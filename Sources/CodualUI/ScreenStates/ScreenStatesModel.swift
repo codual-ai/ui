@@ -90,6 +90,20 @@ public final class ScreenStatesModel<Value> {
     refreshError = nil
   }
 
+  /// Shows a value the app already has, as if the first load had given it, so appearing loads nothing. For a
+  /// behaviour built on this one, such as a paged list given its first page. Does nothing once a load has started.
+  func showLoaded(_ value: Value) {
+    guard case .idle = state else { return }
+    state = isEmpty(value) ? .empty : .content(value)
+  }
+
+  /// Replaces the value shown, for a behaviour built on this one, such as a paged list adding a page. Does nothing
+  /// unless content is shown.
+  func replaceContent(_ value: Value) {
+    guard case .content = state else { return }
+    state = .content(value)
+  }
+
   private func start() {
     generation += 1
     let id = generation

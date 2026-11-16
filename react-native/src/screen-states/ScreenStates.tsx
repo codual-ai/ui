@@ -20,8 +20,12 @@ import {
 } from "./system-views";
 import { type ScreenStatesController, type ScreenStatesOptions, useScreenStates } from "./use-screen-states";
 
-export interface ScreenStatesProps<T> extends ScreenStatesOptions<T> {
+export interface ScreenStatesProps<T> extends ScreenStatesOptions<T>, ScreenStatesViews<T> {
   readonly load: Load<T>;
+}
+
+/** The app's views for each state; any it leaves out is a plain system one. */
+export interface ScreenStatesViews<T> {
   /** The loaded data. Pass `refreshControl` to your list or scroll view so it can be pulled to refresh. */
   readonly content: (value: T, refreshControl: ReactElement<RefreshControlProps>) => ReactNode;
   readonly loading?: () => ReactNode;
@@ -44,6 +48,17 @@ const styles = StyleSheet.create({ screen: { flex: 1 }, fill: { flexGrow: 1 } })
 export function ScreenStates<T>(props: ScreenStatesProps<T>) {
   const { load, isEmpty, isOffline } = props;
   const screen = useScreenStates(load, { ...(isEmpty && { isEmpty }), ...(isOffline && { isOffline }) });
+  return <ScreenStatesView views={props} screen={screen} />;
+}
+
+/** The views of a screen state, for `ScreenStates` and the behaviours built on it. */
+export function ScreenStatesView<T>({
+  views: props,
+  screen,
+}: {
+  readonly views: ScreenStatesViews<T>;
+  readonly screen: ScreenStatesController<T>;
+}) {
   const labels = { ...defaultScreenStatesLabels, ...props.labels };
   const refreshControl = <RefreshControl refreshing={screen.isRefreshing} onRefresh={screen.refresh} />;
   const { refreshError, dismissRefreshError } = screen;
@@ -75,7 +90,7 @@ function useFocusWhenLoadingEnds(isLoading: boolean) {
 
 /** The app's view for the current state, or the system one. */
 function stateView<T>(
-  props: ScreenStatesProps<T>,
+  props: ScreenStatesViews<T>,
   { state, retry }: ScreenStatesController<T>,
   labels: ScreenStatesLabels,
   refreshControl: ReactElement<RefreshControlProps>,
@@ -106,7 +121,7 @@ function stateView<T>(
 }
 
 function refreshErrorView<T>(
-  props: ScreenStatesProps<T>,
+  props: ScreenStatesViews<T>,
   error: unknown,
   dismiss: () => void,
   labels: ScreenStatesLabels,

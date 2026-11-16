@@ -1,7 +1,6 @@
 import SwiftUI
 import Testing
 import UIKit
-import Vision
 
 @testable import CodualUI
 
@@ -93,28 +92,20 @@ struct ScreenStatesViewTests {
     #expect(type(of: screen) == expected)
   }
 
-  // ImageRenderer leaves out ContentUnavailableView's title, so this reads the message and the button.
-  @Test("SS-23 the failed and offline views draw a message and a Try Again button that retries")
-  func theFailedAndOfflineViewsDrawAMessageAndRetry() async throws {
+  // Vision may read the symbol above the title as a letter, so this reads the last three lines.
+  @Test("SS-23 the failed and offline views draw a title, a message and a Try Again button that retries")
+  func theFailedAndOfflineViewsDrawATitleAMessageAndRetry() async throws {
     var retries = 0
     let failed = SystemFailedView(error: CancellationError()) { retries += 1 }
     let failedText = try recognizedText(in: failed)
-    #expect(failedText == ["Something went wrong. Try again in a moment.", "Try Again"])
+    #expect(failedText.suffix(3) == ["Couldn't Load", "Something went wrong. Try again in a moment.", "Try Again"])
     let offlineText = try recognizedText(in: SystemOfflineView {})
-    #expect(offlineText == ["Check your internet connection, then try again.", "Try Again"])
+    #expect(
+      offlineText.suffix(3) == [
+        "No Internet Connection", "Check your internet connection, then try again.", "Try Again",
+      ])
     failed.retry()
     #expect(retries == 1)
-  }
-
-  private func show(_ view: some View) -> UIWindow {
-    show(UIHostingController(rootView: view))
-  }
-
-  private func show(_ controller: UIViewController) -> UIWindow {
-    let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 844))
-    window.rootViewController = controller
-    window.makeKeyAndVisible()
-    return window
   }
 }
 
@@ -151,17 +142,4 @@ private struct RefreshActionReader: View {
       .onAppear { views.refresh = refresh }
       .onDisappear { views.contentDisappeared = true }
   }
-}
-
-/// The lines of text Vision reads in `view`, drawn at phone size.
-@MainActor
-private func recognizedText(in view: some View) throws -> [String] {
-  let renderer = ImageRenderer(content: view.frame(width: 390, height: 600))
-  renderer.scale = 3
-  let image = try #require(renderer.cgImage)
-  let request = VNRecognizeTextRequest()
-  request.recognitionLevel = .accurate
-  request.usesLanguageCorrection = false
-  try VNImageRequestHandler(cgImage: image).perform([request])
-  return (request.results ?? []).compactMap { $0.topCandidates(1).first?.string }
 }

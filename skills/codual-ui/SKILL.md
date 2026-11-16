@@ -1,12 +1,12 @@
 ---
 name: codual-ui
-description: Use Codual UI's headless behaviours instead of writing their logic by hand, on SwiftUI, Jetpack Compose and React Native. Load before writing any screen that loads data (a list, a detail page, a feed, a profile) — anything with a spinner, an empty state, an error with retry, an offline message or pull to refresh.
+description: Use Codual UI's headless behaviours instead of writing their logic by hand, on SwiftUI, Jetpack Compose and React Native. Load before writing any screen that loads data (a list, a detail page, a feed, a profile) — anything with a spinner, an empty state, an error with retry, an offline message, pull to refresh, or paging (load more, infinite scroll).
 ---
 
 # Codual UI
 
 Codual UI handles the state, timing and edge cases of common screens; the app keeps its own views. Don't write
-that logic by hand: no `isLoading` flags, no `try`/`catch` around a fetch that sets an error, no "has it loaded
+that logic by hand: no `isLoading` or `isLoadingMore` flags, no `hasMore` or page counters, no `try`/`catch` around a fetch that sets an error, no "has it loaded
 yet" check on appear. Pass the load and the app's views, and leave out any view the app doesn't need to style: a
 plain system one takes its place.
 
@@ -76,3 +76,80 @@ Don't write code for these, and don't let a review talk you into it; each has a 
 - A cancelled refresh, or leaving during one, shows no error; a load that cancels itself with nothing on screen
   shows failed, never an endless spinner (SS-21, SS-22).
 - Every view you leave out is an accessible system view with a "Try Again" button where it needs one (SS-23).
+
+## Lists
+
+**Use it for** any list whose data comes in pages: a feed, search results, a history, anything with a cursor, a
+page number or a "next" URL. **Don't use it for** a list that loads in one go (that is screen states), or a list the
+app edits locally (deletes, reorders) after loading.
+
+```swift
+// SwiftUI: put the rows in a List or a LazyVStack, never a plain VStack (every row would appear and load every page)
+PagedList(loadPage: { token in try await api.items(after: token) }) { item in
+  ItemRow(item: item)
+} content: { rows in
+  List { rows }
+}
+```
+
+```kotlin
+// Jetpack Compose
+PagedList(rememberPagedList(key = { it.id }) { token -> api.items(after = token) }) { item -> ItemRow(item) }
+```
+
+```tsx
+// React Native: any other prop (ItemSeparatorComponent, contentContainerStyle, testID) goes to the FlatList
+<PagedList
+  loadPage={(token, signal) => api.items({ after: token, signal })}
+  keyExtractor={(item) => item.id}
+  renderItem={({ item }) => <ItemRow item={item} />}
+/>
+```
+
+**How to wire it right:**
+
+- **The loader returns a page.** `Page(items:next:)` / `Page(items, next)` / `{ items, next }`. `next` is whatever
+  the next request needs (a cursor, `page + 1`, a URL), and nil, null or left out at the end. Deciding the end is
+  yours: a missing cursor, or a page shorter than you asked for (`next: items.count < size ? nil : page + 1`).
+- **Identity is how duplicates go.** SwiftUI uses `Identifiable`; give Compose `key` (a `String`, `Int` or `Long`)
+  and React Native `keyExtractor`. Use the server's ID, never the index.
+- **No `onAppear` or `onEndReached` of your own.** The list loads the next page itself; don't add a
+  `.task`/`LaunchedEffect`/`useEffect` that loads, or a second `onEndReached`.
+- **The footer** shows after the last row: by default a spinner, "Couldn't Load More" with Try Again, a Load More
+  button, or "No More Items". To style it, pass `footer` and switch on its four cases (more, loading, failed, end);
+  keep the actions it gives you (`loadMore`, `retry`) on real buttons.
+- **Rows that need their position** (a rounded last card): SwiftUI `row: { item, position in … }`, Compose
+  `index` and `isLast` in the row's scope, React Native `renderItem={({ item, index, isLast }) => …}`. Don't
+  switch to the state machine for this.
+- **A first page you already have** (passed from the screen before): `initialPage`. It shows with no request;
+  don't load it again yourself.
+- **The first page's views** are screen states' (`loading`, `empty`, `failed`, `offline`, `refreshError`).
+- **New input, new list**: `.id(query)`, `key(query) { … }`, `key={query}`, as with screen states.
+- **Draw it yourself** with `PagedListModel` (call `rowAppeared(_:)` from each row), `PagedListState` (call
+  `endReached()` near the end, and put `PagedListAnnouncements(state)` beside the list so TalkBack hears new pages)
+  or `usePagedList` (pass `endReached` to `onEndReached`), never by calling `loadMore`
+  from a scroll callback: `loadMore` is the Load More button's action, and it goes on even after a stall.
+
+### Edge cases it already handles
+
+Don't write code for these ([spec](../../spec/lists.md)):
+
+- The first page is a screen state: loading, then the list, empty, failed or offline with retry; never a footer on
+  its own (LS-01, LS-15).
+- The next page loads near the end, one at a time however fast the person scrolls, with the last page's token
+  (LS-02 to LS-04); React Native's `onEndReached` firing on mount and repeatedly is guarded (LS-23).
+- The end stops paging for good (LS-05). Duplicates across and inside pages are dropped; the first copy stays
+  (LS-06).
+- A loading footer while a page loads; a failed page keeps every item and shows a failed footer, retried only by
+  its Try Again (LS-07 to LS-09).
+- Pull to refresh starts over from the first page, cancels a page that is loading and never adds it, loads no page
+  meanwhile, keeps every page if it fails, and clears a failed footer if it succeeds (LS-10 to LS-14).
+- Pages that add nothing load the next at once, at most 3 in a row, then wait for Load More (LS-16).
+- Leaving the screen cancels a page without leaving a spinner; coming back carries on from the same token (LS-17);
+  a page that cancels itself shows the failed footer (LS-18); asking for more before the list is shown does nothing
+  (LS-19).
+- Screen readers hear one short announcement per page that adds items, at the end, and when a page fails (LS-20);
+  Load More is a real button (LS-21); every footer you leave out is a system one with localisable text (LS-22).
+- A page load never belongs to a row, so scrolling away never cancels it (LS-24).
+- Drawing it yourself keeps the announcements (LS-25); an initial page shows with no request (LS-26); rows know
+  their index and whether they're last (LS-27).
