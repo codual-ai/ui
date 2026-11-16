@@ -2,7 +2,7 @@
   "name": "@codual-ai/react-native-ui",
   "version": "0.0.0",
   "private": true,
-  "description": "Look-free behaviours for React Native apps, the same as Codual UI's SwiftUI package, built for coding agents.",
+  "description": "Headless behaviours for React Native apps, the same as Codual UI's SwiftUI package, built for coding agents.",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/codual-ai/ui.git",

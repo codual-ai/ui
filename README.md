@@ -3,10 +3,10 @@
 [![CI](https://github.com/codual-ai/ui/actions/workflows/ci.yml/badge.svg)](https://github.com/codual-ai/ui/actions/workflows/ci.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 
-**Look-free behaviours for mobile apps, the same on SwiftUI, Jetpack Compose and React Native, built for coding
-agents.** A behaviour is the state, timing and edge cases behind a common screen: loading and retry, paging, form
-checks, purchases. It has no look of its own. It shows your app's own views, so your app keeps its design, and the code your agent writes
-shrinks to the part that is really yours.
+**Headless behaviours for mobile apps, the same on SwiftUI, Jetpack Compose and React Native, built for coding
+agents.** We handle the logic; your app keeps its design. A behaviour is the state, timing and edge cases behind a
+common screen: loading and retry, paging, form checks, purchases. It has no look of its own and shows your app's own
+views, so the code your agent writes shrinks to the part that is really yours.
 
 > [!NOTE]
 > Foundation only: nothing to install yet. The first behaviours are on their way: screen states, lists, forms and
