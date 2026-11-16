@@ -4,6 +4,9 @@ coverage/
 .build/
 .swiftpm/
 DerivedData/
-cli/LICENSE
 *.log
 .DS_Store
+.gradle/
+.kotlin/
+build/
+local.properties
