@@ -1,6 +1,6 @@
 ---
 prefix: SS
-status: not implemented yet
+status: implemented
 ---
 
 # Screen states

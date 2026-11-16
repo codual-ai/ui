@@ -1,0 +1,132 @@
+import { type ReactElement, type ReactNode, useEffect, useRef } from "react";
+import {
+  AccessibilityInfo,
+  type HostInstance,
+  RefreshControl,
+  type RefreshControlProps,
+  ScrollView,
+  StyleSheet,
+  View,
+} from "react-native";
+import type { Load } from "./machine";
+import {
+  defaultScreenStatesLabels,
+  type ScreenStatesLabels,
+  SystemEmptyView,
+  SystemFailedView,
+  SystemLoadingView,
+  SystemOfflineView,
+  SystemRefreshErrorAlert,
+} from "./system-views";
+import { type ScreenStatesController, type ScreenStatesOptions, useScreenStates } from "./use-screen-states";
+
+export interface ScreenStatesProps<T> extends ScreenStatesOptions<T> {
+  readonly load: Load<T>;
+  /** The loaded data. Pass `refreshControl` to your list or scroll view so it can be pulled to refresh. */
+  readonly content: (value: T, refreshControl: ReactElement<RefreshControlProps>) => ReactNode;
+  readonly loading?: () => ReactNode;
+  readonly empty?: () => ReactNode;
+  readonly failed?: (error: unknown, retry: () => void) => ReactNode;
+  readonly offline?: (retry: () => void) => ReactNode;
+  /** A refresh that failed while content was shown, over the content. By default, a system alert. */
+  readonly refreshError?: (error: unknown, dismiss: () => void) => ReactNode;
+  /** The text of the views you leave out. */
+  readonly labels?: Partial<ScreenStatesLabels>;
+}
+
+const styles = StyleSheet.create({ screen: { flex: 1 }, fill: { flexGrow: 1 } });
+
+/**
+ * A screen that loads data, shown through the app's own views: loading, then content, empty, failed or offline.
+ * It loads on mount, aborts on unmount, retries from the failed and offline views and refreshes on pull, keeping
+ * the current view on screen. A view the app leaves out is a plain system one.
+ */
+export function ScreenStates<T>(props: ScreenStatesProps<T>) {
+  const { load, isEmpty, isOffline } = props;
+  const screen = useScreenStates(load, { ...(isEmpty && { isEmpty }), ...(isOffline && { isOffline }) });
+  const labels = { ...defaultScreenStatesLabels, ...props.labels };
+  const refreshControl = <RefreshControl refreshing={screen.isRefreshing} onRefresh={screen.refresh} />;
+  const { refreshError, dismissRefreshError } = screen;
+  const view = useFocusWhenLoadingEnds(screen.state.status === "idle" || screen.state.status === "loading");
+  return (
+    <>
+      <View ref={view} style={styles.screen}>
+        {stateView(props, screen, labels, refreshControl)}
+      </View>
+      {refreshError === undefined
+        ? null
+        : refreshErrorView(props, refreshError.error, dismissRefreshError, labels)}
+    </>
+  );
+}
+
+/** Moves the screen reader to the view that replaced the spinner, once loading ends. */
+function useFocusWhenLoadingEnds(isLoading: boolean) {
+  const view = useRef<HostInstance>(null);
+  const wasLoading = useRef(isLoading);
+  useEffect(() => {
+    if (wasLoading.current && !isLoading && view.current) {
+      AccessibilityInfo.sendAccessibilityEvent(view.current, "focus");
+    }
+    wasLoading.current = isLoading;
+  }, [isLoading]);
+  return view;
+}
+
+/** The app's view for the current state, or the system one. */
+function stateView<T>(
+  props: ScreenStatesProps<T>,
+  { state, retry }: ScreenStatesController<T>,
+  labels: ScreenStatesLabels,
+  refreshControl: ReactElement<RefreshControlProps>,
+): ReactNode {
+  const pullable = (view: ReactNode) => <PullToRefresh refreshControl={refreshControl}>{view}</PullToRefresh>;
+  // A slot the app passes is used even when it renders nothing.
+  switch (state.status) {
+    case "idle":
+    case "loading":
+      return props.loading ? props.loading() : <SystemLoadingView labels={labels} />;
+    case "content":
+      return props.content(state.value, refreshControl);
+    case "empty":
+      return pullable(props.empty ? props.empty() : <SystemEmptyView labels={labels} />);
+    case "failed":
+      return pullable(
+        props.failed ? (
+          props.failed(state.error, retry)
+        ) : (
+          <SystemFailedView error={state.error} retry={retry} labels={labels} />
+        ),
+      );
+    case "offline":
+      return pullable(
+        props.offline ? props.offline(retry) : <SystemOfflineView retry={retry} labels={labels} />,
+      );
+  }
+}
+
+function refreshErrorView<T>(
+  props: ScreenStatesProps<T>,
+  error: unknown,
+  dismiss: () => void,
+  labels: ScreenStatesLabels,
+): ReactNode {
+  if (props.refreshError) return props.refreshError(error, dismiss);
+  return <SystemRefreshErrorAlert error={error} dismiss={dismiss} labels={labels} />;
+}
+
+/** A full-size scroll view, so a view that may not scroll can still be pulled to refresh. */
+function PullToRefresh(props: {
+  readonly refreshControl: ReactElement<RefreshControlProps>;
+  readonly children: ReactNode;
+}) {
+  return (
+    <ScrollView
+      testID="screen-states-pull-to-refresh"
+      contentContainerStyle={styles.fill}
+      refreshControl={props.refreshControl}
+    >
+      {props.children}
+    </ScrollView>
+  );
+}

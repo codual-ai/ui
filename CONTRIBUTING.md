@@ -25,7 +25,7 @@ By taking part, you agree to the [Code of Conduct](CODE_OF_CONDUCT.md).
 ### Compose tests
 
 Keep a behaviour's logic in plain Kotlin, driven by coroutines, so its tests run on the JVM in `src/test/` with
-JUnit 4 and `kotlinx-coroutines-test` (virtual time, no device). Tests of the composables themselves will run there
+JUnit 4 and `kotlinx-coroutines-test` (virtual time, no device). Tests of the composables themselves run there
 too, on Robolectric, rather than as instrumented tests in `src/androidTest/`: they need no emulator, and Android
 before 11 (API 30) can't run test names with spaces. CI runs no device, so the spec check refuses an edge-case
 test in `src/androidTest/`.
