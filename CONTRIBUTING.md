@@ -40,7 +40,7 @@ swift format lint --strict -r Sources Tests Package.swift
 device=$(xcrun simctl list devices available | grep -m1 -E '^ +iPhone' | grep -oE '[0-9A-F-]{36}')
 xcodebuild test -scheme CodualUI -destination "id=$device"
 
-# Jetpack Compose (JDK 17 or later, and the Android SDK at $ANDROID_HOME): lint, unit tests and the build
+# Jetpack Compose (JDK 21 or later, which Robolectric needs for Android 16, and the Android SDK at $ANDROID_HOME): lint, unit tests and the build
 (cd android && ./gradlew build)
 
 # React Native (Node 22.18 or later, pnpm)
