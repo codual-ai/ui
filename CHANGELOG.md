@@ -7,7 +7,8 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- The repository's foundation: a Swift package at the root (iOS 17, Swift 6) and a React Native package in
-  `react-native/`, both without behaviours yet.
+- The repository's foundation: a Swift package at the root (iOS 17, Swift 6), a Jetpack Compose library in
+  `android/` (`ai.codual.ui:codual-ui-compose`, Android 7.0 / API 24) and a React Native package in
+  `react-native/`, all without behaviours yet.
 - The behaviour spec format (`spec/README.md`) and the first spec, screen states, not implemented yet.
-- A CI check that every edge case of an implemented spec has a test on both platforms.
+- A CI check that every edge case of an implemented spec has a test on every platform it applies to.

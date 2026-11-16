@@ -65,7 +65,8 @@ Two things sit on top of a state without changing which view is shown:
 - **SS-07** Retry from the failed or offline view shows loading, then the result.
 - **SS-08** Tapping retry again while a retry runs loads only once.
 - **SS-09** Retry does nothing unless the last load failed.
-- **SS-10** (only: SwiftUI) A retry is not cancelled by the failed view being replaced with the loading view.
+- **SS-10** (only: SwiftUI, Compose) A retry is not cancelled by the failed view being replaced with the loading
+  view.
 - **SS-11** Pull to refresh with content shown keeps the content on screen until the new data arrives.
 - **SS-12** Pull to refresh works from the empty, failed and offline views, which stay on screen until the result.
 - **SS-13** A refresh that fails while content is shown keeps the content and reports a refresh error, without
@@ -102,19 +103,27 @@ Two things sit on top of a state without changing which view is shown:
 - How the refresh error is shown. Without a choice, each platform shows its system alert.
 - The load itself: what it fetches, its timeout, and any caching.
 - When to reload for a new input, such as a search query: the app gives the screen a new identity (SwiftUI
-  `.id(query)`, React `key={query}`).
+  `.id(query)`, Compose `key(query) { … }`, React `key={query}`).
 - Which value counts as empty, for anything that isn't a collection.
 
 ## Platform notes
 
 - **Lack of a connection.** SwiftUI: a `URLError` with code `notConnectedToInternet`, `networkConnectionLost`,
   `dataNotAllowed`, `internationalRoamingOff` or `callIsActive`, or one with a `networkUnavailableReason` (Low Data
-  Mode, a cellular restriction). React Native: the `TypeError` that `fetch` throws when no response arrives
-  ("Network request failed").
-- **Cancellation.** SwiftUI: `CancellationError` or `URLError.cancelled`, from the task being cancelled. React
-  Native: the load gets an `AbortSignal`, and an `AbortError` from it is a cancellation.
+  Mode, a cellular restriction). Compose: an `UnknownHostException`, `ConnectException` or
+  `NoRouteToHostException` from `java.net`, or an exception caused by one. React Native: the `TypeError` that
+  `fetch` throws when no response arrives ("Network request failed").
+- **Cancellation.** SwiftUI: `CancellationError` or `URLError.cancelled`, from the task being cancelled. Compose:
+  a `CancellationException` from the load's coroutine being cancelled. React Native: the load gets an
+  `AbortSignal`, and an `AbortError` from it is a cancellation.
 - **When the screen appears and goes away.** SwiftUI: the content's `.task` and `.onDisappear`, on a container that
-  stays while the views inside it change (SS-10: SwiftUI tears down a replaced view's tasks, so only it needs the
-  test). React Native: the component mounting and unmounting.
-- **Pull to refresh.** SwiftUI: `.refreshable`, with the refresh `await`ing the load. React Native: `RefreshControl`
-  with `refreshing` true until the load finishes.
+  stays while the views inside it change. Compose: the screen entering and leaving the composition, with the load
+  in a scope that outlives the views inside it. SS-10: SwiftUI tears down a replaced view's tasks, and Compose
+  cancels the coroutines of a composable that leaves the composition (`rememberCoroutineScope`, `LaunchedEffect`),
+  so only they need the test. React Native: the component mounting and unmounting.
+- **Pull to refresh.** SwiftUI: `.refreshable`, with the refresh `await`ing the load. Compose: the app's pull to
+  refresh container (Material 3 `PullToRefreshBox`, say) gets `isRefreshing`, true until the load finishes, and
+  `onRefresh`. React Native: `RefreshControl` with `refreshing` true until the load finishes.
+- **Built-in views and the refresh error alert (SS-23).** Compose has no system views outside a design library, so
+  it uses Material 3 (`CircularProgressIndicator`, `Text`, `TextButton`, `AlertDialog`), which takes the app's
+  `MaterialTheme`.

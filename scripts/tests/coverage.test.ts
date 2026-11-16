@@ -94,6 +94,22 @@ describe("platform-only edge cases", () => {
     ]);
   });
 
+  test("a case for two of three platforms needs both and refuses the third", () => {
+    const nativeOnly: Spec = {
+      ...spec,
+      edgeCases: [{ id: "SS-01", isWithdrawn: false, platforms: ["SwiftUI", "Compose"] }],
+    };
+    const platforms = [
+      { platform: "SwiftUI", tested: testsNaming("SS-01") },
+      { platform: "Compose", tested: [] },
+      { platform: "React Native", tested: testsNaming("SS-01") },
+    ];
+    expect(coverageProblems([nativeOnly], platforms)).toEqual([
+      "spec/a.md: SS-01 has no Compose test",
+      "test-file: tests SS-01, which its spec limits to SwiftUI, Compose",
+    ]);
+  });
+
   test("reports an unknown platform name", () => {
     const typo: Spec = { ...spec, edgeCases: [{ id: "SS-01", isWithdrawn: false, platforms: ["Swift"] }] };
     expect(coverageProblems([typo], [{ platform: "SwiftUI", tested: [] }])).toEqual([

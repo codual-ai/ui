@@ -128,7 +128,11 @@ describe("parseSpec", () => {
 describe("platform-only edge cases", () => {
   test("reads the platforms an (only: …) edge case applies to", () => {
     const text = specText({
-      edgeCases: ["- **SS-01** (only: SwiftUI) A.", "- **SS-02** (only: SwiftUI, React Native) B."],
+      edgeCases: [
+        "- **SS-01** (only: SwiftUI) A.",
+        "- **SS-02** (only: SwiftUI, React Native) B.",
+        "- **SS-03** (only: SwiftUI,Compose) C.",
+      ],
     });
     expect(parseSpec("spec/x.md", text)).toMatchObject({
       ok: true,
@@ -136,6 +140,7 @@ describe("platform-only edge cases", () => {
         edgeCases: [
           { id: "SS-01", platforms: ["SwiftUI"] },
           { id: "SS-02", platforms: ["SwiftUI", "React Native"] },
+          { id: "SS-03", platforms: ["SwiftUI", "Compose"] },
         ],
       },
     });

@@ -6,3 +6,7 @@ coverage/
 DerivedData/
 *.log
 .DS_Store
+.gradle/
+.kotlin/
+build/
+local.properties
