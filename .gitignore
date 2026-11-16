@@ -4,6 +4,5 @@ coverage/
 .build/
 .swiftpm/
 DerivedData/
-cli/LICENSE
 *.log
 .DS_Store
