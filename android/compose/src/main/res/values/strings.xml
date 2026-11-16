@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="codual_ui_loading">Loading</string>
+  <string name="codual_ui_empty">Nothing Here Yet</string>
+  <string name="codual_ui_failed">Couldn\'t Load</string>
+  <string name="codual_ui_failed_message">Something went wrong. Try again in a moment.</string>
+  <string name="codual_ui_offline">No Internet Connection</string>
+  <string name="codual_ui_offline_message">Check your internet connection, then try again.</string>
+  <string name="codual_ui_try_again">Try Again</string>
+  <string name="codual_ui_refresh_failed">Couldn\'t Refresh</string>
+  <string name="codual_ui_ok">OK</string>
+</resources>

@@ -9,15 +9,57 @@ common screen: loading and retry, paging, form checks, purchases. It has no look
 views, so the code your agent writes shrinks to the part that is really yours.
 
 > [!NOTE]
-> Foundation only: nothing to install yet. The first behaviours are on their way: screen states, lists, forms and
-> purchases, each on all three platforms, with a skill that teaches coding agents to use them.
+> Not published yet: use the packages from source. The first behaviour, [screen states](spec/screen-states.md), is
+> done on all three platforms; lists, forms and purchases are on their way, with a skill that teaches coding agents
+> to use them ([`skills/codual-ui`](skills/codual-ui/SKILL.md)).
+
+## Screen states
+
+A screen that loads data shows loading, then content, empty, failed (with retry) or offline. Screen states loads
+when the screen appears, cancels when it goes away, refreshes on pull while the current view stays, and never shows
+a cancelled load as an error. You pass the load and your content; any other view you leave out is a plain system
+one.
+
+```swift
+// SwiftUI
+ScreenStates(load: { try await api.items() }) { items in
+  List(items) { ItemRow(item: $0) }
+}
+```
+
+```kotlin
+// Jetpack Compose
+ScreenStates(rememberScreenStates { api.items() }) { items -> ItemList(items) }
+```
+
+```tsx
+// React Native
+<ScreenStates
+  load={(signal) => api.items({ signal })}
+  content={(items, refreshControl) => (
+    <FlatList data={items} refreshControl={refreshControl} renderItem={renderItem} />
+  )}
+/>
+```
+
+The same pieces on each platform:
+
+| | SwiftUI | Jetpack Compose | React Native |
+|---|---|---|---|
+| The screen | `ScreenStates(load:content:)` | `ScreenStates(state) { content }` | `<ScreenStates load content />` |
+| The state machine, to draw it yourself | `ScreenStatesModel` | `ScreenStatesState`: `rememberScreenStates { }`, or in a ViewModel with `viewModelScope` | `useScreenStates(load)` |
+| Your views | `loading`, `empty`, `failed(error, retry)`, `offline(retry)`, `refreshError(error, dismiss)` | the same parameters | the same props |
+| Empty | a collection with no items, or `isEmpty:` | a collection or map with no items, or `isEmpty =` | an array, `Map` or `Set` with no items, or `isEmpty` |
+| Offline | `URLError` for no connection, or `isOffline:` | `UnknownHostException`, `ConnectException`, `NoRouteToHostException`, or `isOffline =` | `fetch`'s "Network request failed", or `isOffline` (a NetInfo check, say) |
+| Cancelling on leave | the load's task is cancelled | the load's coroutine is cancelled | the load's `AbortSignal` aborts; any other abort is a failure |
+| Pull to refresh | `.refreshable`, for your `List` or `ScrollView` | `PullToRefreshBox`, for your scrolling content | pass `refreshControl` to your list |
+| Built-in views' text | your app's string catalog | string resources named `codual_ui_*` | the `labels` prop |
 
 ## How it works
 
 Every behaviour starts as a written spec in [`spec/`](spec/): its states, its transitions, and a numbered list of
 the edge cases apps get wrong. Every platform implements the same spec, and each edge case has a test on each of
-them, named by its ID (`SS-07`), so the behaviour is identical on iOS and Android. The first spec is
-[screen states](spec/screen-states.md).
+them, named by its ID (`SS-07`), so the behaviour is identical on iOS and Android.
 
 ```
 spec/            one spec per behaviour, shared by every platform
@@ -26,6 +68,7 @@ Tests/
 android/         the Jetpack Compose library (Android 7.0, API 24, or later)
 react-native/    the React Native package
 scripts/         the check that every edge case is tested on every platform
+skills/          the skill that teaches coding agents to use the behaviours
 ```
 
 ## Contributing

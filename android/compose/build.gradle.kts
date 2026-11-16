@@ -29,10 +29,18 @@ android {
     warningsAsErrors = true
     // New releases of dependencies would otherwise fail a build that hasn't changed.
     disable += setOf("GradleDependency", "AndroidGradlePluginVersion", "NewerVersionAvailable")
+    // A dependency's own lint checks (lifecycle-runtime's) being too old for this lint is no fault of this code.
+    disable += "ObsoleteLintCustomCheck"
   }
 
   testOptions {
-    unitTests.all { test -> test.systemProperty("codual.ui.version", projectVersion) }
+    // Robolectric runs the composable tests on the JVM, with the library's string resources.
+    unitTests.isIncludeAndroidResources = true
+    unitTests.all { test ->
+      test.systemProperty("codual.ui.version", projectVersion)
+      // Robolectric's Android 16 needs this on JDK 17 and later.
+      test.jvmArgs("--add-exports=java.base/jdk.internal.access=ALL-UNNAMED")
+    }
   }
 }
 
@@ -45,10 +53,17 @@ kotlin {
 }
 
 dependencies {
-  implementation(platform(libs.compose.bom))
-  implementation(libs.compose.runtime)
-  implementation(libs.kotlinx.coroutines.core)
+  // The public API takes and returns types from these.
+  api(platform(libs.compose.bom))
+  api(libs.compose.runtime)
+  api(libs.compose.ui)
+  api(libs.kotlinx.coroutines.core)
+  implementation(libs.compose.foundation)
+  implementation(libs.compose.material3)
 
+  testImplementation(platform(libs.compose.bom))
+  testImplementation(libs.compose.ui.test.junit4)
   testImplementation(libs.junit)
   testImplementation(libs.kotlinx.coroutines.test)
+  testImplementation(libs.robolectric)
 }
