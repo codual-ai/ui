@@ -9,4 +9,14 @@
   <string name="codual_ui_try_again">Try Again</string>
   <string name="codual_ui_refresh_failed">Couldn\'t Refresh</string>
   <string name="codual_ui_ok">OK</string>
+  <string name="codual_ui_loading_more">Loading More</string>
+  <string name="codual_ui_couldnt_load_more">Couldn\'t Load More</string>
+  <string name="codual_ui_load_more">Load More</string>
+  <string name="codual_ui_no_more_items">No More Items</string>
+  <plurals name="codual_ui_loaded_more">
+    <item quantity="one">Loaded %d more item.</item>
+    <item quantity="other">Loaded %d more items.</item>
+  </plurals>
+  <string name="codual_ui_end_of_list">End of list.</string>
+  <string name="codual_ui_load_more_failed">Couldn\'t load more items.</string>
 </resources>

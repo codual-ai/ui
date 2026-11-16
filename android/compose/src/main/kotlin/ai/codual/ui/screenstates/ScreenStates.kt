@@ -26,7 +26,6 @@ import androidx.compose.ui.focus.focusRequester
  * @param refreshError a refresh that failed while content was shown, over the content. By default, an alert dialog.
  * @param content the loaded data. A scrollable list or column inside it can be pulled to refresh.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 public fun <T> ScreenStates(
   state: ScreenStatesState<T>,
@@ -42,9 +41,43 @@ public fun <T> ScreenStates(
   },
   content: @Composable (T) -> Unit,
 ) {
+  ScreenStatesLayout(
+    state = state,
+    appear = state::appear,
+    disappear = state::disappear,
+    refresh = state::refresh,
+    modifier = modifier,
+    loading = loading,
+    empty = empty,
+    failed = failed,
+    offline = offline,
+    refreshError = refreshError,
+    content = content,
+  )
+}
+
+/**
+ * The views of a [ScreenStatesState], for [ScreenStates] and the behaviours built on it, which pass their own
+ * [appear], [disappear] and [refresh] so they can do more around the state's.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun <T> ScreenStatesLayout(
+  state: ScreenStatesState<T>,
+  appear: () -> Unit,
+  disappear: () -> Unit,
+  refresh: () -> Unit,
+  modifier: Modifier,
+  loading: @Composable () -> Unit,
+  empty: @Composable () -> Unit,
+  failed: @Composable (error: Throwable, retry: () -> Unit) -> Unit,
+  offline: @Composable (retry: () -> Unit) -> Unit,
+  refreshError: @Composable (error: Throwable, dismiss: () -> Unit) -> Unit,
+  content: @Composable (T) -> Unit,
+) {
   DisposableEffect(state) {
-    state.appear()
-    onDispose { state.disappear() }
+    appear()
+    onDispose { disappear() }
   }
   val isLoading = state.state == ScreenState.Idle || state.state == ScreenState.Loading
   val newView = remember { FocusRequester() }
@@ -57,7 +90,7 @@ public fun <T> ScreenStates(
   // cancels a load.
   PullToRefreshBox(
     isRefreshing = state.isRefreshing,
-    onRefresh = state::refresh,
+    onRefresh = refresh,
     modifier = modifier.focusRequester(newView),
   ) {
     when (val current = state.state) {

@@ -105,6 +105,22 @@ public class ScreenStatesState<T>(
     refreshError = null
   }
 
+  /**
+   * Shows a value the app already has, as if the first load had given it, so appearing loads nothing. For a behaviour
+   * built on this one, such as a paged list given its first page. Does nothing once a load has started.
+   */
+  internal fun showLoaded(value: T) {
+    if (state == ScreenState.Idle) state = if (isEmpty(value)) ScreenState.Empty else ScreenState.Content(value)
+  }
+
+  /**
+   * Replaces the value shown, for a behaviour built on this one, such as a paged list adding a page. Does nothing
+   * unless content is shown.
+   */
+  internal fun replaceContent(value: T) {
+    if (state is ScreenState.Content) state = ScreenState.Content(value)
+  }
+
   private fun start() {
     generation += 1
     val id = generation

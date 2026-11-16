@@ -9,9 +9,9 @@ common screen: loading and retry, paging, form checks, purchases. It has no look
 views, so the code your agent writes shrinks to the part that is really yours.
 
 > [!NOTE]
-> Not published yet: use the packages from source. The first behaviour, [screen states](spec/screen-states.md), is
-> done on all three platforms; lists, forms and purchases are on their way, with a skill that teaches coding agents
-> to use them ([`skills/codual-ui`](skills/codual-ui/SKILL.md)).
+> Not published yet: use the packages from source. [Screen states](spec/screen-states.md) and
+> [lists](spec/lists.md) are done on all three platforms; forms and purchases are on their way, with a skill that
+> teaches coding agents to use them ([`skills/codual-ui`](skills/codual-ui/SKILL.md)).
 
 ## Screen states
 
@@ -54,6 +54,53 @@ The same pieces on each platform:
 | Cancelling on leave | the load's task is cancelled | the load's coroutine is cancelled | the load's `AbortSignal` aborts; any other abort is a failure |
 | Pull to refresh | `.refreshable`, for your `List` or `ScrollView` | `PullToRefreshBox`, for your scrolling content | pass `refreshControl` to your list |
 | Built-in views' text | your app's string catalog | string resources named `codual_ui_*` | the `labels` prop |
+
+## Lists
+
+A list of data that comes in pages loads its first page as a screen state, then the next page as the end of the
+list comes near. It drops items already in the list, shows a footer while a page loads, when one fails (with retry,
+keeping the list) and at the end, and starts again from the first page on pull to refresh. Two pages never load at
+once, and a page still loading when the screen goes away or a refresh starts is cancelled and never added. You pass
+a page loader, which takes a token (none for the first page) and returns the page's items and the next token, or
+none at the end, and your row.
+
+```swift
+// SwiftUI: rows in your List or LazyVStack
+PagedList(loadPage: { token in try await api.items(after: token) }) { item in
+  ItemRow(item: item)
+} content: { rows in
+  List { rows }
+}
+```
+
+```kotlin
+// Jetpack Compose: rows in a LazyColumn
+PagedList(rememberPagedList(key = { it.id }) { token -> api.items(after = token) }) { item -> ItemRow(item) }
+```
+
+```tsx
+// React Native: rows in a FlatList; any other prop goes to it
+<PagedList
+  loadPage={(token, signal) => api.items({ after: token, signal })}
+  keyExtractor={(item) => item.id}
+  renderItem={({ item }) => <ItemRow item={item} />}
+/>
+```
+
+| | SwiftUI | Jetpack Compose | React Native |
+|---|---|---|---|
+| The list | `PagedList(loadPage:row:content:)` | `PagedList(state) { row }` | `<PagedList loadPage keyExtractor renderItem />` |
+| The state machine, to draw it yourself | `PagedListModel` | `PagedListState`: `rememberPagedList { }`, or in a ViewModel with `viewModelScope` | `usePagedList(loadPage, { keyExtractor })` |
+| A page | `Page(items:next:)`, `next` nil at the end | `Page(items, next)`, `next` null at the end | `{ items, next }`, `next` null or left out at the end |
+| Item identity, for de-duplication | `Identifiable` | `key =`, also the `LazyColumn` key | `keyExtractor`, also `FlatList`'s |
+| Near the end | a row's `onAppear`, `threshold` rows from the end (5) | the `LazyListState`'s last visible item, `threshold` items from the end (5) | `onEndReached`, with `onEndReachedThreshold` |
+| The footer | `footer: { PagedListFooter in … }`: `.more(loadMore)`, `.loading`, `.failed(error, retry)`, `.end` | `footer = { … }`: `More(loadMore)`, `Loading`, `Failed(error, retry)`, `End` | `footer={(footer) => …}`: `status` `"more"` (`loadMore`), `"loading"`, `"failed"` (`error`, `retry`), `"end"` |
+| A row's position | `row: { item, position in … }`: `position.index`, `position.isLast` | the row's scope: `index`, `isLast` | `renderItem`'s info: `index`, `isLast` |
+| A first page the screen already has | `initialPage:` | `initialPage =` | `initialPage` |
+| The first page's views | screen states' `loading`, `empty`, `failed`, `offline`, `refreshError` | the same parameters | the same props |
+| Cancelling | the page's task is cancelled | the page's coroutine is cancelled | the page's `AbortSignal` aborts |
+| New items announced | `AccessibilityNotification.Announcement`, from the model too | a polite live region; drawing it yourself, add `PagedListAnnouncements(state)` | `AccessibilityInfo.announceForAccessibilityWithOptions`, queued |
+| Built-in text | your app's string catalog | string resources named `codual_ui_*` | the `labels` prop |
 
 ## How it works
 

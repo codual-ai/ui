@@ -54,13 +54,42 @@ public struct ScreenStates<
   public var body: some View {
     // Every update hands the model this view's closures, so a load, and the result it gives, always uses the latest.
     let _ = updateModel()
+    ScreenStatesView(
+      model: model, appear: model.appear, disappear: model.disappear, refresh: model.refresh, content: content,
+      loading: loading, empty: empty, failed: failed, offline: offline, refreshError: refreshError)
+  }
+
+  private func updateModel() {
+    model.load = load
+    model.isEmpty = isEmpty
+    model.isOffline = isOffline
+  }
+}
+
+/// The views of a `ScreenStatesModel`, for `ScreenStates` and the behaviours built on it, which pass their own
+/// appear, disappear and refresh so they can do more around the model's.
+struct ScreenStatesView<
+  Value, Content: View, Loading: View, Empty: View, Failed: View, Offline: View, RefreshError: View
+>: View {
+  let model: ScreenStatesModel<Value>
+  let appear: () -> Void
+  let disappear: () -> Void
+  let refresh: () async -> Void
+  let content: (Value) -> Content
+  let loading: () -> Loading
+  let empty: () -> Empty
+  let failed: (any Error, @escaping () -> Void) -> Failed
+  let offline: (@escaping () -> Void) -> Offline
+  let refreshError: (any Error, @escaping () -> Void) -> RefreshError
+
+  var body: some View {
     // One container for every state, so swapping the view inside it never reads as the screen going away.
     ZStack { currentView }
       .overlay {
         if let error = model.refreshError { refreshError(error, model.dismissRefreshError) }
       }
-      .task { model.appear() }
-      .onDisappear { model.disappear() }
+      .task { appear() }
+      .onDisappear { disappear() }
       .onChange(of: isShowingLoading) { wasLoading, isLoading in
         // Moves VoiceOver to the view that replaced the spinner.
         if wasLoading && !isLoading { AccessibilityNotification.LayoutChanged().post() }
@@ -72,8 +101,8 @@ public struct ScreenStates<
     case .idle, .loading: loading()
     case .content(let value): content(value).refreshable { await refresh() }
     case .empty: pullToRefresh(empty())
-    case .failed(let error): pullToRefresh(failed(error, retry))
-    case .offline: pullToRefresh(offline(retry))
+    case .failed(let error): pullToRefresh(failed(error, model.retry))
+    case .offline: pullToRefresh(offline(model.retry))
     }
   }
 
@@ -90,19 +119,5 @@ public struct ScreenStates<
       view.containerRelativeFrame([.horizontal, .vertical])
     }
     .refreshable { await refresh() }
-  }
-
-  private func updateModel() {
-    model.load = load
-    model.isEmpty = isEmpty
-    model.isOffline = isOffline
-  }
-
-  private func retry() {
-    model.retry()
-  }
-
-  private func refresh() async {
-    await model.refresh()
   }
 }

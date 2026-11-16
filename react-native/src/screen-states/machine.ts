@@ -99,6 +99,26 @@ export class ScreenStatesMachine<T> {
     this.update({ refreshError: undefined });
   };
 
+  /**
+   * Shows a value the app already has, as if the first load had given it, so appearing loads nothing. For a
+   * behaviour built on this one, such as a paged list given its first page. Does nothing once a load has started.
+   */
+  showLoaded(value: T): void {
+    if (this.snapshot.state.status !== "idle") return;
+    const state: ScreenState<T> = this.source().isEmpty(value)
+      ? { status: "empty" }
+      : { status: "content", value };
+    this.update({ state });
+  }
+
+  /**
+   * Replaces the value shown, for a behaviour built on this one, such as a paged list adding a page. Does nothing
+   * unless content is shown.
+   */
+  replaceContent(value: T): void {
+    if (this.snapshot.state.status === "content") this.update({ state: { status: "content", value } });
+  }
+
   private start(): RunningLoad {
     this.generation += 1;
     const id = this.generation;

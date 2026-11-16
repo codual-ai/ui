@@ -13,6 +13,13 @@ and versions follow [Semantic Versioning](https://semver.org/).
   system views for any the app leaves out. The spec is `implemented`, with a test for each of its 23 edge cases on
   every platform it applies to.
 - The `codual-ui` skill for coding agents, starting with screen states.
+- Lists on SwiftUI (`PagedList`, `PagedListModel`), Jetpack Compose (`PagedList`, `PagedListState`,
+  `rememberPagedList`) and React Native (`<PagedList>`, `usePagedList`), built on screen states: the first page as a
+  screen state, the next page near the end, one page at a time, de-duplication by item identity, a footer while a
+  page loads, when one fails (with retry, keeping the list) and at the end, pull to refresh from the first page,
+  cancellation, announcements for screen readers, a first page the screen already has, and each row's position.
+  The spec is `implemented`, with a test for each of its 27 edge cases on every platform it applies to.
+- The `codual-ui` skill covers lists.
 
 ### Changed
 
