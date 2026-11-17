@@ -47,6 +47,15 @@ and versions follow [Semantic Versioning](https://semver.org/).
 - The `codual-ui` skill covers sheets.
 - The Compose library depends on `androidx.activity:activity-compose` directly, for `BackHandler`, at the version
   Material 3 already brings (1.8.2).
+- Search on SwiftUI (`SearchResults`, `SearchModel`), Jetpack Compose (`SearchResults`, `SearchState`,
+  `rememberSearch`, `rememberScopedSearch`, `rememberLocalSearch`) and React Native (`<SearchResults>`,
+  `useSearch`), built on lists and screen states: a debounce, trimming and a minimum length, cancellation of the
+  running search when the query changes, results only for the latest query, submit that skips the debounce, recent
+  searches saved on submit (no duplicates, capped, removable, clearable, in an app-provided store), a no-results view
+  apart from failed and offline, retry, scopes, paged results, local mode, keyboard dismissal on scroll, cancel, an
+  initial or restored query, and one polite announcement of the results once the typing settles. The spec is
+  `implemented`, with a test for each of its 32 edge cases on every platform it applies to.
+- The `codual-ui` skill covers search.
 
 ### Changed
 

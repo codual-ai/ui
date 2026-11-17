@@ -85,6 +85,19 @@ export class PagedListMachine<Item, Token> {
     return this.derived.to;
   };
 
+  /**
+   * Shows a first page at once with no request, even one with no items, which shows the empty view: for a behaviour
+   * built on this one, such as search filtering items in memory. Does nothing once a load has started.
+   */
+  showLoaded(page: Page<Item, Token>): void {
+    this.screen.showLoaded(firstPageContent(page, this.source().keyExtractor));
+  }
+
+  /** Replaces the whole list shown with this first page, keeping the list itself (and its scroll position). */
+  replaceFirstPage(page: Page<Item, Token>): void {
+    this.screen.replaceLoaded(firstPageContent(page, this.source().keyExtractor));
+  }
+
   /** Loads the first page. Safe to call on every mount: once it has started or finished, it does nothing. */
   readonly appear = (): void => this.screen.appear();
 
