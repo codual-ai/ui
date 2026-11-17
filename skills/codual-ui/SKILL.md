@@ -1,6 +1,6 @@
 ---
 name: codual-ui
-description: Use Codual UI's headless behaviours instead of writing their logic by hand, on SwiftUI, Jetpack Compose and React Native. Load before writing any screen that loads data (a list, a detail page, a feed, a profile) — anything with a spinner, an empty state, an error with retry, an offline message, pull to refresh, or paging (load more, infinite scroll).
+description: Use Codual UI's headless behaviours instead of writing their logic by hand, on SwiftUI, Jetpack Compose and React Native. Load before writing any screen that loads data (a list, a detail page, a feed, a profile) — anything with a spinner, an empty state, an error with retry, an offline message, pull to refresh, or paging (load more, infinite scroll), and any search field (search as you type, recent searches, filtering a list).
 ---
 
 # Codual UI
@@ -153,3 +153,82 @@ Don't write code for these ([spec](../../spec/lists.md)):
 - A page load never belongs to a row, so scrolling away never cancels it (LS-24).
 - Drawing it yourself keeps the announcements (LS-25); an initial page shows with no request (LS-26); rows know
   their index and whether they're last (LS-27).
+
+## Search
+
+**Use it for** any screen that searches as the person types: a search tab, a "find a contact" field, a product
+search, a filter over a list already in memory. **Don't use it for** a form field that is checked on submit, or a
+picker with a handful of fixed options.
+
+```swift
+// SwiftUI (iOS 17+): inside a NavigationStack; SearchResults adds .searchable, .searchSuggestions and .onSubmit
+@State private var search = SearchModel { query, token in try await api.search(query, after: token) }
+
+SearchResults(search) { item in ItemRow(item: item) } content: { rows in List { rows } }
+```
+
+```kotlin
+// Jetpack Compose: bind your own SearchBar or TextField to the state
+val search = rememberSearch(key = { it.id }) { query, token -> api.search(query, after = token) }
+TextField(
+  value = search.query,
+  onValueChange = { search.query = it },
+  keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+  keyboardActions = KeyboardActions(onSearch = { search.submit() }),
+)
+SearchResults(search) { item -> ItemRow(item) }
+```
+
+```tsx
+// React Native
+const search = useSearch({
+  search: (query, { token, signal }) => api.search(query, { after: token, signal }),
+  keyExtractor: (item) => item.id,
+});
+<TextInput {...search.inputProps} placeholder="Search" />
+<SearchResults search={search} renderItem={({ item }) => <ItemRow item={item} />} />
+```
+
+**How to wire it right:**
+
+- **No debounce, timer, `AbortController`, "latest request" counter or `isSearching` flag of your own.** Bind the
+  field to the query and let search decide when to search. Don't search in `onChange`, `LaunchedEffect(query)` or
+  `useEffect([query])`.
+- **The search returns a page**, as lists does: `Page(items:next:)` / `Page(items, next)` / `{ items, next }`.
+  Without paging, return one page with no next token (`Page(items: results)` in SwiftUI).
+- **Data already in memory** (contacts, settings): local mode, `SearchModel(items:matches:)`,
+  `rememberLocalSearch(items, key) { item, query -> … }`, `useSearch({ items, matches, keyExtractor })`. It filters
+  at once with no loading view; update the items and the results follow.
+- **Scopes and filters**: SwiftUI `.searchScopes($search.scope) { … }`, Compose `rememberScopedSearch(initialScope =
+  …)` then `search.scope = …`, React Native `initialScope` and `setScope`. A change searches again at once.
+- **Recent searches** are saved on submit only (the keyboard's search button, or picking one). Pass a store to keep
+  them: `UserDefaultsRecentSearches()`, `SharedPreferencesRecentSearches(context)`, or a React Native
+  `RecentSearchStore` over AsyncStorage or MMKV. Keep one store for the app's lifetime.
+- **The views**: `suggestions` (gets the recent searches with `pick`, `remove` and `clear`) while the query is too
+  short, `noResults` (gets the query) for a search that finds nothing, and the list's and screen states' views for
+  the rest. Keep `pick`, `remove` and `clear` on real buttons.
+- **Keyboard**: SwiftUI and Compose's `SearchResults` dismiss it on scroll; in React Native spread
+  `search.listProps` on a `FlatList` or `ScrollView` you draw yourself. Cancel (`cancel()`) clears the query.
+- **A query from outside** (a deep link, `@SceneStorage`, the screen before): `initialQuery`. It searches at once
+  and isn't a recent search. Compose's `rememberSearch` restores the query after rotation by itself.
+- **Draw it yourself** with `SearchModel` (call `appear()`/`disappear()`), `SearchState` (add
+  `SearchAnnouncements(state)` beside the results so TalkBack hears them) or `useSearch`; the results' list is a
+  `PagedListModel` / `PagedListState` / paged list controller, used as in lists.
+
+### Edge cases it already handles
+
+Don't write code for these ([spec](../../spec/search.md)):
+
+- One search after the typing stops, for the last query only; the query trimmed; too short shows the suggestions
+  at once (SR-01 to SR-03).
+- A change cancels the running search at once; a late answer to an old query is dropped; the results stay while
+  the debounce waits; typing back to the query shown searches nothing (SR-04 to SR-07).
+- Submit searches at once; submitting the query shown searches nothing unless it failed (SR-08, SR-09).
+- Recent searches: saved on submit only, no duplicates by case or spaces, capped, removable, clearable, loaded and
+  cleaned from the store; picking one searches at once (SR-10 to SR-16).
+- No results is its own view, apart from failed and offline; retry searches the same query and scope (SR-17 to
+  SR-19).
+- Scopes search again at once; pages use their own query; local mode filters at once (SR-20 to SR-22).
+- Keyboard dismissed on scroll; cancel; leaving and coming back; an initial or restored query (SR-23 to SR-27).
+- One polite announcement of the results after the typing settles; the field's text is never rewritten; a search
+  that cancels itself fails instead of spinning; system views with localisable text (SR-28 to SR-32).

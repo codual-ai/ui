@@ -7,6 +7,11 @@ export type ScreenState<T> =
   | { readonly status: "failed"; readonly error: unknown }
   | { readonly status: "offline" };
 
+/** Whether the state shows the loading view: nothing loaded yet, or the first load or a retry running. */
+export function isShowingLoading(state: ScreenState<unknown>): boolean {
+  return state.status === "idle" || state.status === "loading";
+}
+
 /** A refresh that failed while content was shown. The content stays; the next successful load clears it. */
 export interface RefreshError {
   readonly error: unknown;
@@ -117,6 +122,18 @@ export class ScreenStatesMachine<T> {
    */
   replaceContent(value: T): void {
     if (this.snapshot.state.status === "content") this.update({ state: { status: "content", value } });
+  }
+
+  /**
+   * Replaces what is shown with another value the app already has, as content or the empty view: for a behaviour
+   * built on this one, such as search filtering changed items in memory. Does nothing while the loading view shows.
+   */
+  replaceLoaded(value: T): void {
+    if (isShowingLoading(this.snapshot.state)) return;
+    const state: ScreenState<T> = this.source().isEmpty(value)
+      ? { status: "empty" }
+      : { status: "content", value };
+    this.update({ state });
   }
 
   private start(): RunningLoad {

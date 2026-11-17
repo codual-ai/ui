@@ -19,4 +19,16 @@
   </plurals>
   <string name="codual_ui_end_of_list">End of list.</string>
   <string name="codual_ui_load_more_failed">Couldn\'t load more items.</string>
+  <plurals name="codual_ui_search_results">
+    <item quantity="one">Showing %d result.</item>
+    <item quantity="other">Showing %d results.</item>
+  </plurals>
+  <string name="codual_ui_search_no_results">No results for “%s”.</string>
+  <string name="codual_ui_search_failed">Couldn\'t load results.</string>
+  <string name="codual_ui_search_offline">No internet connection.</string>
+  <string name="codual_ui_recent_searches">Recent Searches</string>
+  <string name="codual_ui_clear">Clear</string>
+  <string name="codual_ui_remove_recent_search">Remove “%s”</string>
+  <string name="codual_ui_no_results_title">No Results for “%s”</string>
+  <string name="codual_ui_no_results_message">Check the spelling or try a new search.</string>
 </resources>

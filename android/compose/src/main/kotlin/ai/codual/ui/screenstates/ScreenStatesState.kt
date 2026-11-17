@@ -61,6 +61,12 @@ public class ScreenStatesState<T>(
   public var refreshError: Throwable? by mutableStateOf(null)
     private set
 
+  /**
+   * Called when a load that showed the loading view (the first one, or a retry) finishes, with what it shows now: for
+   * a behaviour built on this one, such as search announcing its results. Not called for a refresh.
+   */
+  internal var loadingFinished: ((ScreenState<T>) -> Unit)? = null
+
   private var running: Job? = null
   private var generation = 0
 
@@ -121,6 +127,16 @@ public class ScreenStatesState<T>(
     if (state is ScreenState.Content) state = ScreenState.Content(value)
   }
 
+  /**
+   * Replaces a loaded value with another, which may be empty, for a behaviour built on this one, such as a local search
+   * whose items changed. Does nothing unless content or the empty view is shown.
+   */
+  internal fun replaceLoaded(value: T) {
+    if (state is ScreenState.Content || state == ScreenState.Empty) {
+      state = if (isEmpty(value)) ScreenState.Empty else ScreenState.Content(value)
+    }
+  }
+
   private fun start() {
     generation += 1
     val id = generation
@@ -146,6 +162,7 @@ public class ScreenStatesState<T>(
     if (id != generation) return
     running = null
     isRefreshing = false
+    val wasLoading = state == ScreenState.Idle || state == ScreenState.Loading
     result.fold(
       onSuccess = { value ->
         state = if (isEmpty(value)) ScreenState.Empty else ScreenState.Content(value)
@@ -153,6 +170,7 @@ public class ScreenStatesState<T>(
       },
       onFailure = ::fail,
     )
+    if (wasLoading) loadingFinished?.invoke(state)
   }
 
   private fun fail(error: Throwable) {

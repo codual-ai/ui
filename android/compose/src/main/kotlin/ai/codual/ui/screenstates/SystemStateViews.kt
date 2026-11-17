@@ -68,12 +68,12 @@ private fun MessageView(title: String, message: String, retry: () -> Unit) {
 }
 
 @Composable
-private fun Title(text: String) {
+internal fun Title(text: String) {
   Text(text, Modifier.semantics { heading() }, style = MaterialTheme.typography.titleMedium)
 }
 
 @Composable
-private fun Centered(content: @Composable () -> Unit) {
+internal fun Centered(content: @Composable () -> Unit) {
   Column(
     Modifier.fillMaxSize(),
     verticalArrangement = Arrangement.Center,

@@ -1,12 +1,12 @@
 package ai.codual.ui.lists
 
+import ai.codual.ui.Announcer
 import ai.codual.ui.screenstates.ScreenState
 import ai.codual.ui.screenstates.ScreenStatesState
 import ai.codual.ui.screenstates.isOfflineError
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
@@ -57,15 +57,8 @@ public class PagedListState<Item, Token : Any>(
     }
   }
 
-  /** What a screen reader should hear about the last page, numbered so two the same in a row are both spoken. */
-  internal var announcement: NumberedAnnouncement? by mutableStateOf(null)
-    private set
-
-  /**
-   * The last announcement a live region has spoken, kept with the state (a ViewModel's, say) so coming back to the
-   * screen or rotating it doesn't speak it again.
-   */
-  internal var spokenAnnouncement: Int = 0
+  /** What a screen reader should hear about the last page. */
+  internal val announcer: Announcer<PagedListAnnouncement> = Announcer()
 
   private var pageLoad: Job? = null
   private var generation = 0
@@ -218,7 +211,7 @@ public class PagedListState<Item, Token : Any>(
   }
 
   private fun announce(value: PagedListAnnouncement) {
-    announcement = NumberedAnnouncement((announcement?.number ?: 0) + 1, value)
+    announcer.announce(value)
   }
 
   private fun cancelPageLoad() {
