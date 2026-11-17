@@ -1,0 +1,4 @@
+{
+  "main": "../dist/react-native-iap/index.js",
+  "types": "../dist/react-native-iap/index.d.ts"
+}

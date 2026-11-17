@@ -3,6 +3,8 @@
 package ai.codual.ui.lists
 
 import ai.codual.ui.DeclareComposeActivity
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import ai.codual.ui.screenstates.TestError
 import ai.codual.ui.screenstates.ScreenState
 import androidx.compose.foundation.layout.Box
@@ -28,9 +30,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Rule
