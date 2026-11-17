@@ -228,7 +228,7 @@ export class Purchases {
 
   /**
    * Replaces the entitlements with the store's, less any withheld, unless a newer check has already answered. A failed
-   * check keeps the last entitlements, even when an older check answers after it.
+   * check changes nothing, so an older check that answers after it still counts.
    */
   private async checkEntitlements(): Promise<void> {
     this.entitlementsGeneration += 1;

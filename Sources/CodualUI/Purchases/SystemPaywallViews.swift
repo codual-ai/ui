@@ -143,16 +143,10 @@ public struct SystemPurchaseMessageAlert: View {
   @ViewBuilder private var detail: some View {
     switch message {
     case .pending: Text(PaywallText.pendingMessage)
-    case .failed(_, let error), .restoreFailed(let error): errorDetail(error)
+    case .failed(_, let error), .restoreFailed(let error): failureMessage(error)
     case .nothingToRestore: Text(PaywallText.nothingToRestoreMessage)
     case .restored: EmptyView()
     }
-  }
-
-  private func errorDetail(_ error: any Error) -> Text {
-    if isOfflineError(error) { return Text(ScreenStatesText.offlineMessage) }
-    if let message = userFacingMessage(error) { return Text(message) }
-    return Text(ScreenStatesText.failedMessage)
   }
 
   private var isPresented: Binding<Bool> {

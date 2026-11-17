@@ -1,8 +1,7 @@
 package ai.codual.ui.purchases
 
 import ai.codual.ui.R
-import ai.codual.ui.screenstates.isOfflineError
-import ai.codual.ui.screenstates.userFacingMessage
+import ai.codual.ui.screenstates.failureMessage
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.selectable
@@ -99,15 +98,8 @@ private fun messageTitle(message: PurchaseMessage): Int =
 private fun messageDetail(message: PurchaseMessage): String? =
   when (message) {
     is PurchaseMessage.Pending -> stringResource(R.string.codual_ui_purchase_pending_message)
-    is PurchaseMessage.Failed -> errorDetail(message.error)
+    is PurchaseMessage.Failed -> failureMessage(message.error)
     PurchaseMessage.Restored -> null
     PurchaseMessage.NothingToRestore -> stringResource(R.string.codual_ui_nothing_to_restore_message)
-    is PurchaseMessage.RestoreFailed -> errorDetail(message.error)
-  }
-
-@Composable
-private fun errorDetail(error: Throwable): String =
-  when {
-    isOfflineError(error) -> stringResource(R.string.codual_ui_offline_message)
-    else -> userFacingMessage(error) ?: stringResource(R.string.codual_ui_failed_message)
+    is PurchaseMessage.RestoreFailed -> failureMessage(message.error)
   }

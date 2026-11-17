@@ -33,14 +33,6 @@ public enum PurchaseStatus {
     case .idle, .purchasing, .purchased, .cancelled, .restoring: nil
     }
   }
-
-  /// The product a purchase is or was about, if any.
-  var productId: String? {
-    switch self {
-    case .purchasing(let id), .pending(let id), .purchased(let id), .cancelled(let id), .failed(let id, _): id
-    case .idle, .restoring, .restored, .nothingToRestore, .restoreFailed: nil
-    }
-  }
 }
 
 /// A status the paywall tells the user about, until the app dismisses it.

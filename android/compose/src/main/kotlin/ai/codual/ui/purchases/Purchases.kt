@@ -55,15 +55,9 @@ public class Purchases(
   private var appliedGeneration = 0
   private var expiryCheck: Job? = null
 
-  /** The running purchase or restore; it belongs to [scope], so leaving the paywall never cancels it. */
-  internal var activity: Job? = null
-    private set
-
-  internal val startup: Job
-
   init {
     scope.launch { store.updates.collect(::handle) }
-    startup = scope.launch { refresh() }
+    scope.launch { refresh() }
   }
 
   public val isBusy: Boolean
@@ -85,14 +79,15 @@ public class Purchases(
   public fun buy(product: StoreProduct) {
     if (isBusy || isOwned(product)) return
     status = PurchaseStatus.Purchasing(product.id)
-    activity = scope.launch { purchase(product) }
+    // The purchase belongs to [scope], so leaving the paywall never cancels it.
+    scope.launch { purchase(product) }
   }
 
   /** Asks the store for the user's purchases again. Does nothing while a purchase or restore runs. */
   public fun restore() {
     if (isBusy) return
     status = PurchaseStatus.Restoring
-    activity = scope.launch { sync() }
+    scope.launch { sync() }
   }
 
   /** Clears the message the paywall shows, once the user has seen it. */
@@ -116,20 +111,26 @@ public class Purchases(
 
   private suspend fun purchase(product: StoreProduct) {
     status =
-      when (val result = storeCall { store.purchase(product) }.getOrElse { PurchaseFailure(it) }) {
-        is StorePurchaseResult.Purchased -> {
-          val delivered = process(result.transaction)
-          storeCall { checkEntitlements() }
-          delivered.fold(
-            onSuccess = { PurchaseStatus.Purchased(product.id) },
-            onFailure = { PurchaseStatus.Failed(product.id, it) },
-          )
-        }
-        StorePurchaseResult.Pending -> PurchaseStatus.Pending(product.id)
-        StorePurchaseResult.Cancelled -> PurchaseStatus.Cancelled(product.id)
-        is PurchaseFailure -> PurchaseStatus.Failed(product.id, result.error)
-      }
+      storeCall { store.purchase(product) }
+        .fold(
+          onSuccess = { result -> purchaseStatus(product, result) },
+          onFailure = { PurchaseStatus.Failed(product.id, it) },
+        )
   }
+
+  private suspend fun purchaseStatus(product: StoreProduct, result: StorePurchaseResult): PurchaseStatus =
+    when (result) {
+      is StorePurchaseResult.Purchased -> {
+        val delivered = process(result.transaction)
+        storeCall { checkEntitlements() }
+        delivered.fold(
+          onSuccess = { PurchaseStatus.Purchased(product.id) },
+          onFailure = { PurchaseStatus.Failed(product.id, it) },
+        )
+      }
+      StorePurchaseResult.Pending -> PurchaseStatus.Pending(product.id)
+      StorePurchaseResult.Cancelled -> PurchaseStatus.Cancelled(product.id)
+    }
 
   private suspend fun sync() {
     status =
@@ -212,7 +213,7 @@ public class Purchases(
 
   /**
    * Replaces the entitlements with the store's, less any withheld, unless a newer check has already answered. A failed
-   * check throws and keeps the last entitlements, even when an older check answers after it.
+   * check throws and changes nothing, so an older check that answers after it still counts.
    */
   private suspend fun checkEntitlements() {
     entitlementsGeneration += 1
@@ -239,8 +240,6 @@ public class Purchases(
         storeCall { checkEntitlements() }
       }
   }
-
-  private class PurchaseFailure(val error: Throwable) : StorePurchaseResult
 }
 
 /** Runs a call to the store or the app, turning its failure into a result. Cancellation still propagates. */

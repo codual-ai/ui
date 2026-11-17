@@ -221,7 +221,7 @@ public final class PurchasesModel {
   }
 
   /// Replaces the entitlements with the store's, less any withheld, unless a newer check has already answered. A
-  /// failed check keeps the last entitlements, even when an older check answers after it.
+  /// failed check changes nothing, so an older check that answers after it still counts.
   private func checkEntitlements() async throws {
     entitlementsGeneration += 1
     let id = entitlementsGeneration

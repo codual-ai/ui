@@ -1,7 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Alert, Button, Pressable, Text, View } from "react-native";
-import { errorMessage, isOfflineError } from "../screen-states/errors";
-import { defaultScreenStatesLabels } from "../screen-states/system-views";
+import { defaultScreenStatesLabels, failureMessage } from "../screen-states/system-views";
 import type { PaywallContent } from "./paywall-content";
 import { isBusy, type PurchaseMessage } from "./status";
 import type { StoreProduct } from "./store";
@@ -141,17 +140,12 @@ function messageText(message: PurchaseMessage, labels: PaywallLabels): readonly 
     case "pending":
       return [labels.pending, labels.pendingMessage];
     case "failed":
-      return [labels.failed, errorText(message.error, labels)];
+      return [labels.failed, failureMessage(message.error, labels)];
     case "restored":
       return [labels.restored, undefined];
     case "nothing-to-restore":
       return [labels.nothingToRestore, labels.nothingToRestoreMessage];
     case "restore-failed":
-      return [labels.restoreFailed, errorText(message.error, labels)];
+      return [labels.restoreFailed, failureMessage(message.error, labels)];
   }
-}
-
-function errorText(error: unknown, labels: PaywallLabels): string {
-  if (isOfflineError(error)) return labels.offlineMessage;
-  return errorMessage(error) ?? labels.failedMessage;
 }

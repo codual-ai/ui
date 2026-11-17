@@ -2,10 +2,9 @@
 
 package ai.codual.ui.purchases
 
+import ai.codual.ui.DeclareComposeActivity
 import ai.codual.ui.screenstates.TestError
 import ai.codual.ui.screenstates.offlineError
-import android.content.ComponentName
-import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -24,28 +23,15 @@ import kotlinx.coroutines.test.runCurrent
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.ExternalResource
 import org.junit.rules.RuleChain
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.RuntimeEnvironment
-import org.robolectric.Shadows.shadowOf
 
 @RunWith(RobolectricTestRunner::class)
 class PaywallUiTest {
   private val compose = createComposeRule()
 
-  // The compose rule launches a ComponentActivity, which a library's test manifest doesn't declare.
-  private val declareActivity =
-    object : ExternalResource() {
-      override fun before() {
-        val application = RuntimeEnvironment.getApplication()
-        val activity = ComponentName(application, ComponentActivity::class.java)
-        shadowOf(application.packageManager).addActivityIfNotPresent(activity)
-      }
-    }
-
-  @get:Rule val rules: RuleChain = RuleChain.outerRule(declareActivity).around(compose)
+  @get:Rule val rules: RuleChain = RuleChain.outerRule(DeclareComposeActivity()).around(compose)
 
   private val test = TestScope(StandardTestDispatcher())
   private val store = FakeStore()

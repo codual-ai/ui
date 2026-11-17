@@ -2,9 +2,10 @@
 
 package ai.codual.ui.lists
 
+import ai.codual.ui.DeclareComposeActivity
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import ai.codual.ui.screenstates.TestError
-import android.content.ComponentName
-import androidx.activity.ComponentActivity
 import ai.codual.ui.screenstates.ScreenState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,35 +30,20 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.ExternalResource
 import org.junit.rules.RuleChain
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.RuntimeEnvironment
-import org.robolectric.Shadows.shadowOf
 
 @RunWith(RobolectricTestRunner::class)
 class PagedListUiTest {
   private val compose = createComposeRule()
 
-  // The compose rule launches a ComponentActivity, which a library's test manifest doesn't declare.
-  private val declareActivity =
-    object : ExternalResource() {
-      override fun before() {
-        val application = RuntimeEnvironment.getApplication()
-        val activity = ComponentName(application, ComponentActivity::class.java)
-        shadowOf(application.packageManager).addActivityIfNotPresent(activity)
-      }
-    }
-
-  @get:Rule val rules: RuleChain = RuleChain.outerRule(declareActivity).around(compose)
+  @get:Rule val rules: RuleChain = RuleChain.outerRule(DeclareComposeActivity()).around(compose)
 
   private val test = TestScope(StandardTestDispatcher())
   private val loader = FakePageLoader()

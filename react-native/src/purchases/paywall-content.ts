@@ -25,7 +25,7 @@ export function selectedProduct(
   return products.find((product) => product.id === selection) ?? products[0];
 }
 
-export function buyButtonState(
+function buyButtonState(
   purchases: Purchases,
   snapshot: PurchasesSnapshot,
   selected: StoreProduct | undefined,
