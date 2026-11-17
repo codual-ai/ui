@@ -45,7 +45,7 @@ struct PagedListViewTests {
     let list = PagedListFixture()
     await list.showFirstPage(page([1], next: 2))
     let footer = try #require(list.model.footer)
-    #expect(try recognizedText(in: SystemPagedListFooter(footer), height: 100) == ["Load More"])
+    #expect(try await recognizedText(in: SystemPagedListFooter(footer), height: 100) == ["Load More"])
     guard case .more(let loadMore) = footer else { Issue.record("not the more footer"); return }
     loadMore()
     await list.loader.pages.waitForCalls(2)
@@ -59,13 +59,13 @@ struct PagedListViewTests {
     list.model.loadMore()
     await list.answer(failingWith: TestError())
     let failed = try #require(list.model.footer)
-    let failedText = try recognizedText(in: SystemPagedListFooter(failed), height: 120)
+    let failedText = try await recognizedText(in: SystemPagedListFooter(failed), height: 120)
     #expect(failedText == ["Couldn't Load More", "Try Again"])
     guard case .failed(_, let retry) = failed else { Issue.record("not the failed footer"); return }
     retry()
     await list.answer(with: page([2], next: nil))
     #expect(list.loader.tokens == [nil, 2, 2])
-    let endText = try recognizedText(in: SystemPagedListFooter(try #require(list.model.footer)), height: 100)
+    let endText = try await recognizedText(in: SystemPagedListFooter(try #require(list.model.footer)), height: 100)
     #expect(endText == ["No More Items"])
 
     let screen = PagedList(loadPage: { (_: Int?) in page([1], next: nil) }) { _ in
