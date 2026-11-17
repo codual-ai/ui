@@ -17,6 +17,11 @@ export function page(ids: readonly number[], next: number | null): Page<TestItem
   return { items: ids.map((id) => ({ id })), next };
 }
 
+/** Items with these IDs, for `appendNewer`. */
+export function items(...ids: readonly number[]): TestItem[] {
+  return ids.map((id) => ({ id }));
+}
+
 /** A page loader whose calls wait until the test answers them, recording the token of each. */
 export class FakePageLoader {
   readonly pages = new FakeLoader<Page<TestItem, number>>();
@@ -33,7 +38,9 @@ export class FakePageLoader {
 }
 
 /** Renders `usePagedList` on a fake loader, mounted, recording what it announces. */
-export async function renderPagedList(options: { readonly initialPage?: Page<TestItem, number> } = {}) {
+export async function renderPagedList(
+  options: { readonly initialPage?: Page<TestItem, number>; readonly inverted?: boolean } = {},
+) {
   const loader = new FakePageLoader();
   const announce = jest
     .spyOn(AccessibilityInfo, "announceForAccessibilityWithOptions")
@@ -74,10 +81,13 @@ export async function startRefresh(refresh: () => Promise<void>): Promise<{ read
  * Renders `usePagedList` inside an `<Activity>`, which hides a screen the way a navigator keeps it: its effects clean
  * up (the screen goes away) and run again (it appears), and its state stays.
  */
-export async function renderHideableList(loader: FakePageLoader) {
+export async function renderHideableList(
+  loader: FakePageLoader,
+  options: { readonly inverted?: boolean } = {},
+) {
   let latest: PagedListController<TestItem> | undefined;
   function Probe() {
-    latest = usePagedList(loader.load, { keyExtractor });
+    latest = usePagedList(loader.load, { keyExtractor, ...options });
     return null;
   }
   const screen = await render(

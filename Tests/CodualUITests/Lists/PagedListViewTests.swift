@@ -34,10 +34,10 @@ struct PagedListViewTests {
 
   @Test("LS-20 the announcements read as short sentences, with English plurals")
   func theAnnouncementsReadAsSentences() {
-    #expect(PagedListAnnouncement.loaded(count: 1, isEnd: false).text == "Loaded 1 more item.")
-    #expect(PagedListAnnouncement.loaded(count: 20, isEnd: true).text == "Loaded 20 more items. End of list.")
-    #expect(PagedListAnnouncement.end.text == "End of list.")
-    #expect(PagedListAnnouncement.failed.text == "Couldn't load more items.")
+    #expect(PagedListAnnouncement.loaded(count: 1, isEnd: false).text() == "Loaded 1 more item.")
+    #expect(PagedListAnnouncement.loaded(count: 20, isEnd: true).text() == "Loaded 20 more items. End of list.")
+    #expect(PagedListAnnouncement.end.text() == "End of list.")
+    #expect(PagedListAnnouncement.failed.text() == "Couldn't load more items.")
   }
 
   @Test("LS-21 the more footer is a Load More button that loads the next page")

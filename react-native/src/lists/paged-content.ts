@@ -29,6 +29,29 @@ export function firstPageContent<Item, Token>(
     .content;
 }
 
+/**
+ * The content with the items whose key isn't in it yet before its first, the newest first; `arrived` runs oldest
+ * first, as the items arrived.
+ */
+export function addingNewer<Item, Token>(
+  content: PagedContent<Item, Token>,
+  arrived: readonly Item[],
+  keyExtractor: (item: Item) => string,
+): { readonly content: PagedContent<Item, Token>; readonly added: number } {
+  const keys = new Set(content.keys);
+  const newer: Item[] = [];
+  for (const item of arrived) {
+    const key = keyExtractor(item);
+    if (keys.has(key)) continue;
+    keys.add(key);
+    newer.push(item);
+  }
+  return {
+    content: { ...content, items: [...newer.reverse(), ...content.items], keys },
+    added: newer.length,
+  };
+}
+
 /** The content with the page's items whose key isn't in it yet, and the page's next token. */
 export function addingPage<Item, Token>(
   content: PagedContent<Item, Token>,

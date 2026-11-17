@@ -104,6 +104,15 @@ public final class ScreenStatesModel<Value> {
     state = .content(value)
   }
 
+  /// Shows a value in place of the empty view or the content, for a behaviour built on this one, such as a chat
+  /// getting its first message. Does nothing in any other state.
+  func showContent(_ value: Value) {
+    switch state {
+    case .content, .empty: state = isEmpty(value) ? .empty : .content(value)
+    case .idle, .loading, .failed, .offline: return
+    }
+  }
+
   private func start() {
     generation += 1
     let id = generation

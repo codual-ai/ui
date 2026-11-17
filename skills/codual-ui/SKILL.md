@@ -129,6 +129,14 @@ PagedList(rememberPagedList(key = { it.id }) { token -> api.items(after = token)
   `endReached()` near the end, and put `PagedListAnnouncements(state)` beside the list so TalkBack hears new pages)
   or `usePagedList` (pass `endReached` to `onEndReached`), never by calling `loadMore`
   from a scroll callback: `loadMore` is the Load More button's action, and it goes on even after a stall.
+- **A chat or message history** is a reversed list, not a flipped one you scroll yourself: SwiftUI
+  `PagedListModel(direction: .reversed)` drawn with `PagedList(model:)` in
+  `ScrollView { LazyVStack { rows }.scrollTargetLayout() }`; Compose `rememberPagedList(reverseLayout = true)`;
+  React Native `usePagedList(loadPage, { keyExtractor, inverted: true })` drawn with `<PagedListView list={list} />`.
+  Pages come newest first (reverse an oldest-first API in the loader). Send new messages through
+  `appendNewer([message])`, oldest first; show a "new messages" button when `newItemCount > 0` that calls
+  `scrollToBottom()`. Don't add your own scroll-to-bottom effect, anchoring or de-duplication; React Native's
+  anchoring is `FlatList`'s `maintainVisibleContentPosition` (iOS and Android), which the list sets itself.
 
 ### Edge cases it already handles
 
@@ -153,6 +161,9 @@ Don't write code for these ([spec](../../spec/lists.md)):
 - A page load never belongs to a row, so scrolling away never cancels it (LS-24).
 - Drawing it yourself keeps the announcements (LS-25); an initial page shows with no request (LS-26); rows know
   their index and whether they're last (LS-27).
+- Reversed lists start at the newest item, load older pages at the top without moving the rows on screen, scroll
+  new items into view only at the bottom and count them otherwise, drop duplicates, refresh to the newest page,
+  keep items that arrive mid-load, and announce new items politely (LS-28 to LS-40).
 
 ## Forms
 

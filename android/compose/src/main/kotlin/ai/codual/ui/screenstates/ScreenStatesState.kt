@@ -121,6 +121,16 @@ public class ScreenStatesState<T>(
     if (state is ScreenState.Content) state = ScreenState.Content(value)
   }
 
+  /**
+   * Shows a value in place of the empty view or the content, for a behaviour built on this one, such as a chat
+   * getting its first message. Does nothing in any other state.
+   */
+  internal fun showContent(value: T) {
+    if (state is ScreenState.Content || state == ScreenState.Empty) {
+      state = if (isEmpty(value)) ScreenState.Empty else ScreenState.Content(value)
+    }
+  }
+
   private fun start() {
     generation += 1
     val id = generation

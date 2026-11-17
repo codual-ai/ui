@@ -112,6 +112,19 @@ export class ScreenStatesMachine<T> {
   }
 
   /**
+   * Shows a value in place of the empty view or the content, for a behaviour built on this one, such as a chat
+   * getting its first message. Does nothing in any other state.
+   */
+  showContent(value: T): void {
+    const { status } = this.snapshot.state;
+    if (status !== "content" && status !== "empty") return;
+    const state: ScreenState<T> = this.source().isEmpty(value)
+      ? { status: "empty" }
+      : { status: "content", value };
+    this.update({ state });
+  }
+
+  /**
    * Replaces the value shown, for a behaviour built on this one, such as a paged list adding a page. Does nothing
    * unless content is shown.
    */
