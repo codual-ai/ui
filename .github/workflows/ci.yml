@@ -25,6 +25,8 @@ jobs:
       - name: Build and test on an iOS simulator
         run: |
           device=$(xcrun simctl list devices available | grep -m1 -E '^ +iPhone' | grep -oE '[0-9A-F-]{36}')
+          # Boot the simulator and wait until it has fully started; UIKit's first use otherwise blocks the tests' main thread.
+          xcrun simctl bootstatus "$device" -b
           xcodebuild test -scheme CodualUI -destination "id=$device" -skip-testing:CodualUIStoreKitTests -quiet \
             -resultBundlePath "$RUNNER_TEMP/tests.xcresult"
           xcodebuild test -scheme CodualUI -destination "id=$device" -only-testing:CodualUIStoreKitTests -quiet \
