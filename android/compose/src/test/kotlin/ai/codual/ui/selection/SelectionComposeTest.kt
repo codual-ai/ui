@@ -3,7 +3,7 @@
 package ai.codual.ui.selection
 
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import ai.codual.ui.declareComponentActivity
+import ai.codual.ui.DeclareComposeActivity
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
@@ -17,7 +17,7 @@ import org.robolectric.RobolectricTestRunner
 abstract class SelectionComposeTest {
   protected val compose = createComposeRule()
 
-  @get:Rule val rules: RuleChain = RuleChain.outerRule(declareComponentActivity()).around(compose)
+  @get:Rule val rules: RuleChain = RuleChain.outerRule(DeclareComposeActivity()).around(compose)
 
   protected val test = TestScope(StandardTestDispatcher())
 

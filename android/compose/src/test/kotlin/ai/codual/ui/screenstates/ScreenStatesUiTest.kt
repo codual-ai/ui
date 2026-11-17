@@ -2,12 +2,12 @@
 
 package ai.codual.ui.screenstates
 
-import ai.codual.ui.declareComponentActivity
+import ai.codual.ui.DeclareComposeActivity
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -30,7 +30,7 @@ import org.robolectric.RobolectricTestRunner
 class ScreenStatesUiTest {
   private val compose = createComposeRule()
 
-  @get:Rule val rules: RuleChain = RuleChain.outerRule(declareComponentActivity()).around(compose)
+  @get:Rule val rules: RuleChain = RuleChain.outerRule(DeclareComposeActivity()).around(compose)
 
   private val test = TestScope(StandardTestDispatcher())
   private val loader = FakeLoader<List<String>>()

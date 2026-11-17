@@ -5,7 +5,7 @@ import {
   type AccessibilityState,
   BackHandler,
 } from "react-native";
-import { announcePolitely } from "../accessibility";
+import { announce } from "../announce";
 import type { SelectionAction, SelectionActivation, SelectionKind, SelectionSource } from "./config";
 import { announcementText, defaultSelectionLabels, type SelectionLabels } from "./labels";
 import { SelectionMachine } from "./machine";
@@ -89,7 +89,7 @@ export function useSelection<Item>(options: SelectionOptions<Item>): SelectionCo
     keyExtractor: options.keyExtractor,
     isDisabled: options.isDisabled ?? notDisabled,
     serverTotal: options.serverTotal,
-    announce: (announcement) => announcePolitely(announcementText(announcement, labels)),
+    announce: (announcement) => announce(announcementText(announcement, labels)),
   };
   const latest = useRef(source);
   useLayoutEffect(() => {

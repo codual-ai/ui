@@ -21,10 +21,26 @@ jobs:
         with:
           persist-credentials: false
       - run: swift format lint --strict -r Sources Tests Package.swift
+      # StoreKit Testing runs on its own: its session holds up the main thread of every test running beside it.
       - name: Build and test on an iOS simulator
         run: |
           device=$(xcrun simctl list devices available | grep -m1 -E '^ +iPhone' | grep -oE '[0-9A-F-]{36}')
-          xcodebuild test -scheme CodualUI -destination "id=$device" -quiet
+          xcodebuild test -scheme CodualUI -destination "id=$device" -skip-testing:CodualUIStoreKitTests -quiet \
+            -resultBundlePath "$RUNNER_TEMP/tests.xcresult"
+          xcodebuild test -scheme CodualUI -destination "id=$device" -only-testing:CodualUIStoreKitTests -quiet \
+            -resultBundlePath "$RUNNER_TEMP/storekit-tests.xcresult"
+      # xcodebuild -quiet names a failed test without its message; the result bundle has it.
+      - name: Show test failures
+        if: failure()
+        run: |
+          bundles=$(ls -d "$RUNNER_TEMP"/*.xcresult 2>/dev/null || true)
+          [ -n "$bundles" ] && python3 .github/scripts/print-test-failures.py $bundles
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: swift-test-results
+          path: ${{ runner.temp }}/*.xcresult
+          retention-days: 7
 
   android:
     runs-on: ubuntu-latest

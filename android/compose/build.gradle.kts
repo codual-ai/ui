@@ -58,9 +58,9 @@ dependencies {
   api(libs.compose.runtime)
   api(libs.compose.ui)
   api(libs.kotlinx.coroutines.core)
-  implementation(libs.compose.foundation)
+  // Forms' field bindings return its KeyboardOptions and KeyboardActions.
+  api(libs.compose.foundation)
   implementation(libs.compose.material3)
-  // BackHandler, for leaving the selection mode on back; Material 3 already brings this version.
   implementation(libs.activity.compose)
 
   testImplementation(platform(libs.compose.bom))

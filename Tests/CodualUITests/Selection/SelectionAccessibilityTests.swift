@@ -88,13 +88,13 @@ struct SelectionAccessibilityTests {
   }
 
   @Test("SL-23 the Select button enters the mode and is Done inside it; rows offer the Select action")
-  func nothingNeedsALongPress() throws {
+  func nothingNeedsALongPress() async throws {
     let fixture = SelectionFixture()
     fixture.show([1, 2])
-    #expect(try recognizedText(in: SelectionModeButton(fixture.selection), height: 80) == ["Select"])
+    #expect(try await recognizedText(in: SelectionModeButton(fixture.selection), height: 80) == ["Select"])
     #expect(fixture.selection.rowAccessibility(TestItem(id: 1)).offersSelectAction)
     fixture.selection.enter()
-    #expect(try recognizedText(in: SelectionModeButton(fixture.selection), height: 80) == ["Done"])
+    #expect(try await recognizedText(in: SelectionModeButton(fixture.selection), height: 80) == ["Done"])
     #expect(!fixture.selection.rowAccessibility(TestItem(id: 1)).offersSelectAction)
     fixture.selection.exit()
     fixture.disabled = [2]
@@ -102,25 +102,25 @@ struct SelectionAccessibilityTests {
   }
 
   @Test("SL-23 an always active selection shows no Select button")
-  func anAlwaysActiveSelectionHasNoSelectButton() throws {
+  func anAlwaysActiveSelectionHasNoSelectButton() async throws {
     let fixture = SelectionFixture(activation: .always)
-    #expect(try recognizedText(in: SelectionModeButton(fixture.selection), height: 80).isEmpty)
+    #expect(try await recognizedText(in: SelectionModeButton(fixture.selection), height: 80).isEmpty)
   }
 
   @Test("SL-24 the built-in text reads in English, with plurals")
-  func theBuiltInTextIsLocalisable() throws {
+  func theBuiltInTextIsLocalisable() async throws {
     #expect(SelectionText.title(1) == "1 Selected")
     #expect(SelectionText.title(3) == "3 Selected")
     #expect(SelectionText.selectAction == "Select")
     let fixture = SelectionFixture()
     fixture.show([1])
     fixture.selection.enter()
-    #expect(try recognizedText(in: SelectAllButton(fixture.selection), height: 80) == ["Select All"])
+    #expect(try await recognizedText(in: SelectAllButton(fixture.selection), height: 80) == ["Select All"])
     fixture.selection.selectAll()
-    #expect(try recognizedText(in: SelectAllButton(fixture.selection), height: 80) == ["Deselect All"])
+    #expect(try await recognizedText(in: SelectAllButton(fixture.selection), height: 80) == ["Deselect All"])
     let single = SelectionFixture(kind: .single)
     single.selection.enter()
-    #expect(try recognizedText(in: SelectAllButton(single.selection), height: 80).isEmpty)
+    #expect(try await recognizedText(in: SelectAllButton(single.selection), height: 80).isEmpty)
   }
 
   @Test("SL-29 EditButton's EditMode enters and leaves the mode")

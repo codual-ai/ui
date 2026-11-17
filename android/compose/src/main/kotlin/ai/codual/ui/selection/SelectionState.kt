@@ -1,6 +1,6 @@
 package ai.codual.ui.selection
 
-import ai.codual.ui.Announcements
+import ai.codual.ui.Announcer
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -56,7 +56,7 @@ public class SelectionState<Item, Key : Any>(
   private var itemsBecameNoneDuringAction = false
 
   /** What a screen reader should hear after each change the person makes. */
-  internal val announcements = Announcements<SelectionAnnouncement>()
+  internal val announcer = Announcer<SelectionAnnouncement>()
 
   /** The selected items' keys, in the order they were selected. */
   public val selectedKeys: List<Key>
@@ -141,7 +141,7 @@ public class SelectionState<Item, Key : Any>(
         }
         kind == SelectionKind.Single -> setOf(itemKey)
         limit != null && selected.size >= limit -> {
-          announcements.announce(SelectionAnnouncement.Limit(limit))
+          announcer.announce(SelectionAnnouncement.Limit(limit))
           return
         }
         else -> selected + itemKey
@@ -293,6 +293,6 @@ public class SelectionState<Item, Key : Any>(
   }
 
   private fun announceCount() {
-    announcements.announce(SelectionAnnouncement.Count(count, total))
+    announcer.announce(SelectionAnnouncement.Count(count, total))
   }
 }

@@ -10,7 +10,7 @@ export function isOfflineError(error: unknown): boolean {
 }
 
 /** Whether a load ended in an `AbortError`, the error an aborted `AbortSignal` makes `fetch` throw. */
-function isAbortError(error: unknown): boolean {
+export function isAbortError(error: unknown): boolean {
   return typeof error === "object" && error !== null && "name" in error && error.name === "AbortError";
 }
 

@@ -1,6 +1,6 @@
 package ai.codual.ui.lists
 
-import ai.codual.ui.Announcements
+import ai.codual.ui.Announcer
 import ai.codual.ui.screenstates.ScreenState
 import ai.codual.ui.screenstates.ScreenStatesState
 import ai.codual.ui.screenstates.isOfflineError
@@ -56,8 +56,8 @@ public class PagedListState<Item, Token : Any>(
     }
   }
 
-  /** What a screen reader should hear about each page after the first. */
-  internal val announcements = Announcements<PagedListAnnouncement>()
+  /** What a screen reader should hear about the last page. */
+  internal val announcer: Announcer<PagedListAnnouncement> = Announcer()
 
   private var pageLoad: Job? = null
   private var generation = 0
@@ -200,11 +200,11 @@ public class PagedListState<Item, Token : Any>(
           return
         }
         screen.replaceContent(added.content.withPaging(if (isStalled) Paging.Stalled else Paging.Ready))
-        PagedListAnnouncement.of(added.count, isEnd = next == null)?.let(announcements::announce)
+        PagedListAnnouncement.of(added.count, isEnd = next == null)?.let(announcer::announce)
       },
       onFailure = { error ->
         screen.replaceContent(content.withPaging(Paging.Failed(error)))
-        announcements.announce(PagedListAnnouncement.Failed)
+        announcer.announce(PagedListAnnouncement.Failed)
       },
     )
   }

@@ -2,7 +2,9 @@
 
 package ai.codual.ui.lists
 
-import ai.codual.ui.declareComponentActivity
+import ai.codual.ui.DeclareComposeActivity
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import ai.codual.ui.screenstates.TestError
 import ai.codual.ui.screenstates.ScreenState
 import androidx.compose.foundation.layout.Box
@@ -28,9 +30,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Rule
@@ -43,7 +43,7 @@ import org.robolectric.RobolectricTestRunner
 class PagedListUiTest {
   private val compose = createComposeRule()
 
-  @get:Rule val rules: RuleChain = RuleChain.outerRule(declareComponentActivity()).around(compose)
+  @get:Rule val rules: RuleChain = RuleChain.outerRule(DeclareComposeActivity()).around(compose)
 
   private val test = TestScope(StandardTestDispatcher())
   private val loader = FakePageLoader()
@@ -118,9 +118,9 @@ class PagedListUiTest {
     compose.onNodeWithContentDescription("Couldn't load more items.").assertExists()
     compose.onNodeWithText("Try Again").performClick()
     settle()
-    val failureAnnouncement = list.announcements.latest
+    val failureAnnouncement = list.announcer.latest
     answer(page(listOf(1), next = 3))
-    assertEquals(failureAnnouncement, list.announcements.latest)
+    assertEquals(failureAnnouncement, list.announcer.latest)
     answer(page(listOf(2), next = null))
     compose.onNodeWithContentDescription("Loaded 1 more item. End of list.").assertExists()
   }

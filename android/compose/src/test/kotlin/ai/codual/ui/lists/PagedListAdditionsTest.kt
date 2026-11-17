@@ -11,9 +11,9 @@ class PagedListAdditionsTest {
     val fixture = PagedListFixture(this)
     fixture.showFirstPage(page(listOf(1), next = 2))
     fixture.loadNextPage(page(listOf(2), next = 3))
-    val first = fixture.list.announcements.latest
+    val first = fixture.list.announcer.latest
     fixture.loadNextPage(page(listOf(3), next = 4))
-    val second = fixture.list.announcements.latest
+    val second = fixture.list.announcer.latest
     assertEquals(first?.value, second?.value)
     assertTrue(first != second)
   }

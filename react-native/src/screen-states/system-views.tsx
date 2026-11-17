@@ -85,9 +85,7 @@ export function SystemRefreshErrorAlert(props: {
   readonly labels: ScreenStatesLabels;
 }) {
   const { error, dismiss, labels } = props;
-  const message = isOfflineError(error)
-    ? labels.offlineMessage
-    : (errorMessage(error) ?? labels.failedMessage);
+  const message = failureMessage(error, labels);
   const { refreshFailed, ok } = labels;
   const alerted = useRef<{ readonly error: unknown }>(undefined);
   useEffect(() => {
@@ -96,4 +94,13 @@ export function SystemRefreshErrorAlert(props: {
     Alert.alert(refreshFailed, message, [{ text: ok, onPress: dismiss }], { onDismiss: dismiss });
   }, [error, dismiss, message, refreshFailed, ok]);
   return null;
+}
+
+/** What an alert says about a failure: no connection, the error's own message, or that something went wrong. */
+export function failureMessage(
+  error: unknown,
+  labels: Pick<ScreenStatesLabels, "offlineMessage" | "failedMessage">,
+): string {
+  if (isOfflineError(error)) return labels.offlineMessage;
+  return errorMessage(error) ?? labels.failedMessage;
 }

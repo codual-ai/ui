@@ -45,11 +45,7 @@ public fun SystemOfflineView(retry: () -> Unit) {
 /** Shows a refresh error as an alert dialog, and dismisses it when the dialog closes. */
 @Composable
 public fun SystemRefreshErrorDialog(error: Throwable, dismiss: () -> Unit) {
-  val message =
-    when {
-      isOfflineError(error) -> stringResource(R.string.codual_ui_offline_message)
-      else -> userFacingMessage(error) ?: stringResource(R.string.codual_ui_failed_message)
-    }
+  val message = failureMessage(error)
   AlertDialog(
     onDismissRequest = dismiss,
     confirmButton = { TextButton(onClick = dismiss) { Text(stringResource(R.string.codual_ui_ok)) } },
@@ -68,12 +64,12 @@ private fun MessageView(title: String, message: String, retry: () -> Unit) {
 }
 
 @Composable
-private fun Title(text: String) {
+internal fun Title(text: String) {
   Text(text, Modifier.semantics { heading() }, style = MaterialTheme.typography.titleMedium)
 }
 
 @Composable
-private fun Centered(content: @Composable () -> Unit) {
+internal fun Centered(content: @Composable () -> Unit) {
   Column(
     Modifier.fillMaxSize(),
     verticalArrangement = Arrangement.Center,
@@ -82,3 +78,11 @@ private fun Centered(content: @Composable () -> Unit) {
     content()
   }
 }
+
+/** What a dialog says about a failure: no connection, the error's own message, or that something went wrong. */
+@Composable
+internal fun failureMessage(error: Throwable): String =
+  when {
+    isOfflineError(error) -> stringResource(R.string.codual_ui_offline_message)
+    else -> userFacingMessage(error) ?: stringResource(R.string.codual_ui_failed_message)
+  }

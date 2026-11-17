@@ -121,7 +121,7 @@ public fun selectionTitle(selection: SelectionState<*, *>): String {
  */
 @Composable
 public fun SelectionAnnouncements(selection: SelectionState<*, *>, modifier: Modifier = Modifier) {
-  LiveRegionAnnouncements(selection.announcements, modifier) { announcementText(it) }
+  LiveRegionAnnouncements(selection.announcer, modifier) { announcementText(it) }
 }
 
 @Composable

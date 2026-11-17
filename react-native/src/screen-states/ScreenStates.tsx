@@ -5,10 +5,11 @@ import {
   RefreshControl,
   type RefreshControlProps,
   ScrollView,
+  type ScrollViewProps,
   StyleSheet,
   View,
 } from "react-native";
-import type { Load } from "./machine";
+import { isShowingLoading, type Load } from "./machine";
 import {
   defaultScreenStatesLabels,
   type ScreenStatesLabels,
@@ -55,18 +56,28 @@ export function ScreenStates<T>(props: ScreenStatesProps<T>) {
 export function ScreenStatesView<T>({
   views: props,
   screen,
+  focusWhenLoaded = "move",
+  pullToRefreshProps,
 }: {
   readonly views: ScreenStatesViews<T>;
   readonly screen: ScreenStatesController<T>;
+  /** `stay` leaves the screen reader where it is, for a behaviour whose field keeps focus, such as search. */
+  readonly focusWhenLoaded?: FocusWhenLoaded;
+  /** For the scroll view around the empty, failed and offline views: search's keyboard dismissal, say. */
+  readonly pullToRefreshProps?: ScrollViewProps | undefined;
 }) {
   const labels = { ...defaultScreenStatesLabels, ...props.labels };
   const refreshControl = <RefreshControl refreshing={screen.isRefreshing} onRefresh={screen.refresh} />;
   const { refreshError, dismissRefreshError } = screen;
-  const view = useFocusWhenLoadingEnds(screen.state.status === "idle" || screen.state.status === "loading");
+  const view = useFocusWhenLoadingEnds(isShowingLoading(screen.state), focusWhenLoaded);
   return (
     <>
       <View ref={view} style={styles.screen}>
-        {stateView(props, screen, labels, refreshControl)}
+        {stateView(props, screen, labels, refreshControl, (view) => (
+          <PullToRefresh refreshControl={refreshControl} scrollViewProps={pullToRefreshProps}>
+            {view}
+          </PullToRefresh>
+        ))}
       </View>
       {refreshError === undefined
         ? null
@@ -75,16 +86,19 @@ export function ScreenStatesView<T>({
   );
 }
 
+/** Whether the screen reader moves to the view that replaced the spinner, once loading ends. */
+export type FocusWhenLoaded = "move" | "stay";
+
 /** Moves the screen reader to the view that replaced the spinner, once loading ends. */
-function useFocusWhenLoadingEnds(isLoading: boolean) {
+function useFocusWhenLoadingEnds(isLoading: boolean, focusWhenLoaded: FocusWhenLoaded) {
   const view = useRef<HostInstance>(null);
   const wasLoading = useRef(isLoading);
   useEffect(() => {
-    if (wasLoading.current && !isLoading && view.current) {
+    if (focusWhenLoaded === "move" && wasLoading.current && !isLoading && view.current) {
       AccessibilityInfo.sendAccessibilityEvent(view.current, "focus");
     }
     wasLoading.current = isLoading;
-  }, [isLoading]);
+  }, [isLoading, focusWhenLoaded]);
   return view;
 }
 
@@ -94,8 +108,8 @@ function stateView<T>(
   { state, retry }: ScreenStatesController<T>,
   labels: ScreenStatesLabels,
   refreshControl: ReactElement<RefreshControlProps>,
+  pullable: (view: ReactNode) => ReactNode,
 ): ReactNode {
-  const pullable = (view: ReactNode) => <PullToRefresh refreshControl={refreshControl}>{view}</PullToRefresh>;
   // A slot the app passes is used even when it renders nothing.
   switch (state.status) {
     case "idle":
@@ -133,10 +147,12 @@ function refreshErrorView<T>(
 /** A full-size scroll view, so a view that may not scroll can still be pulled to refresh. */
 function PullToRefresh(props: {
   readonly refreshControl: ReactElement<RefreshControlProps>;
+  readonly scrollViewProps: ScrollViewProps | undefined;
   readonly children: ReactNode;
 }) {
   return (
     <ScrollView
+      {...props.scrollViewProps}
       testID="screen-states-pull-to-refresh"
       contentContainerStyle={styles.fill}
       refreshControl={props.refreshControl}

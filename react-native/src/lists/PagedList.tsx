@@ -1,9 +1,14 @@
 import { type ReactElement, type ReactNode, useLayoutEffect } from "react";
-import { FlatList, type FlatListProps, type ListRenderItemInfo } from "react-native";
+import { FlatList, type FlatListProps, type ListRenderItemInfo, type ScrollViewProps } from "react-native";
 import type { ScreenState } from "../screen-states/machine";
-import { ScreenStatesView, type ScreenStatesViews } from "../screen-states/ScreenStates";
+import {
+  type FocusWhenLoaded,
+  ScreenStatesView,
+  type ScreenStatesViews,
+} from "../screen-states/ScreenStates";
 import type { ScreenStatesLabels } from "../screen-states/system-views";
 import type { SelectionController } from "../selection/use-selection";
+import type { PagedListController } from "./controller";
 import type { LoadPage, PagedListFooter } from "./machine";
 import { defaultPagedListLabels, type PagedListLabels, SystemPagedListFooter } from "./system-footer";
 import { type PagedListOptions, usePagedList } from "./use-paged-list";
@@ -24,16 +29,8 @@ export interface PagedListRenderItemInfo<Item> extends ListRenderItemInfo<Item> 
 
 export interface PagedListProps<Item, Token>
   extends Omit<PagedListOptions<Item, Token>, "labels">,
-    Omit<ScreenStatesViews<readonly Item[]>, "content" | "labels">,
-    Omit<FlatListProps<Item>, OwnListProps> {
+    Omit<PagedListViewProps<Item>, "list" | "focusWhenLoaded" | "pullToRefreshProps"> {
   readonly loadPage: LoadPage<Item, Token>;
-  readonly renderItem: (info: PagedListRenderItemInfo<Item>) => ReactElement | null;
-  /** After the last row. By default, a progress indicator, Try Again, Load More, or an end message. */
-  readonly footer?: (footer: PagedListFooter) => ReactNode;
-  /** The text of the views you leave out, and of the announcements. */
-  readonly labels?: Partial<ScreenStatesLabels & PagedListLabels>;
-  /** A selection kept to the items the list has loaded; rows redraw as it changes. */
-  readonly selection?: SelectionController<Item>;
 }
 
 const NO_ITEMS: readonly never[] = [];
@@ -45,16 +42,40 @@ const NO_ITEMS: readonly never[] = [];
  * prop goes to the `FlatList`.
  */
 export function PagedList<Item, Token>(props: PagedListProps<Item, Token>) {
-  checkThreshold(props.onEndReachedThreshold);
-  const { loadPage, keyExtractor, isOffline, initialPage, renderItem, footer, labels, selection, ...rest } =
-    props;
-  const { loading, empty, failed, offline, refreshError, ...listProps } = rest;
+  const { loadPage, isOffline, initialPage, ...viewProps } = props;
+  const { keyExtractor, labels } = viewProps;
   const list = usePagedList(loadPage, {
     keyExtractor,
     ...(isOffline && { isOffline }),
     ...(labels && { labels }),
     ...(initialPage && { initialPage }),
   });
+  return <PagedListView {...viewProps} list={list} />;
+}
+
+/** The views of a paged list's controller, for `PagedList` and the behaviours built on it. */
+export interface PagedListViewProps<Item>
+  extends Omit<ScreenStatesViews<readonly Item[]>, "content" | "labels">,
+    Omit<FlatListProps<Item>, OwnListProps> {
+  readonly list: PagedListController<Item>;
+  readonly keyExtractor: (item: Item) => string;
+  readonly renderItem: (info: PagedListRenderItemInfo<Item>) => ReactElement | null;
+  /** After the last row. By default, a progress indicator, Try Again, Load More, or an end message. */
+  readonly footer?: (footer: PagedListFooter) => ReactNode;
+  /** The text of the views you leave out, and of the announcements. */
+  readonly labels?: Partial<ScreenStatesLabels & PagedListLabels>;
+  readonly focusWhenLoaded?: FocusWhenLoaded;
+  /** Props for the scroll view that lets the empty, failed and offline views be pulled to refresh. */
+  readonly pullToRefreshProps?: ScrollViewProps;
+  /** A selection kept to the items the list has loaded; rows redraw as it changes. */
+  readonly selection?: SelectionController<Item>;
+}
+
+export function PagedListView<Item>(props: PagedListViewProps<Item>) {
+  checkThreshold(props.onEndReachedThreshold);
+  const { list, keyExtractor, renderItem, footer, labels, focusWhenLoaded, pullToRefreshProps, ...rest } =
+    props;
+  const { loading, empty, failed, offline, refreshError, selection, ...listProps } = rest;
   const loadedItems = knownItems(list.state);
   const updateSelection = selection?.updateItems;
   // Every render: updating is idempotent, and catches a changed `isDisabled` as well as new items.
@@ -83,7 +104,14 @@ export function PagedList<Item, Token>(props: PagedListProps<Item, Token>) {
       />
     ),
   };
-  return <ScreenStatesView views={views} screen={list} />;
+  return (
+    <ScreenStatesView
+      views={views}
+      screen={list}
+      {...(focusWhenLoaded && { focusWhenLoaded })}
+      {...(pullToRefreshProps && { pullToRefreshProps })}
+    />
+  );
 }
 
 /** The items once the list has loaded: its content's, or none for the empty view. Until then, `undefined`. */

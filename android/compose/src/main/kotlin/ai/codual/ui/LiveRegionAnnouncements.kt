@@ -20,44 +20,44 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 
 /** An announcement, numbered so two the same in a row are both spoken. */
-internal data class NumberedAnnouncement<T>(val number: Int, val value: T)
+internal data class NumberedAnnouncement<out T>(val number: Int, val value: T)
 
 /**
- * What a behaviour's state has to say to screen readers, kept with the state (a ViewModel's, say) along with the last
- * one spoken, so coming back to the screen or rotating it doesn't speak it again. TalkBack needs a view to speak it:
- * [LiveRegionAnnouncements].
+ * What a behaviour's state wants a screen reader to hear, for a live region to speak. Kept with the state (a
+ * ViewModel's, say), so coming back to the screen or rotating it doesn't speak the last one again.
  */
 @Stable
-internal class Announcements<T> {
+internal class Announcer<T> {
   var latest: NumberedAnnouncement<T>? by mutableStateOf(null)
     private set
 
-  var lastSpoken: Int = 0
+  /** The number of the last announcement a live region has spoken. */
+  var spoken: Int = 0
 
   fun announce(value: T) {
     latest = NumberedAnnouncement((latest?.number ?: 0) + 1, value)
   }
 }
 
-/** A polite live region that speaks each of [announcements] once, after whatever TalkBack is saying, in [text]. */
+/** A polite live region that speaks each new announcement of [announcer] once, after whatever TalkBack is saying. */
 @Composable
 internal fun <T> LiveRegionAnnouncements(
-  announcements: Announcements<T>,
+  announcer: Announcer<T>,
   modifier: Modifier,
   text: @Composable (T) -> String,
 ) {
-  val announcement = announcements.latest
+  val announcement = announcer.latest
   val latestText by rememberUpdatedState(announcement?.let { text(it.value) })
-  var spoken by remember(announcements) { mutableStateOf<String?>(null) }
-  // TalkBack speaks a live region when its text changes, so each new announcement clears it for a frame first: the
-  // same words twice in a row are spoken twice.
-  LaunchedEffect(announcements, announcement?.number) {
+  var spoken by remember(announcer) { mutableStateOf<String?>(null) }
+  // TalkBack speaks a live region when its text changes, so each new announcement clears it for a frame first:
+  // the same words twice in a row are spoken twice.
+  LaunchedEffect(announcer, announcement?.number) {
     val number = announcement?.number ?: return@LaunchedEffect
-    if (number == announcements.lastSpoken) return@LaunchedEffect
+    if (number == announcer.spoken) return@LaunchedEffect
     spoken = null
     withFrameNanos {}
     spoken = latestText
-    announcements.lastSpoken = number
+    announcer.spoken = number
   }
   // One pixel high, as TalkBack skips nodes with no size.
   Box(
