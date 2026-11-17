@@ -13,6 +13,12 @@ export interface PagedListLabels {
   readonly loadedMore: (count: number) => string;
   readonly endOfList: string;
   readonly loadMoreFailedAnnouncement: string;
+  /** The end footer of an inverted list, a chat's start. */
+  readonly noEarlierItems: string;
+  /** The end of an inverted list, announced. */
+  readonly startOfList: string;
+  /** "1 new item.", "3 new items.", for newer items arriving in an inverted list. */
+  readonly newItems: (count: number) => string;
 }
 
 export const defaultPagedListLabels: PagedListLabels = {
@@ -24,19 +30,29 @@ export const defaultPagedListLabels: PagedListLabels = {
   loadedMore: (count) => (count === 1 ? "Loaded 1 more item." : `Loaded ${count} more items.`),
   endOfList: "End of list.",
   loadMoreFailedAnnouncement: "Couldn't load more items.",
+  noEarlierItems: "No Earlier Items",
+  startOfList: "Start of list.",
+  newItems: (count) => (count === 1 ? "1 new item." : `${count} new items.`),
 };
 
-/** What a screen reader hears when a page after the first finishes. */
-export function announcementText(announcement: PagedListAnnouncement, labels: PagedListLabels): string {
+/** What a screen reader hears when a page after the first finishes. The end of an inverted list is its start. */
+export function announcementText(
+  announcement: PagedListAnnouncement,
+  labels: PagedListLabels,
+  inverted = false,
+): string {
+  const end = inverted ? labels.startOfList : labels.endOfList;
   switch (announcement.kind) {
     case "loaded": {
       const loaded = labels.loadedMore(announcement.count);
-      return announcement.isEnd ? `${loaded} ${labels.endOfList}` : loaded;
+      return announcement.isEnd ? `${loaded} ${end}` : loaded;
     }
     case "end":
-      return labels.endOfList;
+      return end;
     case "failed":
       return labels.loadMoreFailedAnnouncement;
+    case "newItems":
+      return labels.newItems(announcement.count);
   }
 }
 
@@ -44,9 +60,12 @@ export function announcementText(announcement: PagedListAnnouncement, labels: Pa
 export function SystemPagedListFooter({
   footer,
   labels,
+  inverted = false,
 }: {
   readonly footer: PagedListFooter;
   readonly labels: PagedListLabels;
+  /** An inverted list's end reads as the start of a chat. */
+  readonly inverted?: boolean;
 }) {
   switch (footer.status) {
     case "more":
@@ -67,6 +86,6 @@ export function SystemPagedListFooter({
         </View>
       );
     case "end":
-      return <Text>{labels.noMoreItems}</Text>;
+      return <Text>{inverted ? labels.noEarlierItems : labels.noMoreItems}</Text>;
   }
 }

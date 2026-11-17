@@ -20,6 +20,11 @@ and versions follow [Semantic Versioning](https://semver.org/).
   cancellation, announcements for screen readers, a first page the screen already has, and each row's position.
   The spec is `implemented`, with a test for each of its 27 edge cases on every platform it applies to.
 - The `codual-ui` skill covers lists.
+- Reversed (chat) lists on SwiftUI (`direction: .reversed`, `PagedList(model:)`), Jetpack Compose
+  (`reverseLayout = true`) and React Native (`inverted`, `<PagedListView>`): the newest item at the bottom, older
+  pages above without moving the rows on screen, `appendNewer` for new items with `newItemCount` and
+  `scrollToBottom()`, de-duplication, refresh to the newest page and polite announcements. Edge cases LS-28 to
+  LS-40, tested on every platform they apply to; the skill covers them.
 - Forms on SwiftUI (`FormModel`, `.formField`), Jetpack Compose (`FormState`, `rememberForm`, `field`) and React
   Native (`useForm`, `form.field`): fields in keyboard order with rules (required, length, pattern, email, a number
   in the person's locale, matching another field, the app's own), async rules with a debounce and cancellation,

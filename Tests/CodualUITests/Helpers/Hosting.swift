@@ -25,7 +25,43 @@ func recognizedText(in view: some View, height: CGFloat = 600) async throws -> [
   let renderer = ImageRenderer(content: view.frame(width: 390, height: height).background(.white))
   renderer.scale = 3
   let image = try #require(renderer.cgImage)
-  return try await Task.detached { try readText(in: image) }.value
+  return try await withDeadline(.seconds(30), "reading the text") { try readText(in: image) }
+}
+
+struct TimedOut: Error, CustomStringConvertible {
+  let what: String
+  var description: String { "Timed out \(what)." }
+}
+
+/// Runs `work` off the main actor and returns its result, or throws `TimedOut` if it takes longer than `timeout`; the
+/// work itself can't be stopped, but the test goes on and fails with its name.
+func withDeadline<T: Sendable>(
+  _ timeout: Duration, _ what: String, _ work: @escaping @Sendable () throws -> T
+) async throws -> T {
+  let result = ResultBox<T>()
+  return try await withCheckedThrowingContinuation { continuation in
+    result.continuation = continuation
+    Task.detached { result.finish(Result(catching: work)) }
+    Task.detached {
+      try? await Task.sleep(for: timeout)
+      result.finish(.failure(TimedOut(what: what)))
+    }
+  }
+}
+
+/// Resumes its continuation once, with whichever result comes first.
+private final class ResultBox<T: Sendable>: @unchecked Sendable {
+  private let lock = NSLock()
+  private var resumed = false
+  var continuation: CheckedContinuation<T, any Error>?
+
+  func finish(_ result: Result<T, any Error>) {
+    lock.lock()
+    defer { lock.unlock() }
+    guard !resumed, let continuation else { return }
+    resumed = true
+    continuation.resume(with: result)
+  }
 }
 
 private func readText(in image: CGImage) throws -> [String] {

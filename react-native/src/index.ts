@@ -36,7 +36,13 @@ export {
 } from "./forms/use-form";
 export type { PagedListController } from "./lists/controller";
 export type { LoadPage, PagedListFooter, PagedListSnapshot } from "./lists/machine";
-export { PagedList, type PagedListProps, type PagedListRenderItemInfo } from "./lists/PagedList";
+export {
+  PagedList,
+  type PagedListProps,
+  type PagedListRenderItemInfo,
+  PagedListView,
+  type PagedListViewProps,
+} from "./lists/PagedList";
 export type { Page } from "./lists/paged-content";
 export { defaultPagedListLabels, type PagedListLabels, SystemPagedListFooter } from "./lists/system-footer";
 export { type PagedListOptions, usePagedList } from "./lists/use-paged-list";

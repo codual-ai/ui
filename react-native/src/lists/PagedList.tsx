@@ -7,6 +7,7 @@ import {
 } from "../screen-states/ScreenStates";
 import type { ScreenStatesLabels } from "../screen-states/system-views";
 import type { PagedListController } from "./controller";
+import { type InvertedListProps, useInvertedList } from "./inverted-list";
 import type { LoadPage, PagedListFooter } from "./machine";
 import { defaultPagedListLabels, type PagedListLabels, SystemPagedListFooter } from "./system-footer";
 import { type PagedListOptions, usePagedList } from "./use-paged-list";
@@ -18,7 +19,9 @@ type OwnListProps =
   | "keyExtractor"
   | "onEndReached"
   | "refreshControl"
-  | "ListFooterComponent";
+  | "ListFooterComponent"
+  | "inverted"
+  | "maintainVisibleContentPosition";
 
 /** `FlatList`'s row info, and whether the row is the last item loaded so far: a rounded last card, say. */
 export interface PagedListRenderItemInfo<Item> extends ListRenderItemInfo<Item> {
@@ -35,21 +38,27 @@ export interface PagedListProps<Item, Token>
  * A list of data that comes in pages, in a `FlatList` of the app's own rows: the first page as a screen state, the
  * next page on `onEndReached`, and a footer after the last row while a page loads, when one fails, and at the end.
  * Pull to refresh starts again from the first page. Items with a key already in the list are dropped. Any other
- * prop goes to the `FlatList`.
+ * prop goes to the `FlatList`. For a chat that takes new messages, keep the state yourself with `usePagedList`
+ * (`inverted: true`) and draw it with `PagedListView`.
  */
 export function PagedList<Item, Token>(props: PagedListProps<Item, Token>) {
-  const { loadPage, isOffline, initialPage, ...viewProps } = props;
+  const { loadPage, isOffline, initialPage, inverted, ...viewProps } = props;
   const { keyExtractor, labels } = viewProps;
   const list = usePagedList(loadPage, {
     keyExtractor,
     ...(isOffline && { isOffline }),
     ...(labels && { labels }),
     ...(initialPage && { initialPage }),
+    ...(inverted && { inverted }),
   });
   return <PagedListView {...viewProps} list={list} />;
 }
 
-/** The views of a paged list's controller, for `PagedList` and the behaviours built on it. */
+/**
+ * The views of a paged list's controller, for `PagedList`, the behaviours built on it, and apps that keep the state
+ * themselves. An inverted controller is a chat: the newest row at the bottom, older pages above it, and newer items
+ * scrolling into view only when the newest row is on screen.
+ */
 export interface PagedListViewProps<Item>
   extends Omit<ScreenStatesViews<readonly Item[]>, "content" | "labels">,
     Omit<FlatListProps<Item>, OwnListProps> {
@@ -70,8 +79,24 @@ export function PagedListView<Item>(props: PagedListViewProps<Item>) {
   const { list, keyExtractor, renderItem, footer, labels, focusWhenLoaded, pullToRefreshProps, ...rest } =
     props;
   const { loading, empty, failed, offline, refreshError, ...listProps } = rest;
+  const {
+    onViewableItemsChanged,
+    viewabilityConfig,
+    viewabilityConfigCallbackPairs,
+    onScrollBeginDrag,
+    ...others
+  } = listProps;
+  const own: InvertedListProps<Item> = {
+    ...(onViewableItemsChanged && { onViewableItemsChanged }),
+    ...(viewabilityConfig && { viewabilityConfig }),
+    ...(viewabilityConfigCallbackPairs && { viewabilityConfigCallbackPairs }),
+    ...(onScrollBeginDrag && { onScrollBeginDrag }),
+  };
+  const direction = useInvertedList(list, own);
   const footerLabels = { ...defaultPagedListLabels, ...labels };
-  const footerView = list.footer && <FooterView footer={list.footer} render={footer} labels={footerLabels} />;
+  const footerView = list.footer && (
+    <FooterView footer={list.footer} render={footer} labels={footerLabels} inverted={list.inverted} />
+  );
   const views: ScreenStatesViews<readonly Item[]> = {
     ...(loading && { loading }),
     ...(empty && { empty }),
@@ -81,7 +106,9 @@ export function PagedListView<Item>(props: PagedListViewProps<Item>) {
     ...(labels && { labels }),
     content: (items, refreshControl) => (
       <FlatList
-        {...listProps}
+        {...others}
+        {...direction.props}
+        ref={direction.ref}
         data={items}
         renderItem={(info) => renderItem({ ...info, isLast: info.index === items.length - 1 })}
         keyExtractor={keyExtractor}
@@ -105,9 +132,14 @@ function FooterView(props: {
   readonly footer: PagedListFooter;
   readonly render: ((footer: PagedListFooter) => ReactNode) | undefined;
   readonly labels: PagedListLabels;
+  readonly inverted: boolean;
 }) {
-  const { footer, render, labels } = props;
-  return render ? render(footer) : <SystemPagedListFooter footer={footer} labels={labels} />;
+  const { footer, render, labels, inverted } = props;
+  return render ? (
+    render(footer)
+  ) : (
+    <SystemPagedListFooter footer={footer} labels={labels} inverted={inverted} />
+  );
 }
 
 /** `FlatList` reads `onEndReachedThreshold` in screen lengths from the end; below 0, it would never load more. */

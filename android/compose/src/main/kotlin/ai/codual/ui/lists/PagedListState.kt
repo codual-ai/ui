@@ -4,13 +4,7 @@ import ai.codual.ui.Announcer
 import ai.codual.ui.screenstates.ScreenState
 import ai.codual.ui.screenstates.ScreenStatesState
 import ai.codual.ui.screenstates.isOfflineError
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.setValue
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -33,11 +27,17 @@ internal const val MAX_PAGES_WITH_NOTHING_NEW = 3
  * one; a refresh or [disappear] cancels it and drops its result. [scope] must run on the main thread. Speaking a page
  * to TalkBack needs a view: [PagedList] does it, and an app drawing the list itself adds [PagedListAnnouncements].
  *
+ * A list with [reverseLayout] is a chat: its first page is the newest, at the bottom, with its items newest first.
+ * It takes newer items with [appendNewer], counts the ones that arrive while the newest row is off screen in
+ * [newItemCount], and asks the view to scroll to the newest row with [scrollToBottomRequest]. An app drawing it
+ * itself calls [bottomChanged] as the newest row comes on and off screen.
+ *
  * @param key the identity of an item: an item whose key is already in the list is dropped. [PagedList] uses it as
  *   the `LazyColumn` key too, so it must be a type a `Bundle` can hold.
  * @param isOffline whether a failed first page shows the offline view instead of the failed view.
  * @param initialPage a first page the app already has, shown at once with no request. One with no items counts as
  *   none, and the first page loads.
+ * @param reverseLayout whether the list is a chat, drawn with `LazyColumn(reverseLayout = true)`.
  * @param loadPage loads the page with this token, or the first page for null. The page's `next` is null at the end.
  */
 @Stable
@@ -46,6 +46,7 @@ public class PagedListState<Item, Token : Any>(
   internal val key: (Item) -> Any,
   isOffline: (Throwable) -> Boolean = ::isOfflineError,
   initialPage: Page<Item, Token>? = null,
+  public val reverseLayout: Boolean = false,
   private val loadPage: suspend (token: Token?) -> Page<Item, Token>,
 ) {
   internal val screen: ScreenStatesState<PagedContent<Item, Token>> =
@@ -62,6 +63,18 @@ public class PagedListState<Item, Token : Any>(
 
   private var pageLoad: Job? = null
   private var generation = 0
+  private val newest = NewestEnd()
+  /** The newer items that arrived while the first page loads, for the page it brings; null while none loads. */
+  private var arrivedDuringFirstPage: MutableList<Arrival<Item>>? = null
+
+  /** In a reversed list, how many newer items arrived while the newest row was off screen. */
+  public val newItemCount: Int get() = newest.newItemCount
+
+  /** In a reversed list, whether the newest row is on screen, so newer items scroll into view. */
+  public val isAtBottom: Boolean get() = newest.isAtBottom
+
+  /** Goes up by one each time the view should scroll to the newest row: `animateScrollToItem(0)`. */
+  public val scrollToBottomRequest: Int get() = newest.scrollRequest
 
   /** The first page's state; content is every item loaded so far, first page first. */
   public val state: ScreenState<List<Item>>
@@ -138,6 +151,37 @@ public class PagedListState<Item, Token : Any>(
     if (content.paging is Paging.Failed) startPageLoad(next, pagesWithNothingNew = 0)
   }
 
+  /**
+   * Adds items that arrived after the newest one (a message just received), oldest first, below the newest row.
+   * Items already in the list are dropped. When the newest row is on screen they scroll into view; otherwise the
+   * rows on screen stay still and [newItemCount] goes up. Only for a list with [reverseLayout].
+   */
+  public fun appendNewer(items: List<Item>) {
+    require(reverseLayout) { "appendNewer is for a reversed paged list: create it with reverseLayout = true." }
+    val content =
+      when (val current = screen.state) {
+        is ScreenState.Content -> current.value
+        ScreenState.Empty -> PagedContent.firstPage(Page<Item, Token>(emptyList(), null), key)
+        else -> null
+      }
+    arrivedDuringFirstPage?.addAll(items.map { Arrival(it, shown = content != null) })
+    if (content == null) return
+    val added = content.addingNewer(items, key)
+    if (added.count == 0) return
+    screen.replaceLoaded(added.content)
+    announce(PagedListAnnouncement.NewItems(added.count))
+    newest.arrived(added.count)
+  }
+
+  /** Scrolls to the newest row and sets [newItemCount] back to 0: the action of the app's "new items" indicator. */
+  public fun scrollToBottom(): Unit = newest.scrollToBottom()
+
+  /** Call as the newest row comes on screen and goes off it; [PagedList] does. */
+  public fun bottomChanged(isAtBottom: Boolean): Unit = newest.bottomChanged(isAtBottom)
+
+  /** Call when the user starts dragging the list, so a drag ends a scroll to the bottom; [PagedList] does. */
+  public fun userScrolled(): Unit = newest.userScrolled()
+
   internal fun footer(content: PagedContent<Item, Token>): PagedListFooter =
     when (val paging = content.paging) {
       Paging.Loading -> PagedListFooter.Loading
@@ -151,6 +195,25 @@ public class PagedListState<Item, Token : Any>(
     get() = (screen.state as? ScreenState.Content)?.value?.takeUnless { screen.isRefreshing }
 
   private suspend fun loadFirstPage(): PagedContent<Item, Token> {
+    val arrived = mutableListOf<Arrival<Item>>()
+    arrivedDuringFirstPage = arrived
+    try {
+      val page = loadFirstPages()
+      val content = page.addingNewer(arrived.map { it.item }, key).content
+      // A load the list cancelled is dropped: it mustn't move the list or announce anything.
+      if (reverseLayout && currentCoroutineContext().isActive) {
+        newest.scrollToBottom()
+        val unannounced = arrived.filter { !it.shown }.map { it.item }
+        val count = page.addingNewer(unannounced, key).count
+        if (count > 0) announce(PagedListAnnouncement.NewItems(count))
+      }
+      return content
+    } finally {
+      if (arrivedDuringFirstPage === arrived) arrivedDuringFirstPage = null
+    }
+  }
+
+  private suspend fun loadFirstPages(): PagedContent<Item, Token> {
     var content = PagedContent.firstPage(loadPage(null), key)
     var pagesWithNothingNew = 1
     while (content.items.isEmpty() && pagesWithNothingNew < MAX_PAGES_WITH_NOTHING_NEW) {
@@ -222,26 +285,5 @@ public class PagedListState<Item, Token : Any>(
     if (content?.paging == Paging.Loading) screen.replaceContent(content.withPaging(Paging.Ready))
     // Last, as an immediate dispatcher (viewModelScope's) can resume the cancelled load inside cancel().
     load?.cancel()
-  }
-}
-
-/**
- * A [PagedListState] that loads in this composition's scope and always calls the latest [loadPage], [key] and
- * [isOffline]. To keep the list across configuration changes, create a [PagedListState] in a ViewModel instead,
- * with `viewModelScope`. Wrap the list in `key(query) { … }` to load again for a new input.
- */
-@Composable
-public fun <Item, Token : Any> rememberPagedList(
-  key: (Item) -> Any,
-  isOffline: (Throwable) -> Boolean = ::isOfflineError,
-  initialPage: Page<Item, Token>? = null,
-  loadPage: suspend (token: Token?) -> Page<Item, Token>,
-): PagedListState<Item, Token> {
-  val scope = rememberCoroutineScope()
-  val currentKey by rememberUpdatedState(key)
-  val currentIsOffline by rememberUpdatedState(isOffline)
-  val currentLoadPage by rememberUpdatedState(loadPage)
-  return remember(scope) {
-    PagedListState(scope, { currentKey(it) }, { currentIsOffline(it) }, initialPage) { currentLoadPage(it) }
   }
 }

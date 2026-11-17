@@ -12,6 +12,9 @@ let thresholdMessage = "A paged list's threshold is how many rows from the end l
 /// The first page is a screen state: `state`, `retry()`, `isRefreshing` and `refreshError` work as in
 /// `ScreenStatesModel`. Later pages load one at a time, in a task that belongs to the model, so a row scrolling away
 /// never cancels one; a refresh or `disappear()` cancels it and drops its result.
+///
+/// A `.reversed` list also takes newer items with `appendNewer(_:)`, counts the ones that arrive while the newest row
+/// is off screen in `newItemCount`, and asks its scroll view to show the newest row through `scrollPosition`.
 @MainActor
 @Observable
 public final class PagedListModel<Item: Identifiable, Token> {
@@ -20,7 +23,21 @@ public final class PagedListModel<Item: Identifiable, Token> {
   /// `PagedList` replaces this on every update, so it always captures the view's current values.
   @ObservationIgnored var loadPage: LoadPage
   /// Speaks what a page changed; tests replace it.
-  @ObservationIgnored var announce: (PagedListAnnouncement) -> Void = { $0.post() }
+  @ObservationIgnored var announce: (PagedListAnnouncement) -> Void
+
+  public let direction: PagedListDirection
+  /// In a reversed list, how many newer items arrived while the newest row was off screen.
+  public internal(set) var newItemCount = 0
+  /// In a reversed list, whether the newest row is on screen, so newer items scroll into view.
+  public internal(set) var isAtBottom = true
+  /// A reversed list's scroll position, for `.scrollPosition(id:anchor: .bottom)`: the model sets it to the newest
+  /// row's ID to scroll there, and the scroll view keeps the row with this ID still as older rows arrive above.
+  public var scrollPosition: Item.ID?
+  /// The newer items that arrived while the first page loads, for the page it brings, and whether each was shown
+  /// (and announced) then; nil while none loads.
+  @ObservationIgnored var arrivedDuringFirstPage: [(item: Item, shown: Bool)]?
+  /// Which first-page load the arrivals belong to, so a cancelled one finishing late never clears the next one's.
+  @ObservationIgnored private var firstPageLoad = 0
   @ObservationIgnored let screen: ScreenStatesModel<PagedContent<Item, Token>>
   @ObservationIgnored private(set) var pageLoad: Task<Void, Never>?
   /// `PagedList` replaces this on every update too. At least 1.
@@ -36,15 +53,19 @@ public final class PagedListModel<Item: Identifiable, Token> {
   ///   - isOffline: Whether a failed first page shows the offline view instead of the failed view.
   ///   - initialPage: A first page the app already has, shown at once with no request. One with no items counts
   ///     as none, and the first page loads.
+  ///   - direction: `.reversed` for a chat: the first page is the newest, at the bottom, with its items newest first.
   ///   - loadPage: Loads the page with this token, or the first page for nil. The page's `next` is nil at the end.
   public init(
     threshold: Int = 5,
     isOffline: @escaping (any Error) -> Bool = isOfflineError,
     initialPage: Page<Item, Token>? = nil,
+    direction: PagedListDirection = .standard,
     loadPage: @escaping LoadPage
   ) {
     precondition(threshold >= 1, thresholdMessage)
     self.threshold = threshold
+    self.direction = direction
+    announce = { $0.post(reversed: direction == .reversed) }
     self.loadPage = loadPage
     screen = ScreenStatesModel(isEmpty: { $0.items.isEmpty }, isOffline: isOffline) { throw CancellationError() }
     screen.load = { [weak self] in
@@ -123,6 +144,7 @@ public final class PagedListModel<Item: Identifiable, Token> {
   /// nothing: then only `loadMore()` goes on, so a server that keeps returning tokens can't loop.
   public func rowAppeared(_ item: Item) {
     visibleRows.insert(item.id)
+    if direction == .reversed, item.id == shownItems.first?.id { reachedBottom() }
     guard isNearTheEnd(item.id) else { return }
     loadMore()
   }
@@ -130,6 +152,7 @@ public final class PagedListModel<Item: Identifiable, Token> {
   /// Call from each row's `.onDisappear`, so a refresh knows which rows are still on screen.
   public func rowDisappeared(_ item: Item) {
     visibleRows.remove(item.id)
+    if direction == .reversed, item.id == shownItems.first?.id { isAtBottom = false }
   }
 
   func footer(for content: PagedContent<Item, Token>) -> PagedListFooter {
@@ -157,6 +180,10 @@ public final class PagedListModel<Item: Identifiable, Token> {
   }
 
   private func loadFirstPage() async throws -> PagedContent<Item, Token> {
+    firstPageLoad += 1
+    let load = firstPageLoad
+    arrivedDuringFirstPage = []
+    defer { if load == firstPageLoad { arrivedDuringFirstPage = nil } }
     var content = PagedContent(firstPage: try await loadPage(nil))
     var pagesWithNothingNew = 1
     while content.items.isEmpty, let next = content.next, pagesWithNothingNew < maxPagesWithNothingNew {
@@ -164,6 +191,17 @@ public final class PagedListModel<Item: Identifiable, Token> {
       try Task.checkCancellation()
       content.add(try await loadPage(next))
       pagesWithNothingNew += 1
+    }
+    let page = content
+    let arrived = load == firstPageLoad ? arrivedDuringFirstPage ?? [] : []
+    content.addNewer(arrived.map(\.item))
+    // A load the list cancelled is dropped: it mustn't move the list or announce anything.
+    if direction == .reversed, !Task.isCancelled {
+      // A list opening starts at the bottom by itself; a refresh scrolls there.
+      if case .content = screen.state { showNewest(content.items.first?.id) } else { reachedBottom() }
+      var unannounced = page
+      let count = unannounced.addNewer(arrived.filter { !$0.shown }.map(\.item))
+      if count > 0 { announce(.newItems(count: count)) }
     }
     return content
   }

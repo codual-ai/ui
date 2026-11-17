@@ -13,6 +13,9 @@ internal data class TestItem(val id: Int, val title: String = "")
 /** A page of the items with these IDs. */
 internal fun page(ids: List<Int>, next: Int?): Page<TestItem, Int> = Page(ids.map { TestItem(it) }, next)
 
+/** Items with these IDs, for `appendNewer`. */
+internal fun items(vararg ids: Int): List<TestItem> = ids.map { TestItem(it) }
+
 /** A page loader whose calls wait until the test answers them, recording the token of each. */
 internal class FakePageLoader(ignoresCancellation: Boolean = false) {
   val pages = FakeLoader<Page<TestItem, Int>>(ignoresCancellation)
@@ -32,10 +35,17 @@ internal class PagedListFixture(
   private val test: TestScope,
   ignoresCancellation: Boolean = false,
   initialPage: Page<TestItem, Int>? = null,
+  reverseLayout: Boolean = false,
 ) {
   val loader = FakePageLoader(ignoresCancellation)
   val list =
-    PagedListState(test.backgroundScope, key = { it.id }, initialPage = initialPage, loadPage = loader::load)
+    PagedListState(
+      test.backgroundScope,
+      key = { it.id },
+      initialPage = initialPage,
+      reverseLayout = reverseLayout,
+      loadPage = loader::load,
+    )
 
   val ids: List<Int>
     get() = (list.state as? ScreenState.Content)?.value?.map { it.id }.orEmpty()

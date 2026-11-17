@@ -15,6 +15,11 @@ export interface PagedListOptions<Item, Token> {
   readonly labels?: Partial<PagedListLabels>;
   /** A first page the screen already has, shown at once with no request. One with no items counts as none. */
   readonly initialPage?: Page<Item, Token>;
+  /**
+   * A chat: the first page is the newest, drawn at the bottom of an inverted `FlatList`, with its items newest
+   * first, and newer items arrive with `appendNewer`. Read once, when the list mounts.
+   */
+  readonly inverted?: boolean;
 }
 
 /**
@@ -31,13 +36,15 @@ export function usePagedList<Item, Token>(
     loadPage,
     keyExtractor: options.keyExtractor,
     isOffline: options.isOffline ?? isOfflineError,
-    announce: (announcement) => announce(announcementText(announcement, labels)),
+    announce: (announcement) => announce(announcementText(announcement, labels, options.inverted)),
   };
   const latest = useRef(source);
   useLayoutEffect(() => {
     latest.current = source;
   });
-  const [machine] = useState(() => new PagedListMachine(() => latest.current, options.initialPage));
+  const [machine] = useState(
+    () => new PagedListMachine(() => latest.current, options.initialPage, options.inverted),
+  );
   const snapshot = useSyncExternalStore(machine.subscribe, machine.getSnapshot);
 
   useEffect(() => {
