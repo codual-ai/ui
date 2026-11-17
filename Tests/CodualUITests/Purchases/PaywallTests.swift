@@ -78,9 +78,9 @@ struct PaywallTests {
   func pricesAreTheStoresStrings() async throws {
     let paywall = PaywallContent(purchases: purchases, products: [yearly], selected: yearly, select: { _ in })
     #expect(paywall.buyButton == .ready(yearly))
-    let row = try recognizedText(in: SystemProductRow(yearly, paywall: paywall), height: 80)
+    let row = try await recognizedText(in: SystemProductRow(yearly, paywall: paywall), height: 80)
     #expect(row.contains("$19.99"))
-    let button = try recognizedText(in: SystemBuyButton(paywall).padding(), height: 100)
+    let button = try await recognizedText(in: SystemBuyButton(paywall).padding(), height: 100)
     #expect(button == ["Buy for $19.99"])
   }
 
