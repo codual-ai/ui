@@ -8,7 +8,7 @@ import UIKit
 // would, which keeps them fast; the real-presentation tests below check that a presented sheet or cover gets the same
 // delegate.
 @MainActor
-@Suite(.serialized, .timeLimit(.minutes(2)), .drawsViews)
+@Suite(.serialized, .timeLimit(.minutes(2)))
 struct SheetViewTests {
   let log = ResultLog()
   let presenter: SheetPresenter<Note, String>

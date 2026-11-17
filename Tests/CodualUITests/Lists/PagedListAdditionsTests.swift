@@ -4,7 +4,7 @@ import Testing
 @testable import CodualUI
 
 @MainActor
-@Suite(.timeLimit(.minutes(1)), .drawsViews)
+@Suite(.timeLimit(.minutes(1)))
 struct PagedListAdditionsTests {
   @Test("LS-25 the model alone, with no PagedList view, speaks each page to VoiceOver")
   func theModelAloneAnnounces() async {

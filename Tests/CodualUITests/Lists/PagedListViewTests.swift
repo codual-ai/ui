@@ -4,7 +4,7 @@ import Testing
 @testable import CodualUI
 
 @MainActor
-@Suite(.timeLimit(.minutes(2)), .drawsViews)
+@Suite(.timeLimit(.minutes(2)))
 struct PagedListViewTests {
   @Test("LS-20 each page that adds items is announced once, with the end; a failed page once")
   func pagesAreAnnouncedOnce() async {

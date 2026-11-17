@@ -7,7 +7,7 @@ import UIKit
 /// Reversed lists drawn in a phone-sized window: rows 60 points high, so a page of 30 is taller than the screen.
 @MainActor
 // One window at a time: windows shown side by side cover each other's rows.
-@Suite(.serialized, .timeLimit(.minutes(2)), .drawsViews)
+@Suite(.serialized, .timeLimit(.minutes(2)))
 struct ReversedListViewTests {
   let loader = FakePageLoader()
   let frames = RowFrames()

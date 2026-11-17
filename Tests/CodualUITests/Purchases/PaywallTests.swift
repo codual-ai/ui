@@ -5,7 +5,7 @@ import UIKit
 @testable import CodualUI
 
 @MainActor
-@Suite(.timeLimit(.minutes(2)), .drawsViews)
+@Suite(.timeLimit(.minutes(2)))
 struct PaywallTests {
   let fake = FakeStore()
   let purchases: PurchasesModel

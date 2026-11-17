@@ -6,7 +6,7 @@ import Testing
 @testable import CodualUI
 
 @MainActor
-@Suite(.timeLimit(.minutes(2)), .drawsViews)
+@Suite(.timeLimit(.minutes(2)))
 struct SelectionAccessibilityTests {
   @Test("SL-20 the mode and the selection come back from saved data, and stay until the list loads")
   func aSavedSelectionComesBack() throws {
