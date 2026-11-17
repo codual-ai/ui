@@ -6,7 +6,10 @@ import org.junit.rules.ExternalResource
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 
-/** Declares the `ComponentActivity` the compose rule launches, which a library's test manifest doesn't declare. */
+/**
+ * Declares the `ComponentActivity` the compose rule launches, which a library's test manifest doesn't. Chain it
+ * outside the compose rule: `RuleChain.outerRule(DeclareComposeActivity()).around(compose)`.
+ */
 internal class DeclareComposeActivity : ExternalResource() {
   override fun before() {
     val application = RuntimeEnvironment.getApplication()

@@ -33,6 +33,9 @@ public final class ScreenStatesModel<Value> {
   @ObservationIgnored var isEmpty: (Value) -> Bool
   @ObservationIgnored var isOffline: (any Error) -> Bool
   @ObservationIgnored private(set) var running: Task<Void, Never>?
+  /// Called when a load that showed the loading view (the first one, or a retry) finishes, with what it shows now:
+  /// for a behaviour built on this one, such as search announcing its results. Not called for a refresh.
+  @ObservationIgnored var loadingFinished: ((ScreenState<Value>) -> Void)?
   @ObservationIgnored private var generation = 0
 
   /// - Parameters:
@@ -97,20 +100,20 @@ public final class ScreenStatesModel<Value> {
     state = isEmpty(value) ? .empty : .content(value)
   }
 
+  /// Shows `value` in place of what is shown, as a load would, but with no load: for search filtering items in
+  /// memory again. Does nothing while a load runs or before the first one.
+  func replaceLoaded(_ value: Value) {
+    switch state {
+    case .idle, .loading: return
+    case .content, .empty, .failed, .offline: state = isEmpty(value) ? .empty : .content(value)
+    }
+  }
+
   /// Replaces the value shown, for a behaviour built on this one, such as a paged list adding a page. Does nothing
   /// unless content is shown.
   func replaceContent(_ value: Value) {
     guard case .content = state else { return }
     state = .content(value)
-  }
-
-  /// Shows a value in place of the empty view or the content, for a behaviour built on this one, such as a chat
-  /// getting its first message. Does nothing in any other state.
-  func showContent(_ value: Value) {
-    switch state {
-    case .content, .empty: state = isEmpty(value) ? .empty : .content(value)
-    case .idle, .loading, .failed, .offline: return
-    }
   }
 
   private func start() {
@@ -131,12 +134,22 @@ public final class ScreenStatesModel<Value> {
     guard id == generation else { return }
     running = nil
     isRefreshing = false
+    let wasLoading = isShowingLoading
     switch result {
     case .success(let value):
       state = isEmpty(value) ? .empty : .content(value)
       refreshError = nil
     case .failure(let error):
       fail(error)
+    }
+    if wasLoading { loadingFinished?(state) }
+  }
+
+  /// Whether the loading view is shown: nothing has loaded yet, or a first load or retry runs.
+  var isShowingLoading: Bool {
+    switch state {
+    case .idle, .loading: true
+    case .content, .empty, .failed, .offline: false
     }
   }
 

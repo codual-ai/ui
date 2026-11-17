@@ -42,6 +42,37 @@ and versions follow [Semantic Versioning](https://semver.org/).
   sits behind a small `PurchaseStore` interface on every platform. The spec is `implemented`, with a test for each of
   its 31 edge cases on every platform it applies to.
 - The `codual-ui` skill covers purchases.
+- Sheets on SwiftUI (`SheetPresenter`, `.sheet(presenter)`, `.fullScreenCover(presenter)`), Jetpack Compose
+  (`SheetPresenter`, `rememberSheetPresenter`, `PresentedBottomSheet`, `PresentedDialog`, `DiscardConfirmation`)
+  and React Native (`useSheet`, `modalSheet`, `SheetAdapter`): a sheet that edits an item and reports saved or
+  cancelled, a discard confirmation for unsaved changes, swipes, taps outside, back and Escape that follow the same
+  rules, no closing while saving, closing after a save, one sheet at a time with a queue, focus back to the opener,
+  and restoration on Compose. The spec is `implemented`, with a test for each of its 21 edge cases on every platform
+  it applies to.
+- The `codual-ui` skill covers sheets.
+- The Compose library depends on `androidx.activity:activity-compose` directly, for `BackHandler`, at the version
+  Material 3 already brings (1.8.2).
+- Search on SwiftUI (`SearchResults`, `SearchModel`), Jetpack Compose (`SearchResults`, `SearchState`,
+  `rememberSearch`, `rememberScopedSearch`, `rememberLocalSearch`) and React Native (`<SearchResults>`,
+  `useSearch`), built on lists and screen states: a debounce, trimming and a minimum length, cancellation of the
+  running search when the query changes, results only for the latest query, submit that skips the debounce, recent
+  searches saved on submit (no duplicates, capped, removable, clearable, in an app-provided store), a no-results view
+  apart from failed and offline, retry, scopes, paged results, local mode, keyboard dismissal on scroll, cancel, an
+  initial or restored query, and one polite announcement of the results once the typing settles. The spec is
+  `implemented`, with a test for each of its 32 edge cases on every platform it applies to.
+- The `codual-ui` skill covers search.
+- Permissions on SwiftUI (`PermissionModel`, with `.notifications`, `.camera`, `.photos`, `.locationWhenInUse`,
+  `.microphone` and `.contacts`), Jetpack Compose (`PermissionState`, `rememberPermission`, `AndroidPermission`) and
+  React Native (`usePermission`, `createPermission`, `configurePermissions`, `androidPermission`, and `createReactNativePermissionsAccess` from
+  `@codual-ai/react-native-ui/react-native-permissions`, with react-native-permissions as an optional peer dependency):
+  the status read without prompting, the app's explanation before the system prompt, never asking on launch or twice
+  in a row, Settings guidance once the system won't ask again, Android's "don't ask again" and two-denials rules, a
+  fresh read when the app returns from Settings, limited and approximate grants, no double prompts, and (on SwiftUI
+  and Compose) a missing usage string or manifest entry reported as unavailable. React Native keeps declines in the
+  store given to `configurePermissions`, such as MMKV through `permissionMemory`. Each permission sits behind a small `PermissionAccess`
+  adapter on every platform. The spec is `implemented`, with a test for each of its 26 edge cases on every platform
+  it applies to.
+- The `codual-ui` skill covers permissions.
 
 ### Changed
 

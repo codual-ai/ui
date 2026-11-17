@@ -1,6 +1,6 @@
 ---
 name: codual-ui
-description: Use Codual UI's headless behaviours instead of writing their logic by hand, on SwiftUI, Jetpack Compose and React Native. Load before writing any screen that loads data (a list, a detail page, a feed, a profile) — anything with a spinner, an empty state, an error with retry, an offline message, pull to refresh, or paging (load more, infinite scroll) — a form (sign up, sign in, edit profile, validation, submit), and before any in-app purchase, subscription, paywall, tip jar or restore button (StoreKit, Google Play Billing, react-native-iap).
+description: Use Codual UI's headless behaviours instead of writing their logic by hand, on SwiftUI, Jetpack Compose and React Native. Load before writing any screen that loads data (a list, a detail page, a feed, a profile) — anything with a spinner, an empty state, an error with retry, an offline message, pull to refresh, or paging (load more, infinite scroll) — a form (sign up, sign in, edit profile, validation, submit), before any in-app purchase, subscription, paywall, tip jar or restore button (StoreKit, Google Play Billing, react-native-iap), before any sheet, bottom sheet, modal or full-screen cover that edits something and closes with Cancel or Save, any search field (search as you type, recent searches, filtering a list), and before asking for any permission (notifications, camera, photos, location, microphone, contacts; a pre-permission explanation, "open Settings", requestPermissions, react-native-permissions).
 ---
 
 # Codual UI
@@ -132,7 +132,8 @@ PagedList(rememberPagedList(key = { it.id }) { token -> api.items(after = token)
 - **A chat or message history** is a reversed list, not a flipped one you scroll yourself: SwiftUI
   `PagedListModel(direction: .reversed)` drawn with `PagedList(model:)` in
   `ScrollView { LazyVStack { rows }.scrollTargetLayout() }`; Compose `rememberPagedList(reverseLayout = true)`;
-  React Native `usePagedList(loadPage, { keyExtractor, inverted: true })` drawn with `<PagedListView list={list} />`.
+  React Native `usePagedList(loadPage, { keyExtractor, inverted: true })` drawn with
+  `<PagedListView list={list} keyExtractor={keyExtractor} />`.
   Pages come newest first (reverse an oldest-first API in the loader). Send new messages through
   `appendNewer([message])`, oldest first; show a "new messages" button when `newItemCount > 0` that calls
   `scrollToBottom()`. Don't add your own scroll-to-bottom effect, anchoring or de-duplication; React Native's
@@ -347,3 +348,262 @@ Don't write code for these ([spec](../../spec/purchases.md)):
   consumables bought again (PU-24); Family Sharing (PU-25); unverified App Store transactions (PU-26).
 - Messages, buy button states, selection, purchases outliving the paywall, and the proof for your server
   (PU-27 to PU-31).
+
+## Sheets
+
+**Use it for** any sheet, bottom sheet or full-screen cover that edits or creates something and closes with Cancel
+or Save: an edit form, a new address, a compose screen. **Don't use it for** a sheet that only shows information
+(a plain `.sheet` is fine), a confirmation dialog, or a navigation push.
+
+```swift
+// SwiftUI: the item must be Identifiable
+@State private var editing = SheetPresenter<Note, Note>()
+
+List(notes) { note in Button(note.title) { editing.present(note) } }
+  .sheet(editing, onResult: { result in
+    if case .saved(_, let saved) = result { store.update(saved) }
+  }) { note in
+    NoteEditor(note: note, sheet: editing)
+  }
+
+// In NoteEditor: no isPresented, no dismiss(), no isSaving flag of your own
+.onChange(of: draft, initial: true) { sheet.hasUnsavedChanges = draft != note }
+Button("Cancel") { sheet.requestDismiss() }
+Button("Save") { sheet.save { try await api.save(draft) } }.disabled(sheet.isSaving)
+```
+
+```kotlin
+// Jetpack Compose: items must be Bundle-able (String, Int, Parcelable) for rememberSheetPresenter
+val editing = rememberSheetPresenter<Note, Note>(key = { it.id }) { result ->
+  if (result is SheetResult.Saved) store.update(result.value)
+}
+Button(onClick = { editing.present(note, opener = focusRequester) }) { Text(note.title) }
+PresentedBottomSheet(editing) { note -> NoteEditor(note, editing) }   // or PresentedDialog for full screen
+
+// In NoteEditor
+LaunchedEffect(isDirty) { editing.hasUnsavedChanges = isDirty }
+TextButton(onClick = editing::requestDismiss) { Text("Cancel") }
+Button(onClick = { editing.save { api.save(draft) } }, enabled = !editing.isSaving) { Text("Save") }
+```
+
+```tsx
+// React Native: Modal, or any bottom-sheet library through a small adapter
+const editing = useSheet<Note, Note>({
+  keyExtractor: (note) => note.id,
+  onResult: (result) => { if (result.status === "saved") store.update(result.value); },
+});
+<Pressable ref={openerRef} onPress={() => editing.present(note, { opener: openerRef })} />
+<Modal presentationStyle="pageSheet" animationType="slide" {...editing.bind(modalSheet)}>
+  {editing.item && <NoteEditor note={editing.item} sheet={editing} />}
+</Modal>
+
+// In NoteEditor
+useEffect(() => sheet.setHasUnsavedChanges(isDirty), [isDirty, sheet.setHasUnsavedChanges]);
+<Button title="Cancel" onPress={sheet.requestDismiss} />
+<Button title="Save" disabled={sheet.isSaving} onPress={() => sheet.save((signal) => api.save(draft, { signal }))} />
+```
+
+**How to wire it right:**
+
+- **Every close goes through `requestDismiss`.** The Cancel or close button calls it; never set the item to nil,
+  call `dismiss()`, or set `visible={false}` yourself. Swipes, taps outside, back and Escape are already wired to it.
+- **Unsaved changes are yours to say.** Set `hasUnsavedChanges` from the form's dirty state (the forms behaviour's,
+  or `draft != original`); sheets never compares values. It resets when the sheet closes.
+- **Save through `save`.** It blocks closing while it runs (`isSaving`: show your progress), closes the sheet with
+  the value it returns, and keeps the sheet open with `saveError` if it throws. Don't close the sheet in the save.
+- **The result comes back once**, to `onResult`: saved with the value, or cancelled. Don't also use `onDismiss`.
+- **One at a time.** Presenting while a sheet is open queues it; don't guard with "is a sheet showing".
+- **Nested sheets** get their own presenter, inside the outer sheet's content.
+- **Detents and heights** are yours: `.presentationDetents`, `skipPartiallyExpanded`, the library's snap points.
+- **A bottom-sheet library on React Native**: write the adapter once, mapping `isOpen` to whether it shows,
+  `isDismissDisabled` to its pan-to-close switch, its backdrop press and back button to `requestDismiss`, and the
+  callback it calls once its sheet has closed (however it closed) to `dismissed`. The next queued sheet waits for
+  that callback, so map it, or a sheet that closed waits a second before the next shows.
+- **Your own confirmation**: SwiftUI and Compose show a system one; React Native takes `systemConfirmation: false`
+  and you draw one from `isConfirmingDiscard`, calling `discardChanges` and `keepEditing`.
+
+### Edge cases it already handles
+
+Don't write code for these ([spec](../../spec/sheets.md)):
+
+- The sheet follows the presenter's item alone (SH-01); a clean close reports cancelled (SH-02).
+- Unsaved changes ask before closing, however the close was asked for; Discard Changes closes, Keep Editing keeps
+  the changes (SH-03, SH-04); the swipe and tap outside are blocked and ask instead (SH-05); no second confirmation
+  (SH-06).
+- Nothing closes a saving sheet (SH-07); a successful save closes with the value (SH-08); a failed one keeps the
+  sheet and its changes (SH-09); a double save saves once (SH-10); exactly one result per sheet (SH-11).
+- One sheet at a time, with a queue (SH-12); nested sheets (SH-13); Escape and the VoiceOver escape gesture on iOS
+  (SH-14); Android back (SH-15); rotation and process death on Compose (SH-16); focus back to the opener (SH-17).
+- Blocking follows unsaved changes live (SH-18); the confirmation is a system one with localisable text (SH-19); a
+  full-screen cover follows the same rules (SH-20); the next sheet starts clean (SH-21).
+
+## Search
+
+**Use it for** any screen that searches as the person types: a search tab, a "find a contact" field, a product
+search, a filter over a list already in memory. **Don't use it for** a form field that is checked on submit, or a
+picker with a handful of fixed options.
+
+```swift
+// SwiftUI (iOS 17+): inside a NavigationStack; SearchResults adds .searchable, .searchSuggestions and .onSubmit
+@State private var search = SearchModel { query, token in try await api.search(query, after: token) }
+
+SearchResults(search) { item in ItemRow(item: item) } content: { rows in List { rows } }
+```
+
+```kotlin
+// Jetpack Compose: bind your own SearchBar or TextField to the state
+val search = rememberSearch(key = { it.id }) { query, token -> api.search(query, after = token) }
+TextField(
+  value = search.query,
+  onValueChange = { search.query = it },
+  keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+  keyboardActions = KeyboardActions(onSearch = { search.submit() }),
+)
+SearchResults(search) { item -> ItemRow(item) }
+```
+
+```tsx
+// React Native
+const search = useSearch({
+  search: (query, { token, signal }) => api.search(query, { after: token, signal }),
+  keyExtractor: (item) => item.id,
+});
+<TextInput {...search.inputProps} placeholder="Search" />
+<SearchResults search={search} renderItem={({ item }) => <ItemRow item={item} />} />
+```
+
+**How to wire it right:**
+
+- **No debounce, timer, `AbortController`, "latest request" counter or `isSearching` flag of your own.** Bind the
+  field to the query and let search decide when to search. Don't search in `onChange`, `LaunchedEffect(query)` or
+  `useEffect([query])`.
+- **The search returns a page**, as lists does: `Page(items:next:)` / `Page(items, next)` / `{ items, next }`.
+  Without paging, return one page with no next token (`Page(items: results)` in SwiftUI).
+- **Data already in memory** (contacts, settings): local mode, `SearchModel(items:matches:)`,
+  `rememberLocalSearch(items, key) { item, query -> … }`, `useSearch({ items, matches, keyExtractor })`. It filters
+  at once with no loading view; update the items and the results follow.
+- **Scopes and filters**: SwiftUI `.searchScopes($search.scope) { … }`, Compose `rememberScopedSearch(initialScope =
+  …)` then `search.scope = …`, React Native `initialScope` and `setScope`. A change searches again at once.
+- **Recent searches** are saved on submit only (the keyboard's search button, or picking one). Pass a store to keep
+  them: `UserDefaultsRecentSearches()`, `SharedPreferencesRecentSearches(context)`, or a React Native
+  `RecentSearchStore` over AsyncStorage or MMKV. Keep one store for the app's lifetime.
+- **The views**: `suggestions` (gets the recent searches with `pick`, `remove` and `clear`) while the query is too
+  short, `noResults` (gets the query) for a search that finds nothing, and the list's and screen states' views for
+  the rest. Keep `pick`, `remove` and `clear` on real buttons.
+- **Keyboard**: SwiftUI and Compose's `SearchResults` dismiss it on scroll; in React Native spread
+  `search.listProps` on a `FlatList` or `ScrollView` you draw yourself. Cancel (`cancel()`) clears the query.
+- **A query from outside** (a deep link, `@SceneStorage`, the screen before): `initialQuery`. It searches at once
+  and isn't a recent search. Compose's `rememberSearch` restores the query after rotation by itself.
+- **Draw it yourself** with `SearchModel` (call `appear()`/`disappear()`), `SearchState` (add
+  `SearchAnnouncements(state)` beside the results so TalkBack hears them) or `useSearch`; the results' list is a
+  `PagedListModel` / `PagedListState` / paged list controller, used as in lists.
+
+### Edge cases it already handles
+
+Don't write code for these ([spec](../../spec/search.md)):
+
+- One search after the typing stops, for the last query only; the query trimmed; too short shows the suggestions
+  at once (SR-01 to SR-03).
+- A change cancels the running search at once; a late answer to an old query is dropped; the results stay while
+  the debounce waits; typing back to the query shown searches nothing (SR-04 to SR-07).
+- Submit searches at once; submitting the query shown searches nothing unless it failed (SR-08, SR-09).
+- Recent searches: saved on submit only, no duplicates by case or spaces, capped, removable, clearable, loaded and
+  cleaned from the store; picking one searches at once (SR-10 to SR-16).
+- No results is its own view, apart from failed and offline; retry searches the same query and scope (SR-17 to
+  SR-19).
+- Scopes search again at once; pages use their own query; local mode filters at once (SR-20 to SR-22).
+- Keyboard dismissed on scroll; cancel; leaving and coming back; an initial or restored query (SR-23 to SR-27).
+- One polite announcement of the results after the typing settles; the field's text is never rewritten; a search
+  that cancels itself fails instead of spinning; system views with localisable text (SR-28 to SR-32).
+
+## Permissions
+
+**Use it for** any system permission a feature needs: notifications, the camera, photos, location while in use, the
+microphone, contacts, and others (Bluetooth, the calendar) through a small adapter. **Don't use it for** background
+("always") location or a photo picker: Android's and iOS's pickers need no permission, so use them instead when the
+user only picks a few photos.
+
+```swift
+// SwiftUI: needs NSCameraUsageDescription in Info.plist (a missing one reads as .unavailable, not a crash).
+// Never `.constant(camera.phase == …)`: a swipe or an alert closing must decline, or ask() waits for ever.
+@State private var camera = PermissionModel(.camera)
+
+Button("Scan") { Task { if await camera.ask().isUsable { scanning = true } } }
+  .sheet(isPresented: camera.isExplaining) {
+    CameraExplanation(onContinue: camera.accept)  // one button on iOS; a swipe down declines through the binding
+  }
+  .alert("Turn On the Camera", isPresented: camera.isShowingSettingsGuidance) {
+    Button("Open Settings", action: camera.openSettings)
+    Button("Not Now", role: .cancel) {}  // closing the alert declines through the binding
+  }
+```
+
+```kotlin
+// Jetpack Compose: needs <uses-permission android:name="android.permission.CAMERA" /> in the manifest
+val camera = rememberPermission(AndroidPermission.Camera)
+
+Button(onClick = { scope.launch { if (camera.ask().isUsable) scanning = true } }) { Text("Scan") }
+when (camera.phase) {
+  PermissionPhase.Explaining -> CameraExplanation(onContinue = camera::accept, onNoThanks = camera::decline)
+  PermissionPhase.SettingsGuidance -> SettingsDialog(onOpen = camera::openSettings, onDismiss = camera::decline)
+  else -> {}
+}
+```
+
+```tsx
+// React Native: PermissionsAndroid on Android; react-native-permissions (optional peer dependency) on iOS
+import * as permissions from "react-native-permissions";
+import { createReactNativePermissionsAccess } from "@codual-ai/react-native-ui/react-native-permissions";
+import { configurePermissions, isUsable, permissionMemory, usePermission } from "@codual-ai/react-native-ui";
+import { createMMKV } from "react-native-mmkv";
+configurePermissions({ memory: permissionMemory(createMMKV()) }); // once, at launch, before any permission
+const cameraAccess = createReactNativePermissionsAccess(permissions, "camera"); // once, in a module
+
+const camera = usePermission(cameraAccess);
+<Button title="Scan" onPress={async () => setScanning(isUsable(await camera.ask()))} />
+<CameraExplanation visible={camera.phase === "explaining"} onContinue={camera.accept} onDismiss={camera.decline} />
+// Android only, no dependency: usePermission(androidPermission("camera"))
+```
+
+**How to wire it right:**
+
+- **Never request the permission yourself** (`AVCaptureDevice.requestAccess`, `requestPermissions`,
+  `PermissionsAndroid.request`). Call `ask()` from the user's tap on the feature; the system prompt comes from
+  `accept()` on your explanation. Never ask on launch or in `onAppear`: use `suggest()` for a moment you choose (after
+  onboarding), which never explains again once declined.
+- **Draw two views from `phase`:** the explanation (`explaining`: why, and a button calling `accept()`) and the
+  Settings guidance (`settingsGuidance`: a button calling `openSettings()`, and one calling `decline()`). Call
+  `decline()` whenever either closes another way (SwiftUI's `isExplaining` and `isShowingSettingsGuidance` bindings
+  do it for you). On iOS give the explanation one button only: App Review rejects a
+  "Not Now" before the system prompt. On Android a "No Thanks" is fine.
+- **Decide with the answer:** `ask()` answers with the status when the flow ends; run the feature when `isUsable`
+  (granted, limited or provisional), and fall back otherwise (a picker, typing an address). `status == nil` means not
+  read yet.
+- **Limited is usable.** Limited photos, iOS 18 limited contacts and an approximate location work; call
+  `askForFullAccess()` only when the feature truly needs more.
+- **Don't add your own "returned from Settings" check**, "asked before" flag, `shouldShowRequestPermissionRationale`
+  logic or double-tap guard: it reads again on return, remembers each "no", and joins a second `ask()`.
+- **The usage string / manifest entry is required.** If `status` is `unavailable`, its `reason` names what's missing.
+  On React Native, JavaScript can't see Info.plist: add every usage string yourself (Info.plist or Expo's config), or
+  iOS ends the app at the prompt.
+- **On React Native, `configurePermissions({ memory })` is required setup**, once at launch: `permissionMemory(mmkv)`
+  wraps MMKV (or any synchronous store with `getBoolean`, `set` and `remove` or `delete`). Without it declines and
+  Android's "don't ask again" are forgotten on relaunch (it warns once). Pass `androidApplicationId` too so Android
+  notifications open their own Settings page.
+- **Testing**: implement `PermissionAccess` with a fake.
+
+### Edge cases it already handles
+
+Don't write code for these ([spec](../../spec/permissions.md)):
+
+- The status read without prompting, unknown until read; nothing asked on launch or on return (PM-01, PM-02, PM-05).
+- The explanation first, the system prompt only after it, a declined explanation saving the prompt, usable
+  permissions answering at once (PM-03, PM-04, PM-06).
+- Never twice in a row; a "no" ends the flow; Settings guidance once the system won't ask, opening the app's (or its
+  notification) settings (PM-07 to PM-10).
+- A fresh read on return from Settings, which ends the guidance; stale reads never overwrite the prompt's answer;
+  double taps (PM-11 to PM-13).
+- Limited and approximate grants, full access, provisional notifications, restricted (PM-14 to PM-17).
+- Missing usage strings and manifest entries, failing adapters (PM-18, PM-25); Android's denied, blocked, two-denials,
+  one-time and auto-reset permissions, notifications before Android 13 and turned off in Settings, and the right
+  manifest permissions per version (PM-19 to PM-23, PM-26); any other permission (PM-24).

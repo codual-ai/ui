@@ -1,7 +1,8 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { AccessibilityInfo } from "react-native";
+import { announce } from "../announce";
 import { isOfflineError } from "../screen-states/errors";
-import { type LoadPage, PagedListMachine, type PagedListSnapshot, type PagedListSource } from "./machine";
+import { type PagedListController, pagedListController } from "./controller";
+import { type LoadPage, PagedListMachine, type PagedListSource } from "./machine";
 import type { Page } from "./paged-content";
 import { announcementText, defaultPagedListLabels, type PagedListLabels } from "./system-footer";
 
@@ -21,27 +22,6 @@ export interface PagedListOptions<Item, Token> {
   readonly inverted?: boolean;
 }
 
-export interface PagedListController<Item> extends PagedListSnapshot<Item> {
-  readonly retry: () => void;
-  readonly refresh: () => Promise<void>;
-  readonly dismissRefreshError: () => void;
-  /** The Load More action: loads the next page if there is one and nothing is loading, failed or refreshing. */
-  readonly loadMore: () => void;
-  /** For `FlatList`'s `onEndReached`: loads the next page as `loadMore` does, but never after pages that added nothing. */
-  readonly endReached: () => void;
-  readonly retryPage: () => void;
-  /** Newer items, oldest first, for the bottom of an inverted list (a message just received). */
-  readonly appendNewer: (items: readonly Item[]) => void;
-  /** Scrolls to the newest row and sets `newItemCount` back to 0: the app's "new items" indicator's action. */
-  readonly scrollToBottom: () => void;
-  /** For an app drawing an inverted list itself: call as the newest row comes on screen and goes off it. */
-  readonly bottomChanged: (isAtBottom: boolean) => void;
-  /** For an app drawing an inverted list itself: call from `onScrollBeginDrag`, so a drag ends a scroll to the bottom. */
-  readonly userScrolled: () => void;
-  readonly inverted: boolean;
-  readonly keyExtractor: (item: Item) => string;
-}
-
 /**
  * The state of a list that loads in pages, for apps that draw it themselves. Loads the first page on mount, aborts
  * any load on unmount, and always calls the latest `loadPage` and options. Each page that changes the list is
@@ -56,12 +36,7 @@ export function usePagedList<Item, Token>(
     loadPage,
     keyExtractor: options.keyExtractor,
     isOffline: options.isOffline ?? isOfflineError,
-    // Queued on iOS, after whatever VoiceOver is saying; Android's TalkBack queues announcements anyway.
-    announce: (announcement) =>
-      AccessibilityInfo.announceForAccessibilityWithOptions(
-        announcementText(announcement, labels, options.inverted),
-        { queue: true },
-      ),
+    announce: (announcement) => announce(announcementText(announcement, labels, options.inverted)),
   };
   const latest = useRef(source);
   useLayoutEffect(() => {
@@ -77,22 +52,5 @@ export function usePagedList<Item, Token>(
     return machine.disappear;
   }, [machine]);
 
-  return useMemo(
-    () => ({
-      ...snapshot,
-      retry: machine.retry,
-      refresh: machine.refresh,
-      dismissRefreshError: machine.dismissRefreshError,
-      loadMore: machine.loadMore,
-      endReached: machine.endReached,
-      retryPage: machine.retryPage,
-      appendNewer: machine.appendNewer,
-      scrollToBottom: machine.scrollToBottom,
-      bottomChanged: machine.bottomChanged,
-      userScrolled: machine.userScrolled,
-      inverted: machine.inverted,
-      keyExtractor: options.keyExtractor,
-    }),
-    [snapshot, machine, options.keyExtractor],
-  );
+  return useMemo(() => pagedListController(machine, snapshot), [snapshot, machine]);
 }

@@ -17,7 +17,7 @@ extension PagedListModel {
     arrivedDuringFirstPage?.append(contentsOf: arrived.map { ($0, true) })
     let added = content.addNewer(arrived)
     guard added > 0 else { return }
-    screen.showContent(content)
+    screen.replaceLoaded(content)
     announce(.newItems(count: added))
     if isAtBottom {
       scrollPosition = content.items.first?.id

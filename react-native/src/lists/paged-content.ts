@@ -72,3 +72,27 @@ export function addingPage<Item, Token>(
     added: newItems.length,
   };
 }
+
+/**
+ * Loads the first page and, while it brings no items but a next token, the pages after it, up to `maxPages` in all.
+ * `source` is read for each page, so it can change between them.
+ */
+export async function loadFirstPages<Item, Token>(
+  source: () => {
+    readonly loadPage: (token: Token | undefined, signal: AbortSignal) => Promise<Page<Item, Token>>;
+    readonly keyExtractor: (item: Item) => string;
+  },
+  signal: AbortSignal,
+  maxPages: number,
+): Promise<PagedContent<Item, Token>> {
+  let content = firstPageContent(await source().loadPage(undefined, signal), source().keyExtractor);
+  for (let pages = 1; content.items.length === 0 && pages < maxPages; pages += 1) {
+    if (content.next === undefined) break;
+    // A load that ignored the abort must not start another; the list has gone or moved on.
+    // `throwIfAborted()` is missing from older React Native's AbortSignal.
+    if (signal.aborted) throw new Error("The list stopped loading its first page.");
+    const page = await source().loadPage(content.next, signal);
+    content = addingPage(content, page, source().keyExtractor).content;
+  }
+  return content;
+}

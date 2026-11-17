@@ -4,6 +4,7 @@ import {
   addingNewer,
   addingPage,
   firstPageContent,
+  loadFirstPages,
   type Page,
   type PagedContent,
   type Paging,
@@ -85,6 +86,19 @@ export class PagedListMachine<Item, Token> {
     return this.derived.to;
   };
 
+  /**
+   * Shows a first page at once with no request, even one with no items, which shows the empty view: for a behaviour
+   * built on this one, such as search filtering items in memory. Does nothing once a load has started.
+   */
+  showLoaded(page: Page<Item, Token>): void {
+    this.screen.showLoaded(firstPageContent(page, this.source().keyExtractor));
+  }
+
+  /** Replaces the whole list shown with this first page, keeping the list itself (and its scroll position). */
+  replaceFirstPage(page: Page<Item, Token>): void {
+    this.screen.replaceLoaded(firstPageContent(page, this.source().keyExtractor));
+  }
+
   /** Loads the first page. Safe to call on every mount: once it has started or finished, it does nothing. */
   readonly appear = (): void => this.screen.appear();
 
@@ -150,7 +164,7 @@ export class PagedListMachine<Item, Token> {
     if (content === undefined) return;
     const { content: next, added } = addingNewer(content, items, keyExtractor);
     if (added === 0) return;
-    this.screen.showContent(next);
+    this.screen.replaceLoaded(next);
     this.source().announce({ kind: "newItems", count: added });
     this.newest.arrived(added);
   };
@@ -203,7 +217,7 @@ export class PagedListMachine<Item, Token> {
     this.arrivedDuringFirstPage = arrived;
     try {
       const { keyExtractor, announce } = this.source();
-      const page = await this.loadFirstPages(signal);
+      const page = await loadFirstPages(this.source, signal, MAX_PAGES_WITH_NOTHING_NEW);
       const content = addingNewer(
         page,
         arrived.map(({ item }) => item),
@@ -220,22 +234,6 @@ export class PagedListMachine<Item, Token> {
     } finally {
       if (this.arrivedDuringFirstPage === arrived) this.arrivedDuringFirstPage = undefined;
     }
-  }
-
-  private async loadFirstPages(signal: AbortSignal): Promise<Content<Item, Token>> {
-    let content = firstPageContent(
-      await this.source().loadPage(undefined, signal),
-      this.source().keyExtractor,
-    );
-    for (let pages = 1; content.items.length === 0 && pages < MAX_PAGES_WITH_NOTHING_NEW; pages += 1) {
-      if (content.next === undefined) break;
-      // A load that ignored the abort must not start another; the list has gone or moved on.
-      // `throwIfAborted()` is missing from older React Native's AbortSignal.
-      if (signal.aborted) throw new Error("The list stopped loading its first page.");
-      const page = await this.source().loadPage(content.next, signal);
-      content = addingPage(content, page, this.source().keyExtractor).content;
-    }
-    return content;
   }
 
   private startPageLoad(token: Token, pagesWithNothingNew: number): void {

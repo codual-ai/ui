@@ -1,8 +1,8 @@
 import { act, fireEvent, render as renderScreen, screen } from "@testing-library/react-native";
 import { AccessibilityInfo, FlatList, type FlatListProps, Text } from "react-native";
-import { PagedList } from "../../src/lists/PagedList";
-import { PagedListView } from "../../src/lists/PagedListView";
-import { type PagedListController, usePagedList } from "../../src/lists/use-paged-list";
+import type { PagedListController } from "../../src/lists/controller";
+import { PagedList, PagedListView } from "../../src/lists/PagedList";
+import { usePagedList } from "../../src/lists/use-paged-list";
 import { FakePageLoader, items, keyExtractor, page, type TestItem } from "./helpers/paged-list";
 
 // Jest has no layout: these tests check what the inverted FlatList is given and what it reports back.
@@ -27,7 +27,12 @@ async function showChat(loader: FakePageLoader) {
     const list = usePagedList(loader.load, { keyExtractor, inverted: true });
     latest = list;
     return (
-      <PagedListView testID="list" list={list} renderItem={({ item }) => <Text>{`Row ${item.id}`}</Text>} />
+      <PagedListView
+        keyExtractor={keyExtractor}
+        testID="list"
+        list={list}
+        renderItem={({ item }) => <Text>{`Row ${item.id}`}</Text>}
+      />
     );
   }
   await renderScreen(<Chat />);
@@ -130,7 +135,11 @@ test("LS-31 a list view drawn again for a kept list doesn't replay an old scroll
     const list = usePagedList(loader.load, { keyExtractor, inverted: true });
     latest = list;
     return shown ? (
-      <PagedListView list={list} renderItem={({ item }) => <Text>{`Row ${item.id}`}</Text>} />
+      <PagedListView
+        keyExtractor={keyExtractor}
+        list={list}
+        renderItem={({ item }) => <Text>{`Row ${item.id}`}</Text>}
+      />
     ) : null;
   }
   const view = await renderScreen(<Chat shown />);
@@ -183,6 +192,7 @@ test("LS-32 dragging the inverted FlatList tells the list the user took over, an
     latest = list;
     return (
       <PagedListView
+        keyExtractor={keyExtractor}
         testID="list"
         list={list}
         onScrollBeginDrag={onScrollBeginDrag}

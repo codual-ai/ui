@@ -1,5 +1,6 @@
 package ai.codual.ui.lists
 
+import ai.codual.ui.NumberedAnnouncement
 import ai.codual.ui.screenstates.ScreenState
 import ai.codual.ui.screenstates.TestError
 import kotlinx.coroutines.test.TestScope
@@ -109,12 +110,12 @@ class ReversedPagingTest {
       val fixture = reversed()
       fixture.scrolledAway(page(listOf(10, 9), next = 2))
       fixture.list.appendNewer(items(9, 11, 11))
-      val announcement = fixture.list.announcement
+      val announcement = fixture.list.announcer.latest
       fixture.list.appendNewer(items(11))
       assertEquals(listOf(11, 10, 9), fixture.ids)
       assertEquals(1, fixture.list.newItemCount)
       assertEquals(PagedListAnnouncement.NewItems(1), announcement?.value)
-      assertEquals(announcement, fixture.list.announcement)
+      assertEquals(announcement, fixture.list.announcer.latest)
       fixture.loadNextPage(page(listOf(11, 8), next = null))
       assertEquals(listOf(11, 10, 9, 8), fixture.ids)
     }
@@ -169,7 +170,7 @@ class ReversedPagingTest {
     fixture.showFirstPage(page(listOf(10), next = 2))
     fixture.loadNextPage(page(listOf(9), next = null))
     assertEquals(PagedListFooter.End, fixture.list.footer)
-    assertEquals(PagedListAnnouncement.Loaded(1, isEnd = true), fixture.list.announcement?.value)
+    assertEquals(PagedListAnnouncement.Loaded(1, isEnd = true), fixture.list.announcer.latest?.value)
     fixture.list.endReached()
     fixture.list.loadMore()
     assertEquals(2, fixture.loader.calls)
@@ -192,7 +193,7 @@ class ReversedPagingTest {
     fixture.run()
     fixture.list.appendNewer(items(10, 11, 12))
     fixture.answer(page(listOf(10, 9), next = null))
-    assertEquals(PagedListAnnouncement.NewItems(2), fixture.list.announcement?.value)
+    assertEquals(PagedListAnnouncement.NewItems(2), fixture.list.announcer.latest?.value)
   }
 
   @Test
@@ -256,12 +257,12 @@ class ReversedPagingTest {
     val fixture = reversed()
     fixture.showFirstPage(page(listOf(10), next = null))
     fixture.list.appendNewer(items(11))
-    val first = fixture.list.announcement
+    val first = fixture.list.announcer.latest
     assertEquals(PagedListAnnouncement.NewItems(1), first?.value)
     fixture.list.appendNewer(items(11, 10))
-    assertEquals(first, fixture.list.announcement)
+    assertEquals(first, fixture.list.announcer.latest)
     fixture.list.appendNewer(items(12, 13, 14))
     val third = NumberedAnnouncement((first?.number ?: 0) + 1, PagedListAnnouncement.NewItems(3))
-    assertEquals(third, fixture.list.announcement)
+    assertEquals(third, fixture.list.announcer.latest)
   }
 }
