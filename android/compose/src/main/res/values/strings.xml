@@ -19,6 +19,9 @@
   </plurals>
   <string name="codual_ui_end_of_list">End of list.</string>
   <string name="codual_ui_load_more_failed">Couldn\'t load more items.</string>
+  <string name="codual_ui_discard_changes_title">Discard Changes?</string>
+  <string name="codual_ui_discard_changes">Discard Changes</string>
+  <string name="codual_ui_keep_editing">Keep Editing</string>
   <string name="codual_ui_buy">Buy</string>
   <string name="codual_ui_buy_for">Buy for %1$s</string>
   <string name="codual_ui_buy_label">Buy %1$s, %2$s</string>

@@ -9,6 +9,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.core.content.edit
 import org.json.JSONArray
 import org.json.JSONException
 
@@ -65,7 +66,7 @@ public class SharedPreferencesRecentSearches(
   }
 
   override fun save(searches: List<String>) {
-    preferences.edit().putString(key, JSONArray(searches).toString()).apply()
+    preferences.edit { putString(key, JSONArray(searches).toString()) }
   }
 }
 

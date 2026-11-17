@@ -7,6 +7,7 @@ import ai.codual.ui.screenstates.ScreenState
 import ai.codual.ui.screenstates.isOfflineError
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import kotlin.time.Duration
@@ -142,7 +143,7 @@ internal constructor(
   internal val announcer: Announcer<SearchAnnouncement> = Announcer()
 
   /** How many times [cancel] has ended editing; [SearchResults] clears focus and hides the keyboard on each. */
-  internal var editingEnds: Int by mutableStateOf(0)
+  internal var editingEnds: Int by mutableIntStateOf(0)
     private set
 
   /** The debounce, while it waits to search the query. */

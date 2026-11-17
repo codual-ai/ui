@@ -103,3 +103,16 @@ export {
   type SearchOptions,
   useSearch,
 } from "./search/use-search";
+export type { SaveError, SaveSheet, SheetResult, SheetSnapshot } from "./sheets/machine";
+export {
+  defaultSheetLabels,
+  type ModalSheetProps,
+  modalSheet,
+  type PresentOptions,
+  type SheetAdapter,
+  type SheetBinding,
+  type SheetController,
+  type SheetLabels,
+  type SheetOptions,
+  useSheet,
+} from "./sheets/use-sheet";
