@@ -11,9 +11,8 @@ import Observation
 @MainActor
 @Observable
 public final class SearchModel<Item: Identifiable, Token, Scope: Hashable> {
-  public typealias Search = @MainActor (_ query: String, _ scope: Scope, _ token: Token?) async throws -> Page<
-    Item, Token
-  >
+  public typealias Results = Page<Item, Token>
+  public typealias Search = @MainActor (_ query: String, _ scope: Scope, _ token: Token?) async throws -> Results
 
   /// The field's text, exactly as typed. What is searched is this, trimmed.
   public var query: String {
