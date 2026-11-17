@@ -97,9 +97,9 @@ struct ScreenStatesViewTests {
   func theFailedAndOfflineViewsDrawATitleAMessageAndRetry() async throws {
     var retries = 0
     let failed = SystemFailedView(error: CancellationError()) { retries += 1 }
-    let failedText = try recognizedText(in: failed)
+    let failedText = try await recognizedText(in: failed)
     #expect(failedText.suffix(3) == ["Couldn't Load", "Something went wrong. Try again in a moment.", "Try Again"])
-    let offlineText = try recognizedText(in: SystemOfflineView {})
+    let offlineText = try await recognizedText(in: SystemOfflineView {})
     #expect(
       offlineText.suffix(3) == [
         "No Internet Connection", "Check your internet connection, then try again.", "Try Again",
