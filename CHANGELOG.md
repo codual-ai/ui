@@ -20,9 +20,19 @@ and versions follow [Semantic Versioning](https://semver.org/).
   cancellation, announcements for screen readers, a first page the screen already has, and each row's position.
   The spec is `implemented`, with a test for each of its 27 edge cases on every platform it applies to.
 - The `codual-ui` skill covers lists.
+- Forms on SwiftUI (`FormModel`, `.formField`), Jetpack Compose (`FormState`, `rememberForm`, `field`) and React
+  Native (`useForm`, `form.field`): fields in keyboard order with rules (required, length, pattern, email, a number
+  in the person's locale, matching another field, the app's own), async rules with a debounce and cancellation,
+  errors shown once a field is left or a submit is tried, submit once with focus on the first error, server errors
+  mapped to fields, values kept on failure, trimming, dirty tracking for "discard changes?", Next and Done, and
+  errors read by screen readers with their field, and fields the app makes inactive while hidden. Every message is
+  the app's. The spec is `implemented`, with a test for each of its 35 edge cases on every platform it applies to.
+- The `codual-ui` skill covers forms.
 
 ### Changed
 
+- The Compose library exposes compose-foundation as an `api` dependency: forms' field bindings return its
+  `KeyboardOptions` and `KeyboardActions`.
 - The Compose library builds on the Compose BOM 2026.06.01 (Compose 1.11), not 2026.09.00: Compose 1.12 needs
   compileSdk 37, which every app using the library would then need too.
 
