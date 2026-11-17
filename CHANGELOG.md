@@ -28,6 +28,15 @@ and versions follow [Semantic Versioning](https://semver.org/).
   errors read by screen readers with their field, and fields the app makes inactive while hidden. Every message is
   the app's. The spec is `implemented`, with a test for each of its 35 edge cases on every platform it applies to.
 - The `codual-ui` skill covers forms.
+- Purchases on SwiftUI (`PurchasesModel`, `StoreKitStore`, `Paywall`), Jetpack Compose (`Purchases`, `Paywall`, and
+  `PlayBillingStore` in the new `codual-ui-play-billing` library) and React Native (`createPurchases`,
+  `usePurchases`, `<Paywall>`, and `createReactNativeIapStore` from `@codual-ai/react-native-ui/react-native-iap`,
+  with react-native-iap as an optional peer dependency): products as a screen state, buy, pending, cancelled (not an
+  error), failed, restore and nothing to restore, entitlements known from launch, transactions from outside the buy
+  flow, delivering and finishing each transaction once, refunds, expiry, and system parts for the paywall. The store
+  sits behind a small `PurchaseStore` interface on every platform. The spec is `implemented`, with a test for each of
+  its 31 edge cases on every platform it applies to.
+- The `codual-ui` skill covers purchases.
 
 ### Changed
 

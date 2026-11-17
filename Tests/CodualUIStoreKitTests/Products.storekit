@@ -1,0 +1,74 @@
+{
+  "identifier": "7E6F1C2A",
+  "nonRenewingSubscriptions": [],
+  "products": [
+    {
+      "displayPrice": "4.99",
+      "familyShareable": true,
+      "internalID": "100000001",
+      "localizations": [
+        {
+          "description": "Yours for good",
+          "displayName": "Lifetime",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "lifetime",
+      "referenceName": "Lifetime",
+      "type": "NonConsumable"
+    },
+    {
+      "displayPrice": "0.99",
+      "familyShareable": false,
+      "internalID": "100000002",
+      "localizations": [
+        {
+          "description": "Thank you",
+          "displayName": "Tip",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "tip",
+      "referenceName": "Tip",
+      "type": "Consumable"
+    }
+  ],
+  "settings": {
+    "_failTransactionsEnabled": false
+  },
+  "subscriptionGroups": [
+    {
+      "id": "21000001",
+      "localizations": [],
+      "name": "Pro",
+      "subscriptions": [
+        {
+          "adHocOffers": [],
+          "codeOffers": [],
+          "displayPrice": "2.99",
+          "familyShareable": true,
+          "groupNumber": 1,
+          "internalID": "200000001",
+          "introductoryOffer": null,
+          "localizations": [
+            {
+              "description": "Every feature",
+              "displayName": "Pro Monthly",
+              "locale": "en_US"
+            }
+          ],
+          "productID": "pro.monthly",
+          "recurringSubscriptionPeriod": "P1M",
+          "referenceName": "Pro Monthly",
+          "subscriptionGroupID": "21000001",
+          "type": "RecurringSubscription",
+          "winbackOffers": []
+        }
+      ]
+    }
+  ],
+  "version": {
+    "major": 4,
+    "minor": 0
+  }
+}

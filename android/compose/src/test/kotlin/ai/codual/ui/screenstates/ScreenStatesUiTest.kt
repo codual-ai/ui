@@ -2,13 +2,12 @@
 
 package ai.codual.ui.screenstates
 
-import android.content.ComponentName
-import androidx.activity.ComponentActivity
+import ai.codual.ui.DeclareComposeActivity
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -23,28 +22,15 @@ import kotlinx.coroutines.test.runCurrent
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.ExternalResource
 import org.junit.rules.RuleChain
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.RuntimeEnvironment
-import org.robolectric.Shadows.shadowOf
 
 @RunWith(RobolectricTestRunner::class)
 class ScreenStatesUiTest {
   private val compose = createComposeRule()
 
-  // The compose rule launches a ComponentActivity, which a library's test manifest doesn't declare.
-  private val declareActivity =
-    object : ExternalResource() {
-      override fun before() {
-        val application = RuntimeEnvironment.getApplication()
-        val activity = ComponentName(application, ComponentActivity::class.java)
-        shadowOf(application.packageManager).addActivityIfNotPresent(activity)
-      }
-    }
-
-  @get:Rule val rules: RuleChain = RuleChain.outerRule(declareActivity).around(compose)
+  @get:Rule val rules: RuleChain = RuleChain.outerRule(DeclareComposeActivity()).around(compose)
 
   private val test = TestScope(StandardTestDispatcher())
   private val loader = FakeLoader<List<String>>()
