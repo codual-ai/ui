@@ -19,4 +19,18 @@
   </plurals>
   <string name="codual_ui_end_of_list">End of list.</string>
   <string name="codual_ui_load_more_failed">Couldn\'t load more items.</string>
+  <string name="codual_ui_buy">Buy</string>
+  <string name="codual_ui_buy_for">Buy for %1$s</string>
+  <string name="codual_ui_buy_label">Buy %1$s, %2$s</string>
+  <string name="codual_ui_purchasing">Purchasing</string>
+  <string name="codual_ui_purchased">Purchased</string>
+  <string name="codual_ui_restore">Restore Purchases</string>
+  <string name="codual_ui_restoring">Restoring</string>
+  <string name="codual_ui_purchase_pending">Waiting for Approval</string>
+  <string name="codual_ui_purchase_pending_message">Your purchase will finish once it\'s approved.</string>
+  <string name="codual_ui_purchase_failed">Purchase Failed</string>
+  <string name="codual_ui_purchases_restored">Purchases Restored</string>
+  <string name="codual_ui_nothing_to_restore">Nothing to Restore</string>
+  <string name="codual_ui_nothing_to_restore_message">There are no purchases to restore for this account.</string>
+  <string name="codual_ui_restore_failed">Couldn\'t Restore</string>
 </resources>

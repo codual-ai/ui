@@ -9,9 +9,9 @@ common screen: loading and retry, paging, form checks, purchases. It has no look
 views, so the code your agent writes shrinks to the part that is really yours.
 
 > [!NOTE]
-> Not published yet: use the packages from source. [Screen states](spec/screen-states.md) and
-> [lists](spec/lists.md) are done on all three platforms; forms and purchases are on their way, with a skill that
-> teaches coding agents to use them ([`skills/codual-ui`](skills/codual-ui/SKILL.md)).
+> Not published yet: use the packages from source. [Screen states](spec/screen-states.md),
+> [lists](spec/lists.md) and [purchases](spec/purchases.md) are done on all three platforms; forms are on their way,
+> with a skill that teaches coding agents to use them ([`skills/codual-ui`](skills/codual-ui/SKILL.md)).
 
 ## Screen states
 
@@ -102,6 +102,73 @@ PagedList(rememberPagedList(key = { it.id }) { token -> api.items(after = token)
 | New items announced | `AccessibilityNotification.Announcement`, from the model too | a polite live region; drawing it yourself, add `PagedListAnnouncements(state)` | `AccessibilityInfo.announceForAccessibilityWithOptions`, queued |
 | Built-in text | your app's string catalog | string resources named `codual_ui_*` | the `labels` prop |
 
+## Purchases
+
+In-app purchases and subscriptions, with the store behind a small adapter: StoreKit 2 on SwiftUI, Google Play
+Billing on Compose, react-native-iap (or your own) on React Native. Create one purchases object when the app launches:
+it listens for transactions for as long as the app runs (renewals, Ask to Buy approvals, purchases on another device,
+refunds), finishes each one once, after your `deliver` step, and says what the user owns. A paywall loads the
+products as a screen state and shows your rows and buttons; a second tap never buys twice, and a cancelled purchase
+is never an error. Receipts are not checked on a server: `deliver` gets the store's signed proof to send to yours.
+
+```swift
+// SwiftUI: once, for the app's lifetime, in the App struct (not a view's @State, which SwiftUI builds again)
+private let purchases = PurchasesModel(store: StoreKitStore())  // then .environment(purchases)
+
+Paywall(purchases, productIds: ["pro.monthly", "pro.yearly"]) { paywall in
+  VStack {
+    ForEach(paywall.products) { SystemProductRow($0, paywall: paywall) }
+    SystemBuyButton(paywall)
+    SystemRestoreButton(paywall)
+  }
+}
+```
+
+```kotlin
+// Jetpack Compose: once, for the app's lifetime (ai.codual.ui:codual-ui-play-billing)
+val purchases = Purchases(PlayBillingStore(application), MainScope())
+
+Paywall(purchases, listOf("pro.monthly", "pro.yearly")) { paywall ->
+  Column {
+    paywall.products.forEach { SystemProductRow(it, paywall) }
+    SystemBuyButton(paywall)
+    SystemRestoreButton(paywall)
+  }
+}
+```
+
+```tsx
+// React Native: once, outside any component (react-native-iap is an optional peer dependency)
+import * as iap from "react-native-iap";
+import { createReactNativeIapStore } from "@codual-ai/react-native-ui/react-native-iap";
+const purchases = createPurchases(createReactNativeIapStore(iap));
+
+<Paywall
+  purchases={purchases}
+  productIds={["pro.monthly", "pro.yearly"]}
+  content={(paywall) => (
+    <View>
+      {paywall.products.map((product) => <SystemProductRow key={product.id} product={product} paywall={paywall} />)}
+      <SystemBuyButton paywall={paywall} />
+      <SystemRestoreButton paywall={paywall} />
+    </View>
+  )}
+/>
+```
+
+| | SwiftUI | Jetpack Compose | React Native |
+|---|---|---|---|
+| Purchases, for the app's lifetime | `PurchasesModel(store:deliver:)` | `Purchases(store, scope, deliver)` | `createPurchases(store, { deliver })`, read with `usePurchases` |
+| The store | `StoreKitStore()` | `PlayBillingStore(application, consumableProductIds)`, in `codual-ui-play-billing` | `createReactNativeIapStore(iap, { consumableProductIds })` |
+| Your own store | `PurchaseStore` | `PurchaseStore` | `PurchaseStore` |
+| What the user owns | `entitlements` (nil until known), `isEntitled(to:)` | `entitlements` (null until known), `isEntitled(id)` | `entitlements` (undefined until known), `isEntitled(id)` |
+| The paywall | `Paywall(purchases, productIds:) { paywall in … }` | `Paywall(purchases, productIds) { paywall -> … }` | `<Paywall purchases productIds content />` |
+| Your views | `content`, `message(message, dismiss)`, and screen states' `loading`, `empty`, `failed`, `offline` | the same parameters | the same props |
+| System parts | `SystemProductRow`, `SystemBuyButton`, `SystemRestoreButton`, `SystemPurchaseMessageAlert` | the same, with `SystemPurchaseMessageDialog` | the same |
+| Status | `status`: `.purchasing`, `.pending`, `.purchased`, `.cancelled`, `.failed`, `.restoring`, `.restored`, `.nothingToRestore`, `.restoreFailed` | `status`: the same, as `PurchaseStatus` | `status.status`: the same names, kebab-case |
+| Server verification | `deliver: { transaction in … transaction.proof … }`; throw to leave it unfinished | the same | the same; reject to leave it unfinished |
+| Built-in text | your app's string catalog | string resources named `codual_ui_*` | the `labels` and `paywallLabels` props |
+
 ## How it works
 
 Every behaviour starts as a written spec in [`spec/`](spec/): its states, its transitions, and a numbered list of
@@ -112,7 +179,7 @@ them, named by its ID (`SS-07`), so the behaviour is identical on iOS and Androi
 spec/            one spec per behaviour, shared by every platform
 Sources/         the Swift package (SwiftUI, iOS 17 or later)
 Tests/
-android/         the Jetpack Compose library (Android 7.0, API 24, or later)
+android/         the Jetpack Compose library (Android 7.0, API 24, or later) and its Play Billing store
 react-native/    the React Native package
 scripts/         the check that every edge case is tested on every platform
 skills/          the skill that teaches coding agents to use the behaviours

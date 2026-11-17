@@ -38,7 +38,9 @@ CI runs these; run them before a pull request.
 # Swift (macOS, Xcode 16 or later)
 swift format lint --strict -r Sources Tests Package.swift
 device=$(xcrun simctl list devices available | grep -m1 -E '^ +iPhone' | grep -oE '[0-9A-F-]{36}')
-xcodebuild test -scheme CodualUI -destination "id=$device"
+xcodebuild test -scheme CodualUI -destination "id=$device" -skip-testing:CodualUIStoreKitTests
+# StoreKit Testing on its own, as its session holds up the main thread of tests running beside it
+xcodebuild test -scheme CodualUI -destination "id=$device" -only-testing:CodualUIStoreKitTests
 
 # Jetpack Compose (JDK 21 or later, which Robolectric needs for Android 16, and the Android SDK at $ANDROID_HOME): lint, unit tests and the build
 (cd android && ./gradlew build)

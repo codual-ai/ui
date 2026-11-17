@@ -10,5 +10,8 @@ let package = Package(
   targets: [
     .target(name: "CodualUI"),
     .testTarget(name: "CodualUITests", dependencies: ["CodualUI"]),
+    // StoreKit Testing in a test bundle of its own, so its session never holds up the other suites' main actor.
+    .testTarget(
+      name: "CodualUIStoreKitTests", dependencies: ["CodualUI"], resources: [.copy("Products.storekit")]),
   ]
 )

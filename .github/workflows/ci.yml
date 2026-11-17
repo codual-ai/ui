@@ -21,10 +21,12 @@ jobs:
         with:
           persist-credentials: false
       - run: swift format lint --strict -r Sources Tests Package.swift
+      # StoreKit Testing runs on its own: its session holds up the main thread of every test running beside it.
       - name: Build and test on an iOS simulator
         run: |
           device=$(xcrun simctl list devices available | grep -m1 -E '^ +iPhone' | grep -oE '[0-9A-F-]{36}')
-          xcodebuild test -scheme CodualUI -destination "id=$device" -quiet
+          xcodebuild test -scheme CodualUI -destination "id=$device" -skip-testing:CodualUIStoreKitTests -quiet
+          xcodebuild test -scheme CodualUI -destination "id=$device" -only-testing:CodualUIStoreKitTests -quiet
 
   android:
     runs-on: ubuntu-latest

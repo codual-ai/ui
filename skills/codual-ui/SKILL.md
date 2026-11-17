@@ -1,6 +1,6 @@
 ---
 name: codual-ui
-description: Use Codual UI's headless behaviours instead of writing their logic by hand, on SwiftUI, Jetpack Compose and React Native. Load before writing any screen that loads data (a list, a detail page, a feed, a profile) — anything with a spinner, an empty state, an error with retry, an offline message, pull to refresh, or paging (load more, infinite scroll).
+description: Use Codual UI's headless behaviours instead of writing their logic by hand, on SwiftUI, Jetpack Compose and React Native. Load before writing any screen that loads data (a list, a detail page, a feed, a profile) — anything with a spinner, an empty state, an error with retry, an offline message, pull to refresh, or paging (load more, infinite scroll) — and before any in-app purchase, subscription, paywall, tip jar or restore button (StoreKit, Google Play Billing, react-native-iap).
 ---
 
 # Codual UI
@@ -153,3 +153,87 @@ Don't write code for these ([spec](../../spec/lists.md)):
 - A page load never belongs to a row, so scrolling away never cancels it (LS-24).
 - Drawing it yourself keeps the announcements (LS-25); an initial page shows with no request (LS-26); rows know
   their index and whether they're last (LS-27).
+
+## Purchases
+
+**Use it for** in-app purchases and subscriptions: a paywall, a tip jar, "unlock Pro", restore purchases, and any
+"is the user subscribed" check. **Don't use it for** payments for physical goods or services (those aren't in-app
+purchases), or a server that is the source of truth for access (then ask your server; `deliver` still sends it the
+purchase).
+
+```swift
+// SwiftUI: create it once, in the App struct, and pass it down with .environment(purchases). Never in a view's
+// @State (SwiftUI builds its initial value again with the view) and never inside the paywall.
+private let purchases = PurchasesModel(store: StoreKitStore()) { transaction in
+  try await api.verify(transaction.proof)  // optional: your server; throw to leave it unfinished
+}
+
+Paywall(purchases, productIds: ["pro.monthly", "pro.yearly"]) { paywall in
+  VStack {
+    ForEach(paywall.products) { SystemProductRow($0, paywall: paywall) }
+    SystemBuyButton(paywall)
+    SystemRestoreButton(paywall)
+  }
+}
+// Anywhere: purchases.isEntitled(to: "pro.monthly"); purchases.entitlements == nil means not known yet.
+```
+
+```kotlin
+// Jetpack Compose: once, in Application.onCreate or a singleton, with an app-lifetime main-thread scope
+val purchases = Purchases(PlayBillingStore(application, consumableProductIds = setOf("tip")), MainScope())
+
+Paywall(purchases, listOf("pro.monthly", "pro.yearly")) { paywall ->
+  Column {
+    paywall.products.forEach { SystemProductRow(it, paywall) }
+    SystemBuyButton(paywall)
+    SystemRestoreButton(paywall)
+  }
+}
+```
+
+```tsx
+// React Native: once, in a module, outside any component
+import * as iap from "react-native-iap";
+import { createReactNativeIapStore } from "@codual-ai/react-native-ui/react-native-iap";
+export const purchases = createPurchases(createReactNativeIapStore(iap, { consumableProductIds: ["tip"] }));
+
+<Paywall purchases={purchases} productIds={["pro.monthly"]} content={(paywall) => <MyPaywall paywall={paywall} />} />
+// In components: const { entitlements, status } = usePurchases(purchases)
+```
+
+**How to wire it right:**
+
+- **One purchases object, created at launch.** It must exist from the first second so transactions that arrive
+  outside the buy flow (renewals, Ask to Buy approvals, purchases on another device, unfinished ones from a crash)
+  are delivered and finished. Never create it in the paywall, and never add your own `Transaction.updates`,
+  `PurchasesUpdatedListener` or `purchaseUpdatedListener`.
+- **Never finish, acknowledge or consume yourself.** Purchases does it once, after `deliver` returns. Put what you
+  grant (coins, a server call) in `deliver`, and throw there to have the store give the transaction again later.
+- **Access comes from `isEntitled`, not from a "purchased" flag you store.** It is the store's list, updated for
+  refunds and expiry. Wait for `entitlements` to be non-nil before locking content.
+- **Prices are `product.displayPrice`**, the store's string. Never format a number with a currency yourself.
+- **Consumables** (tips, coins): StoreKit knows them; on Google Play and react-native-iap pass
+  `consumableProductIds`.
+- **Your own buttons**: switch on `paywall.buyButton` (unavailable, ready, purchasing, owned) and call
+  `paywall.buy()`; don't keep an `isPurchasing` flag. For messages, pass `message` and switch on its five cases.
+- **Subscription switches on Google Play**: `PlayBillingStore(…, replacedSubscription = { activeSubscriptionId })`.
+- **Testing**: implement `PurchaseStore` with a fake; StoreKit configuration files and Play's test accounts still
+  work with the real stores.
+
+### Edge cases it already handles
+
+Don't write code for these ([spec](../../spec/purchases.md)):
+
+- Entitlements from launch, unknown until the store answers; transactions from outside the buy flow at any time
+  (PU-01, PU-02).
+- Products as a screen state, in your order, missing ones left out, with the store's prices (PU-03 to PU-05).
+- Purchased, cancelled (not an error), failed, pending (Ask to Buy) approved or declined later, offline failures
+  that complete anyway (PU-06 to PU-12, PU-22).
+- Each transaction delivered and finished once, only after `deliver` succeeds, and unfinished ones from a crash
+  finished at the next launch (PU-13 to PU-15).
+- Refunds, revocations, expiry and renewals, while running or closed; a failed check never removes access
+  (PU-16 to PU-18, PU-21).
+- Restore, nothing to restore, a cancelled sign-in (PU-19, PU-20); double taps (PU-09); already owned (PU-23);
+  consumables bought again (PU-24); Family Sharing (PU-25); unverified App Store transactions (PU-26).
+- Messages, buy button states, selection, purchases outliving the paywall, and the proof for your server
+  (PU-27 to PU-31).
