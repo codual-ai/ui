@@ -23,3 +23,16 @@ export {
   type ScreenStatesOptions,
   useScreenStates,
 } from "./screen-states/use-screen-states";
+export type { SaveError, SaveSheet, SheetResult, SheetSnapshot } from "./sheets/machine";
+export {
+  defaultSheetLabels,
+  type ModalSheetProps,
+  modalSheet,
+  type PresentOptions,
+  type SheetAdapter,
+  type SheetBinding,
+  type SheetController,
+  type SheetLabels,
+  type SheetOptions,
+  useSheet,
+} from "./sheets/use-sheet";

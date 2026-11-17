@@ -60,6 +60,7 @@ dependencies {
   api(libs.kotlinx.coroutines.core)
   implementation(libs.compose.foundation)
   implementation(libs.compose.material3)
+  implementation(libs.activity.compose)
 
   testImplementation(platform(libs.compose.bom))
   testImplementation(libs.compose.ui.test.junit4)

@@ -1,6 +1,6 @@
 ---
 name: codual-ui
-description: Use Codual UI's headless behaviours instead of writing their logic by hand, on SwiftUI, Jetpack Compose and React Native. Load before writing any screen that loads data (a list, a detail page, a feed, a profile) — anything with a spinner, an empty state, an error with retry, an offline message, pull to refresh, or paging (load more, infinite scroll).
+description: Use Codual UI's headless behaviours instead of writing their logic by hand, on SwiftUI, Jetpack Compose and React Native. Load before writing any screen that loads data (a list, a detail page, a feed, a profile) — anything with a spinner, an empty state, an error with retry, an offline message, pull to refresh, or paging (load more, infinite scroll) — and before any sheet, bottom sheet, modal or full-screen cover that edits something and closes with Cancel or Save.
 ---
 
 # Codual UI
@@ -153,3 +153,91 @@ Don't write code for these ([spec](../../spec/lists.md)):
 - A page load never belongs to a row, so scrolling away never cancels it (LS-24).
 - Drawing it yourself keeps the announcements (LS-25); an initial page shows with no request (LS-26); rows know
   their index and whether they're last (LS-27).
+
+## Sheets
+
+**Use it for** any sheet, bottom sheet or full-screen cover that edits or creates something and closes with Cancel
+or Save: an edit form, a new address, a compose screen. **Don't use it for** a sheet that only shows information
+(a plain `.sheet` is fine), a confirmation dialog, or a navigation push.
+
+```swift
+// SwiftUI: the item must be Identifiable
+@State private var editing = SheetPresenter<Note, Note>()
+
+List(notes) { note in Button(note.title) { editing.present(note) } }
+  .sheet(editing, onResult: { result in
+    if case .saved(_, let saved) = result { store.update(saved) }
+  }) { note in
+    NoteEditor(note: note, sheet: editing)
+  }
+
+// In NoteEditor: no isPresented, no dismiss(), no isSaving flag of your own
+.onChange(of: draft, initial: true) { sheet.hasUnsavedChanges = draft != note }
+Button("Cancel") { sheet.requestDismiss() }
+Button("Save") { sheet.save { try await api.save(draft) } }.disabled(sheet.isSaving)
+```
+
+```kotlin
+// Jetpack Compose: items must be Bundle-able (String, Int, Parcelable) for rememberSheetPresenter
+val editing = rememberSheetPresenter<Note, Note>(key = { it.id }) { result ->
+  if (result is SheetResult.Saved) store.update(result.value)
+}
+Button(onClick = { editing.present(note, opener = focusRequester) }) { Text(note.title) }
+PresentedBottomSheet(editing) { note -> NoteEditor(note, editing) }   // or PresentedDialog for full screen
+
+// In NoteEditor
+LaunchedEffect(isDirty) { editing.hasUnsavedChanges = isDirty }
+TextButton(onClick = editing::requestDismiss) { Text("Cancel") }
+Button(onClick = { editing.save { api.save(draft) } }, enabled = !editing.isSaving) { Text("Save") }
+```
+
+```tsx
+// React Native: Modal, or any bottom-sheet library through a small adapter
+const editing = useSheet<Note, Note>({
+  keyExtractor: (note) => note.id,
+  onResult: (result) => { if (result.status === "saved") store.update(result.value); },
+});
+<Pressable ref={openerRef} onPress={() => editing.present(note, { opener: openerRef })} />
+<Modal presentationStyle="pageSheet" animationType="slide" {...editing.bind(modalSheet)}>
+  {editing.item && <NoteEditor note={editing.item} sheet={editing} />}
+</Modal>
+
+// In NoteEditor
+useEffect(() => sheet.setHasUnsavedChanges(isDirty), [isDirty, sheet.setHasUnsavedChanges]);
+<Button title="Cancel" onPress={sheet.requestDismiss} />
+<Button title="Save" disabled={sheet.isSaving} onPress={() => sheet.save((signal) => api.save(draft, { signal }))} />
+```
+
+**How to wire it right:**
+
+- **Every close goes through `requestDismiss`.** The Cancel or close button calls it; never set the item to nil,
+  call `dismiss()`, or set `visible={false}` yourself. Swipes, taps outside, back and Escape are already wired to it.
+- **Unsaved changes are yours to say.** Set `hasUnsavedChanges` from the form's dirty state (the forms behaviour's,
+  or `draft != original`); sheets never compares values. It resets when the sheet closes.
+- **Save through `save`.** It blocks closing while it runs (`isSaving`: show your progress), closes the sheet with
+  the value it returns, and keeps the sheet open with `saveError` if it throws. Don't close the sheet in the save.
+- **The result comes back once**, to `onResult`: saved with the value, or cancelled. Don't also use `onDismiss`.
+- **One at a time.** Presenting while a sheet is open queues it; don't guard with "is a sheet showing".
+- **Nested sheets** get their own presenter, inside the outer sheet's content.
+- **Detents and heights** are yours: `.presentationDetents`, `skipPartiallyExpanded`, the library's snap points.
+- **A bottom-sheet library on React Native**: write the adapter once, mapping `isOpen` to whether it shows,
+  `isDismissDisabled` to its pan-to-close switch, its backdrop press and back button to `requestDismiss`, and the
+  callback it calls once its sheet has closed (however it closed) to `dismissed`. The next queued sheet waits for
+  that callback, so map it, or a sheet that closed waits a second before the next shows.
+- **Your own confirmation**: SwiftUI and Compose show a system one; React Native takes `systemConfirmation: false`
+  and you draw one from `isConfirmingDiscard`, calling `discardChanges` and `keepEditing`.
+
+### Edge cases it already handles
+
+Don't write code for these ([spec](../../spec/sheets.md)):
+
+- The sheet follows the presenter's item alone (SH-01); a clean close reports cancelled (SH-02).
+- Unsaved changes ask before closing, however the close was asked for; Discard Changes closes, Keep Editing keeps
+  the changes (SH-03, SH-04); the swipe and tap outside are blocked and ask instead (SH-05); no second confirmation
+  (SH-06).
+- Nothing closes a saving sheet (SH-07); a successful save closes with the value (SH-08); a failed one keeps the
+  sheet and its changes (SH-09); a double save saves once (SH-10); exactly one result per sheet (SH-11).
+- One sheet at a time, with a queue (SH-12); nested sheets (SH-13); Escape and the VoiceOver escape gesture on iOS
+  (SH-14); Android back (SH-15); rotation and process death on Compose (SH-16); focus back to the opener (SH-17).
+- Blocking follows unsaved changes live (SH-18); the confirmation is a system one with localisable text (SH-19); a
+  full-screen cover follows the same rules (SH-20); the next sheet starts clean (SH-21).
