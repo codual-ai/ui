@@ -22,13 +22,17 @@ jobs:
           persist-credentials: false
       - run: swift format lint --strict -r Sources Tests Package.swift
       # StoreKit Testing runs on its own: its session holds up the main thread of every test running beside it.
+      # Test timeouts, so a test that hangs fails with its name instead of holding up the job.
       - name: Build and test on an iOS simulator
+        timeout-minutes: 20
         run: |
           device=$(xcrun simctl list devices available | grep -m1 -E '^ +iPhone' | grep -oE '[0-9A-F-]{36}')
+          timeouts="-test-timeouts-enabled YES -default-test-execution-time-allowance 60"
+          timeouts="$timeouts -maximum-test-execution-time-allowance 120"
           xcodebuild test -scheme CodualUI -destination "id=$device" -skip-testing:CodualUIStoreKitTests -quiet \
-            -resultBundlePath "$RUNNER_TEMP/tests.xcresult"
+            $timeouts -resultBundlePath "$RUNNER_TEMP/tests.xcresult"
           xcodebuild test -scheme CodualUI -destination "id=$device" -only-testing:CodualUIStoreKitTests -quiet \
-            -resultBundlePath "$RUNNER_TEMP/storekit-tests.xcresult"
+            $timeouts -resultBundlePath "$RUNNER_TEMP/storekit-tests.xcresult"
       # xcodebuild -quiet names a failed test without its message; the result bundle has it.
       - name: Show test failures
         if: failure()
