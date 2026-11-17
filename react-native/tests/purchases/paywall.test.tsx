@@ -26,7 +26,6 @@ beforeEach(() => {
 });
 afterEach(() => {
   stopPurchases();
-  jest.restoreAllMocks();
 });
 
 function systemPaywall(paywall: PaywallContent) {

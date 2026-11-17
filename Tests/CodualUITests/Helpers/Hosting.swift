@@ -18,7 +18,7 @@ func show(_ controller: UIViewController) -> UIWindow {
 }
 
 /// The lines of text Vision reads in `view`, drawn at phone size. The view is drawn on the main actor; the reading,
-/// which takes a while, runs off it, so other main-actor tests running at the same time aren't held up.
+/// which takes a while, runs on a dispatch queue, so neither main-actor tests nor Swift's thread pool are held up.
 @MainActor
 func recognizedText(in view: some View, height: CGFloat = 600) async throws -> [String] {
   // A white background, or black text drawn on transparent pixels reads as nothing.
@@ -33,34 +33,58 @@ struct TimedOut: Error, CustomStringConvertible {
   var description: String { "Timed out \(what)." }
 }
 
-/// Runs `work` off the main actor and returns its result, or throws `TimedOut` if it takes longer than `timeout`; the
-/// work itself can't be stopped, but the test goes on and fails with its name.
+/// Runs `work` on a dispatch queue and returns its result, or throws `TimedOut` if it takes longer than `timeout` and
+/// `CancellationError` if the test is cancelled first (its time limit, say); the work itself can't be stopped, but
+/// the test goes on and fails with its name.
+/// Neither the work nor the deadline runs on Swift's cooperative pool: Vision's text reading blocks its thread while
+/// it waits on work of its own that needs that pool, so a few reads at once (a runner with 3 cores) deadlock it.
 func withDeadline<T: Sendable>(
   _ timeout: Duration, _ what: String, _ work: @escaping @Sendable () throws -> T
 ) async throws -> T {
   let result = ResultBox<T>()
-  return try await withCheckedThrowingContinuation { continuation in
-    result.continuation = continuation
-    Task.detached { result.finish(Result(catching: work)) }
-    Task.detached {
-      try? await Task.sleep(for: timeout)
-      result.finish(.failure(TimedOut(what: what)))
+  return try await withTaskCancellationHandler {
+    try await withCheckedThrowingContinuation { continuation in
+      result.wait(with: continuation)
+      DispatchQueue.global(qos: .userInitiated).async { result.finish(Result(catching: work)) }
+      DispatchQueue.global().asyncAfter(deadline: .now() + timeout.timeInterval) {
+        result.finish(.failure(TimedOut(what: what)))
+      }
     }
+  } onCancel: {
+    result.finish(.failure(CancellationError()))
   }
 }
 
-/// Resumes its continuation once, with whichever result comes first.
+extension Duration {
+  fileprivate var timeInterval: TimeInterval {
+    let (seconds, attoseconds) = components
+    return TimeInterval(seconds) + TimeInterval(attoseconds) / 1e18
+  }
+}
+
+/// Resumes its continuation once, with whichever result comes first, even one that came before the wait began.
 private final class ResultBox<T: Sendable>: @unchecked Sendable {
   private let lock = NSLock()
   private var resumed = false
-  var continuation: CheckedContinuation<T, any Error>?
+  private var continuation: CheckedContinuation<T, any Error>?
+  private var early: Result<T, any Error>?
+
+  func wait(with continuation: CheckedContinuation<T, any Error>) {
+    let early = lock.withLock {
+      if self.early == nil { self.continuation = continuation }
+      return self.early
+    }
+    if let early { continuation.resume(with: early) }
+  }
 
   func finish(_ result: Result<T, any Error>) {
-    lock.lock()
-    defer { lock.unlock() }
-    guard !resumed, let continuation else { return }
-    resumed = true
-    continuation.resume(with: result)
+    let continuation = lock.withLock { () -> CheckedContinuation<T, any Error>? in
+      guard !resumed else { return nil }
+      resumed = true
+      if self.continuation == nil { early = result }
+      return self.continuation
+    }
+    continuation?.resume(with: result)
   }
 }
 

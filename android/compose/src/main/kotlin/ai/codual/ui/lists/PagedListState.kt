@@ -169,7 +169,7 @@ public class PagedListState<Item, Token : Any>(
     val added = content.addingNewer(items, key)
     if (added.count == 0) return
     screen.replaceLoaded(added.content)
-    announce(PagedListAnnouncement.NewItems(added.count))
+    announcer.announce(PagedListAnnouncement.NewItems(added.count))
     newest.arrived(added.count)
   }
 
@@ -205,7 +205,7 @@ public class PagedListState<Item, Token : Any>(
         newest.scrollToBottom()
         val unannounced = arrived.filter { !it.shown }.map { it.item }
         val count = page.addingNewer(unannounced, key).count
-        if (count > 0) announce(PagedListAnnouncement.NewItems(count))
+        if (count > 0) announcer.announce(PagedListAnnouncement.NewItems(count))
       }
       return content
     } finally {
@@ -264,17 +264,13 @@ public class PagedListState<Item, Token : Any>(
           return
         }
         screen.replaceContent(added.content.withPaging(if (isStalled) Paging.Stalled else Paging.Ready))
-        PagedListAnnouncement.of(added.count, isEnd = next == null)?.let(::announce)
+        PagedListAnnouncement.of(added.count, isEnd = next == null)?.let(announcer::announce)
       },
       onFailure = { error ->
         screen.replaceContent(content.withPaging(Paging.Failed(error)))
-        announce(PagedListAnnouncement.Failed)
+        announcer.announce(PagedListAnnouncement.Failed)
       },
     )
-  }
-
-  private fun announce(value: PagedListAnnouncement) {
-    announcer.announce(value)
   }
 
   private fun cancelPageLoad() {

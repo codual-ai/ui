@@ -42,6 +42,17 @@ and versions follow [Semantic Versioning](https://semver.org/).
   sits behind a small `PurchaseStore` interface on every platform. The spec is `implemented`, with a test for each of
   its 31 edge cases on every platform it applies to.
 - The `codual-ui` skill covers purchases.
+- Selection on SwiftUI (`SelectionModel`, `.selectionRow`, `.selectionMode`, `.syncSelection`,
+  `.restoresSelection`), Jetpack Compose (`SelectionState`, `rememberSelection`, `Modifier.selectionRow`,
+  `SyncSelection`, `SelectionBackHandler`, `SelectionAnnouncements`) and React Native (`useSelection`, `rowProps`),
+  with `SelectionModeButton` and `SelectAllButton` on each and a `selection` for `PagedList`: single and multiple
+  selection, a selection mode entered by Select or a long press and left by Done, Cancel or back, select all of the
+  loaded items, a maximum, disabled items, selection by identity across refresh and paging with removed items
+  dropped, bulk actions with confirmation, cleared after success and kept after failure, restoration, and
+  announcements. The spec is `implemented`, with a test for each of its 33 edge cases on every platform it applies
+  to. Filters and search hide selected items without dropping them, and an app can offer select all on the
+  server.
+- The `codual-ui` skill covers selection.
 - Sheets on SwiftUI (`SheetPresenter`, `.sheet(presenter)`, `.fullScreenCover(presenter)`), Jetpack Compose
   (`SheetPresenter`, `rememberSheetPresenter`, `PresentedBottomSheet`, `PresentedDialog`, `DiscardConfirmation`)
   and React Native (`useSheet`, `modalSheet`, `SheetAdapter`): a sheet that edits an item and reports saved or

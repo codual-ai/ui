@@ -223,9 +223,9 @@ struct ReversedPagingTests {
     #expect(PagedListAnnouncement.newItems(count: 3).text() == "3 new items.")
 
     var spoken: [AttributedString] = []
-    let speak = PagedListAnnouncement.speak
-    PagedListAnnouncement.speak = { spoken.append($0) }
-    defer { PagedListAnnouncement.speak = speak }
+    let speak = PoliteAnnouncement.speak
+    PoliteAnnouncement.speak = { spoken.append($0) }
+    defer { PoliteAnnouncement.speak = speak }
     PagedListAnnouncement.newItems(count: 1).post(reversed: true)
     #expect(spoken.map { String($0.characters) } == ["1 new item."])
     #expect(spoken.first?.accessibilitySpeechAnnouncementPriority == .low)

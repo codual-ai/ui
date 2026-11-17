@@ -4,10 +4,6 @@ import { type SheetAdapter, useSheet } from "../../src/sheets/use-sheet";
 import { spyOnFocus, user } from "./helpers/modal-screen";
 import { type Note, ResultLog } from "./helpers/sheet";
 
-afterEach(() => {
-  jest.restoreAllMocks();
-});
-
 test("SH-05 a bottom-sheet library gets the block through its adapter", async () => {
   const log = new ResultLog();
   const props: { current?: { index: number; enablePanDownToClose: boolean; onClose: () => void } } = {};

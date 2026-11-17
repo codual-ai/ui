@@ -94,7 +94,7 @@ class EdgeOrderTest {
     form.focusChanged(Field.Name, isFocused = true)
     submit(form, action)
     assertNull(form.fieldToFocus)
-    assertEquals("Enter your name", form.announcement?.text)
+    assertEquals("Enter your name", form.announcer.latest?.value)
   }
 
   @Test

@@ -5,8 +5,6 @@ import { type SearchController, useSearch } from "../../src/search/use-search";
 import { keyExtractor, page, type TestItem } from "../lists/helpers/paged-list";
 import { FakeSearch, renderSearch, run, spyOnAnnouncements, wait } from "./helpers/search";
 
-afterEach(() => jest.restoreAllMocks());
-
 const items: readonly TestItem[] = [
   { id: 1, title: "cat" },
   { id: 2, title: "cattle" },

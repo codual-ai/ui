@@ -10,10 +10,6 @@ beforeEach(() => {
   jest.spyOn(Alert, "alert").mockImplementation(() => {});
 });
 
-afterEach(() => {
-  jest.restoreAllMocks();
-});
-
 async function openDirty(results: ResultLog, id = 1) {
   const rendered = await renderSheet(results);
   await rendered.run(() => {

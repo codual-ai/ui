@@ -2,8 +2,6 @@ import { createInMemoryRecentSearches } from "../../src/search/recent-searches";
 import { page } from "../lists/helpers/paged-list";
 import { renderSearch, run, wait } from "./helpers/search";
 
-afterEach(() => jest.restoreAllMocks());
-
 /** An in-memory store that records every list saved to it. */
 function recordingStore(initial: readonly string[] = []) {
   const store = createInMemoryRecentSearches(initial);

@@ -2,8 +2,6 @@ import { page } from "../lists/helpers/paged-list";
 import { offlineError, TestError } from "../screen-states/helpers/fake-loader";
 import { renderSearch, run, wait } from "./helpers/search";
 
-afterEach(() => jest.restoreAllMocks());
-
 test("SR-28 the count is announced once when the latest query's first page arrives, never per keystroke", async () => {
   const { fake, type, announcements } = await renderSearch();
   for (const query of ["c", "ca", "cat"]) await type(query);

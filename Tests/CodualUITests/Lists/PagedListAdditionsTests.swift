@@ -9,9 +9,9 @@ struct PagedListAdditionsTests {
   @Test("LS-25 the model alone, with no PagedList view, speaks each page to VoiceOver")
   func theModelAloneAnnounces() async {
     var spoken: [String] = []
-    let speak = PagedListAnnouncement.speak
-    PagedListAnnouncement.speak = { spoken.append(String($0.characters)) }
-    defer { PagedListAnnouncement.speak = speak }
+    let speak = PoliteAnnouncement.speak
+    PoliteAnnouncement.speak = { spoken.append(String($0.characters)) }
+    defer { PoliteAnnouncement.speak = speak }
     let loader = FakePageLoader()
     let model = PagedListModel(loadPage: loader.load)
     model.appear()

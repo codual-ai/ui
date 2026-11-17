@@ -9,11 +9,6 @@ import {
   renderPagedList,
 } from "./helpers/paged-list";
 
-afterEach(() => {
-  jest.restoreAllMocks();
-  jest.clearAllMocks();
-});
-
 test("LS-16 a page that adds nothing new loads the next one straight away", async () => {
   const { loader, list, ids, loadNextPage } = await renderPagedList();
   await loader.pages.succeed(page([1, 2], 2));

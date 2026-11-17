@@ -2,8 +2,6 @@ import { page } from "../lists/helpers/paged-list";
 import { TestError } from "../screen-states/helpers/fake-loader";
 import { renderSearch, run, wait } from "./helpers/search";
 
-afterEach(() => jest.restoreAllMocks());
-
 test("SR-01 typing searches nothing per keystroke, only the last query once typing stops for the debounce", async () => {
   const { fake, type } = await renderSearch();
   for (const query of ["c", "ca", "cat"]) {

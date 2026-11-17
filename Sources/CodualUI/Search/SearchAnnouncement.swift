@@ -28,10 +28,10 @@ enum SearchAnnouncement: Equatable {
     }
   }
 
-  /// Speaks the text after whatever the screen reader is saying, as a page's announcement does.
+  /// Speaks the text after whatever the screen reader is saying.
   @MainActor
   func post() {
-    PagedListAnnouncement.speakPolitely(text)
+    PoliteAnnouncement.post(text)
   }
 }
 

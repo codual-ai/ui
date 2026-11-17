@@ -32,22 +32,11 @@ enum PagedListAnnouncement: Equatable {
     }
   }
 
+  /// Speaks the text after whatever the screen reader is saying.
   @MainActor
   func post(reversed: Bool = false) {
-    Self.speakPolitely(text(reversed: reversed))
+    PoliteAnnouncement.post(text(reversed: reversed))
   }
-
-  /// Speaks `text` after whatever the screen reader is saying: low priority queues it instead of cutting in. Search
-  /// announces through it too.
-  @MainActor
-  static func speakPolitely(_ text: String) {
-    var announcement = AttributedString(text)
-    announcement.accessibilitySpeechAnnouncementPriority = .low
-    speak(announcement)
-  }
-
-  /// Where `post()` sends the announcement; tests listen here.
-  @MainActor static var speak: (AttributedString) -> Void = { AccessibilityNotification.Announcement($0).post() }
 }
 
 enum PagedListText {

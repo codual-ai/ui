@@ -17,6 +17,7 @@ extension PagedList {
   /// ```
   public init(
     model: Model,
+    selection: SelectionModel<Item>? = nil,
     @ViewBuilder row: @escaping (_ item: Item, _ position: PagedListRowPosition) -> Row,
     @ViewBuilder footer: @escaping (PagedListFooter) -> Footer = { SystemPagedListFooter($0) },
     @ViewBuilder content: @escaping (_ rows: Rows) -> Content,
@@ -31,13 +32,14 @@ extension PagedList {
     }
   ) {
     self.init(
-      model: model, ownsModel: false, update: nil, row: row, footer: footer, content: content, loading: loading,
-      empty: empty, failed: failed, offline: offline, refreshError: refreshError)
+      model: model, ownsModel: false, selection: selection, update: nil, row: row, footer: footer, content: content,
+      loading: loading, empty: empty, failed: failed, offline: offline, refreshError: refreshError)
   }
 
   /// A paged list drawn from the app's model, whose rows don't need their position.
   public init(
     model: Model,
+    selection: SelectionModel<Item>? = nil,
     @ViewBuilder row: @escaping (Item) -> Row,
     @ViewBuilder footer: @escaping (PagedListFooter) -> Footer = { SystemPagedListFooter($0) },
     @ViewBuilder content: @escaping (_ rows: Rows) -> Content,
@@ -52,7 +54,8 @@ extension PagedList {
     }
   ) {
     self.init(
-      model: model, ownsModel: false, update: nil, row: { item, _ in row(item) }, footer: footer, content: content,
-      loading: loading, empty: empty, failed: failed, offline: offline, refreshError: refreshError)
+      model: model, ownsModel: false, selection: selection, update: nil, row: { item, _ in row(item) },
+      footer: footer, content: content, loading: loading, empty: empty, failed: failed, offline: offline,
+      refreshError: refreshError)
   }
 }

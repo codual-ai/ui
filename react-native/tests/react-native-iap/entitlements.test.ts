@@ -10,10 +10,6 @@ beforeEach(() => {
   ({ fake, store } = fakeIapStore());
 });
 
-afterEach(() => {
-  jest.restoreAllMocks();
-});
-
 test("PU-05 a product's price is the store's display price, and its kind comes from the store", async () => {
   const products = await store.products(["lifetime", "tip", "pro", "not.sold"]);
   expect(products).toEqual([

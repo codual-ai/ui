@@ -2,8 +2,6 @@ import { page } from "../lists/helpers/paged-list";
 import { abortError, offlineError, TestError } from "../screen-states/helpers/fake-loader";
 import { renderSearch, run, wait } from "./helpers/search";
 
-afterEach(() => jest.restoreAllMocks());
-
 async function searchCat(options: Parameters<typeof renderSearch>[0] = {}) {
   const rendered = await renderSearch(options);
   await rendered.type("cat");

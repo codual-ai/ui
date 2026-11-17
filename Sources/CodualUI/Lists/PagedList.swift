@@ -37,6 +37,7 @@ public struct PagedList<
   private let failed: (any Error, @escaping () -> Void) -> Failed
   private let offline: (@escaping () -> Void) -> Offline
   private let refreshError: (any Error, @escaping () -> Void) -> RefreshError
+  private let selection: SelectionModel<Item>?
   /// The model this view made, kept across updates; nil when the app passed its own, which it keeps itself.
   @State private var ownModel: Model?
   private let appModel: Model?
@@ -52,6 +53,8 @@ public struct PagedList<
   ///   - initialPage: A first page the screen already has, shown at once with no request. One with no items counts
   ///     as none, and the first page loads.
   ///   - direction: `.reversed` for a chat: the first page is the newest, at the bottom, with its items newest first.
+  ///   - selection: A selection kept to the items loaded: selected items a refresh drops drop out of it, and the
+  ///     empty view ends its mode.
   ///   - loadPage: Loads the page with this token, or the first page for nil. The page's `next` is nil at the end.
   ///   - row: A row, with its position among the items loaded so far (`isLast`, say, for a rounded last card).
   ///   - footer: After the last row. By default, a progress indicator, Try Again, Load More, or an end message.
@@ -63,6 +66,7 @@ public struct PagedList<
     isOffline: @escaping (any Error) -> Bool = isOfflineError,
     initialPage: Page<Item, Token>? = nil,
     direction: PagedListDirection = .standard,
+    selection: SelectionModel<Item>? = nil,
     loadPage: @escaping PagedListModel<Item, Token>.LoadPage,
     @ViewBuilder row: @escaping (_ item: Item, _ position: PagedListRowPosition) -> Row,
     @ViewBuilder footer: @escaping (PagedListFooter) -> Footer = { SystemPagedListFooter($0) },
@@ -82,6 +86,7 @@ public struct PagedList<
         threshold: threshold, isOffline: isOffline, initialPage: initialPage, direction: direction,
         loadPage: loadPage),
       ownsModel: true,
+      selection: selection,
       update: { model in
         model.loadPage = loadPage
         model.screen.isOffline = isOffline
@@ -94,6 +99,7 @@ public struct PagedList<
   init(
     model: Model,
     ownsModel: Bool,
+    selection: SelectionModel<Item>?,
     update: ((Model) -> Void)?,
     row: @escaping (Item, PagedListRowPosition) -> Row,
     footer: @escaping (PagedListFooter) -> Footer,
@@ -113,6 +119,7 @@ public struct PagedList<
     self.failed = failed
     self.offline = offline
     self.refreshError = refreshError
+    self.selection = selection
     appModel = ownsModel ? nil : model
     _ownModel = State(initialValue: ownsModel ? model : nil)
   }
@@ -123,7 +130,9 @@ public struct PagedList<
     ScreenStatesView(
       model: model.screen, appear: model.appear, disappear: model.disappear, refresh: model.refresh,
       content: { content(Rows(model: model, content: $0, row: row, footer: footer)).modifier(Scrolling(model: model)) },
-      loading: loading, empty: empty, failed: failed, offline: offline, refreshError: refreshError)
+      loading: loading, empty: empty, failed: failed, offline: offline, refreshError: refreshError
+    )
+    .modifier(SyncSelectionModifier(selection: selection, items: knownItems(in: model.state)))
   }
 }
 
@@ -134,6 +143,7 @@ extension PagedList {
     isOffline: @escaping (any Error) -> Bool = isOfflineError,
     initialPage: Page<Item, Token>? = nil,
     direction: PagedListDirection = .standard,
+    selection: SelectionModel<Item>? = nil,
     loadPage: @escaping PagedListModel<Item, Token>.LoadPage,
     @ViewBuilder row: @escaping (Item) -> Row,
     @ViewBuilder footer: @escaping (PagedListFooter) -> Footer = { SystemPagedListFooter($0) },
@@ -149,9 +159,9 @@ extension PagedList {
     }
   ) {
     self.init(
-      threshold: threshold, isOffline: isOffline, initialPage: initialPage, direction: direction, loadPage: loadPage,
-      row: { item, _ in row(item) }, footer: footer, content: content, loading: loading, empty: empty,
-      failed: failed, offline: offline, refreshError: refreshError)
+      threshold: threshold, isOffline: isOffline, initialPage: initialPage, direction: direction,
+      selection: selection, loadPage: loadPage, row: { item, _ in row(item) }, footer: footer, content: content,
+      loading: loading, empty: empty, failed: failed, offline: offline, refreshError: refreshError)
   }
 }
 

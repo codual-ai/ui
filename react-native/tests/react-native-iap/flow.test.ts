@@ -10,10 +10,6 @@ beforeEach(() => {
   ({ fake, store } = fakeIapStore());
 });
 
-afterEach(() => {
-  jest.restoreAllMocks();
-});
-
 test("PU-06 the sheet's purchase is the purchased transaction, with the App Store's JWS as proof, finished once", async () => {
   const { result: bought } = await buy(store, "lifetime");
   fake.updated(purchase("t1", "lifetime"));

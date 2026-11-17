@@ -8,11 +8,6 @@ import { FakePageLoader, keyExtractor, page } from "./helpers/paged-list";
 
 const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
 
-afterEach(() => {
-  jest.restoreAllMocks();
-  jest.clearAllMocks();
-});
-
 function List({ loader }: { readonly loader: FakePageLoader }) {
   return (
     <PagedList

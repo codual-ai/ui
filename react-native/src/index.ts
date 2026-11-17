@@ -146,6 +146,21 @@ export {
   type SearchOptions,
   useSearch,
 } from "./search/use-search";
+export type {
+  SelectionAction,
+  SelectionActionContext,
+  SelectionActivation,
+  SelectionKind,
+} from "./selection/config";
+export { defaultSelectionLabels, type SelectionLabels } from "./selection/labels";
+export type { SelectionActionError, SelectionSnapshot } from "./selection/snapshot";
+export { SelectAllButton, SelectionModeButton } from "./selection/system-views";
+export {
+  type SelectionController,
+  type SelectionOptions,
+  type SelectionRowProps,
+  useSelection,
+} from "./selection/use-selection";
 export type { SaveError, SaveSheet, SheetResult, SheetSnapshot } from "./sheets/machine";
 export {
   defaultSheetLabels,

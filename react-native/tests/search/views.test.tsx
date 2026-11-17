@@ -14,8 +14,6 @@ function keyboardProps(view: { readonly props: Record<string, unknown> }) {
 
 const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
 
-afterEach(() => jest.restoreAllMocks());
-
 type ScreenOptions = Partial<Omit<SearchOptions<TestItem, number, string>, "search" | "items" | "matches">>;
 
 function SearchScreen({

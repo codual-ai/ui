@@ -1,11 +1,13 @@
-import type { ReactElement, ReactNode } from "react";
+import { type ReactElement, type ReactNode, useLayoutEffect } from "react";
 import { FlatList, type FlatListProps, type ListRenderItemInfo, type ScrollViewProps } from "react-native";
+import type { ScreenState } from "../screen-states/machine";
 import {
   type FocusWhenLoaded,
   ScreenStatesView,
   type ScreenStatesViews,
 } from "../screen-states/ScreenStates";
 import type { ScreenStatesLabels } from "../screen-states/system-views";
+import type { SelectionController } from "../selection/use-selection";
 import type { PagedListController } from "./controller";
 import { type InvertedListProps, useInvertedList } from "./inverted-list";
 import type { LoadPage, PagedListFooter } from "./machine";
@@ -33,6 +35,8 @@ export interface PagedListProps<Item, Token>
     Omit<PagedListViewProps<Item>, "list" | "focusWhenLoaded" | "pullToRefreshProps"> {
   readonly loadPage: LoadPage<Item, Token>;
 }
+
+const NO_ITEMS: readonly never[] = [];
 
 /**
  * A list of data that comes in pages, in a `FlatList` of the app's own rows: the first page as a screen state, the
@@ -72,13 +76,15 @@ export interface PagedListViewProps<Item>
   readonly focusWhenLoaded?: FocusWhenLoaded;
   /** Props for the scroll view that lets the empty, failed and offline views be pulled to refresh. */
   readonly pullToRefreshProps?: ScrollViewProps;
+  /** A selection kept to the items the list has loaded; rows redraw as it changes. */
+  readonly selection?: SelectionController<Item>;
 }
 
 export function PagedListView<Item>(props: PagedListViewProps<Item>) {
   checkThreshold(props.onEndReachedThreshold);
   const { list, keyExtractor, renderItem, footer, labels, focusWhenLoaded, pullToRefreshProps, ...rest } =
     props;
-  const { loading, empty, failed, offline, refreshError, ...listProps } = rest;
+  const { loading, empty, failed, offline, refreshError, selection, ...listProps } = rest;
   const {
     onViewableItemsChanged,
     viewabilityConfig,
@@ -93,6 +99,12 @@ export function PagedListView<Item>(props: PagedListViewProps<Item>) {
     ...(onScrollBeginDrag && { onScrollBeginDrag }),
   };
   const direction = useInvertedList(list, own);
+  const loadedItems = knownItems(list.state);
+  const updateSelection = selection?.updateItems;
+  // Every render: updating is idempotent, and catches a changed `isDisabled` as well as new items.
+  useLayoutEffect(() => {
+    if (loadedItems !== undefined) updateSelection?.(loadedItems);
+  });
   const footerLabels = { ...defaultPagedListLabels, ...labels };
   const footerView = list.footer && (
     <FooterView footer={list.footer} render={footer} labels={footerLabels} inverted={list.inverted} />
@@ -110,6 +122,7 @@ export function PagedListView<Item>(props: PagedListViewProps<Item>) {
         {...direction.props}
         ref={direction.ref}
         data={items}
+        // A new function each render, so rows redraw when the selection (or anything else) changes.
         renderItem={(info) => renderItem({ ...info, isLast: info.index === items.length - 1 })}
         keyExtractor={keyExtractor}
         refreshControl={refreshControl}
@@ -126,6 +139,12 @@ export function PagedListView<Item>(props: PagedListViewProps<Item>) {
       {...(pullToRefreshProps && { pullToRefreshProps })}
     />
   );
+}
+
+/** The items once the list has loaded: its content's, or none for the empty view. Until then, `undefined`. */
+function knownItems<Item>(state: ScreenState<readonly Item[]>): readonly Item[] | undefined {
+  if (state.status === "content") return state.value;
+  return state.status === "empty" ? NO_ITEMS : undefined;
 }
 
 function FooterView(props: {

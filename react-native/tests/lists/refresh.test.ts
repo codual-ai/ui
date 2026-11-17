@@ -1,11 +1,6 @@
 import { abortError, TestError } from "../screen-states/helpers/fake-loader";
 import { page, renderPagedList, startRefresh } from "./helpers/paged-list";
 
-afterEach(() => {
-  jest.restoreAllMocks();
-  jest.clearAllMocks();
-});
-
 /** A list with two pages loaded and a third to come. */
 async function twoPages() {
   const rendered = await renderPagedList();

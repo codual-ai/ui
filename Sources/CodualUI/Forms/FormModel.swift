@@ -36,7 +36,7 @@ public final class FormModel<Field: Hashable & Sendable> {
   /// Counts submits and resets, so a reset drops the answer of a submit still running.
   @ObservationIgnored private var submits = 0
   /// Speaks a message after whatever the screen reader is saying; tests replace it.
-  @ObservationIgnored var announce: @MainActor (String) -> Void = FormAnnouncement.post
+  @ObservationIgnored var announce: @MainActor (String) -> Void = PoliteAnnouncement.post
   /// Waits out an async rule's debounce; tests replace it.
   @ObservationIgnored var sleep: @MainActor (Duration) async throws -> Void = { try await Task.sleep(for: $0) }
 

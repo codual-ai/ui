@@ -6,10 +6,6 @@ import { FakeLoader } from "../screen-states/helpers/fake-loader";
 import { open, spyOnFocus, user } from "./helpers/modal-screen";
 import { fakeBackButton, type Note, ResultLog } from "./helpers/sheet";
 
-afterEach(() => {
-  jest.restoreAllMocks();
-});
-
 test("SH-01 the Modal is visible exactly while the sheet has an item", async () => {
   const { log, run, sheet } = await open();
   expect(screen.getByText("Note 1")).toBeTruthy();

@@ -10,10 +10,6 @@ beforeEach(() => {
   ({ fake, store } = fakeIapStore());
 });
 
-afterEach(() => {
-  jest.restoreAllMocks();
-});
-
 test("PU-02 a purchase from outside the buy flow is sent as a transaction", async () => {
   const updates: unknown[] = [];
   store.subscribe((update) => updates.push(update));

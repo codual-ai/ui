@@ -1,5 +1,6 @@
 package ai.codual.ui.forms
 
+import ai.codual.ui.Announcer
 import ai.codual.ui.screenstates.isCancellation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
@@ -52,8 +53,7 @@ public class FormState<F>(
   private val focusRequesters = mutableMapOf<F, FocusRequester>()
 
   /** What TalkBack hears next, for [FormAnnouncements]: an error whose field already had focus. */
-  internal var announcement: FormAnnouncement? by mutableStateOf(null)
-    private set
+  internal val announcer = Announcer<String>()
 
   /** The field the form wants focused next, for [field] to move focus to; null once it has. */
   internal var fieldToFocus: F? by mutableStateOf(null)
@@ -232,7 +232,7 @@ public class FormState<F>(
   /** Focuses the field, or, when it has focus already and so wouldn't be read again, announces its error. */
   private fun moveFocusToError(key: F) {
     if (key in focused) {
-      error(key)?.let { announcement = FormAnnouncement(it, (announcement?.number ?: 0) + 1) }
+      error(key)?.let(announcer::announce)
     } else {
       fieldToFocus = key
     }
