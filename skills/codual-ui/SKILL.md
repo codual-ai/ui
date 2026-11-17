@@ -153,3 +153,102 @@ Don't write code for these ([spec](../../spec/lists.md)):
 - A page load never belongs to a row, so scrolling away never cancels it (LS-24).
 - Drawing it yourself keeps the announcements (LS-25); an initial page shows with no request (LS-26); rows know
   their index and whether they're last (LS-27).
+
+<!-- Selection: its own section, so it merges cleanly beside other behaviours. -->
+
+## Selection
+
+**Use it for** any list whose items the person picks: an edit mode with bulk delete, share or move, a "choose up
+to 5" picker, a single-choice list. **Don't use it for** a single toggle or a form field (a `Toggle`, a `Picker`).
+Don't write `isEditing`, `selectedIds` state, a `Set` you add to and remove from, a "select all" loop, a long-press
+handler that flips a flag, or an `isDeleting` flag.
+
+```swift
+// SwiftUI
+@State private var selection = SelectionModel<Photo>()
+
+PagedList(selection: selection, loadPage: { token in try await api.photos(after: token) }) { photo in
+  PhotoRow(photo: photo, isSelected: selection.isSelected(photo))
+    .selectionRow(photo, in: selection) { open(photo) }
+} content: { rows in
+  List { rows }
+}
+.selectionMode(selection)
+.toolbar { SelectionModeButton(selection) }
+```
+
+```kotlin
+// Jetpack Compose
+val selection = rememberSelection<Photo>(key = { it.id })
+PagedList(rememberPagedList(key = { it.id }) { token -> api.photos(after = token) }, selection = selection) { photo ->
+  PhotoRow(photo, selection.isSelected(photo), Modifier.selectionRow(selection, photo) { open(photo) })
+}
+```
+
+```tsx
+// React Native
+const selection = useSelection({ keyExtractor: (photo: Photo) => photo.id });
+<PagedList
+  selection={selection}
+  loadPage={(token, signal) => api.photos({ after: token, signal })}
+  keyExtractor={(photo) => photo.id}
+  renderItem={({ item }) => (
+    <Pressable {...selection.rowProps(item, { onPress: () => open(item) })}>
+      <PhotoRow photo={item} isSelected={selection.isSelected(item)} />
+    </Pressable>
+  )}
+/>
+```
+
+**How to wire it right:**
+
+- **Give it the items.** With `PagedList`, pass `selection`. With your own list: SwiftUI `.syncSelection(selection,
+  items: items)`, Compose `SyncSelection(selection, items)`, React Native the `items` option, only once the items
+  have loaded (`[]` is a list with none, which ends the mode). Never prune the selection yourself.
+- **Options**: `kind` (multiple, or single), `max`, `activation` (on demand, an edit mode; or always, a picker) and
+  `isDisabled`. Use identity the server gives (`id`), never the index.
+- **Rows** use the row helper (`.selectionRow`, `Modifier.selectionRow`, `rowProps`): a tap toggles in the mode and
+  opens outside it, a long press enters the mode, and screen readers get the selected state and a Select action.
+  Draw the checkmark from `isSelected(item)`. SwiftUI's `List(selection: selection.listSelection)` with
+  `.selectionMode(selection)` and `EditButton` works too. A plain React Native `FlatList` with a memoized
+  `renderItem` needs `extraData={selection.selectedKeys}`.
+- **Always show a Select button** (`SelectionModeButton`, or your own calling `enter()`/`exit()`): a long press is
+  never the only way in. `SelectAllButton`, or your own on `isAllSelected`, `selectAll()` and `deselectAll()`.
+- **Back**: SwiftUI needs `.selectionMode(selection)` on the screen, which hides back in the mode, and a Done in
+  the toolbar (`SelectionModeButton`); Compose's `rememberSelection` and React Native's
+  `useSelection` handle Android back themselves (a ViewModel's `SelectionState` adds `SelectionBackHandler`). On
+  React Native iOS, turn off the navigator's swipe back while `handlesBack`.
+- **Bulk actions**: `perform { ids, context in … }` for safe ones, `performAfterConfirmation { … }` for destructive ones:
+  show your own dialog while `isConfirming`, calling `confirmPendingAction()` or `cancelPendingAction()`. Don't
+  clear the selection after the action or keep it on failure yourself; show `actionError` and its dismiss. After a
+  delete, update your items or refresh the list.
+- **Filters and search hide, they don't remove.** Give the data as items and what the filter shows as visible items
+  (SwiftUI `.syncSelection(selection, items: all, visibleItems: shown)`, Compose `SyncSelection(selection, all,
+  shown)`, React Native `items` and `visibleItems`): hidden picks stay selected and `hiddenCount` counts them. A list
+  searched on the server gives only visible items. Only a reload of the data drops picks.
+- **All on the server**: set `serverTotal`, show "Select all N" while `canSelectAllOnServer`, call
+  `selectAllOnServer()`, and in the action check `context.isAllOnServer` to act on the whole set (one server request),
+  not just the IDs it gets.
+- **Identity is a stable ID, never the object**: refreshes give new objects, Core Data and Room objects differ across
+  contexts, restoration saves IDs, and the server wants IDs. Tag `List` rows with `item.id`.
+- **The count**: `count` and `total` ("3 of 10"), and `title` ("3 Selected"; Compose `selectionTitle(selection)`).
+- **Restoration**: SwiftUI `.restoresSelection(selection, key: "photos")`; Compose's `rememberSelection` saves itself.
+
+### Edge cases it already handles
+
+Don't write code for these ([spec](../../spec/selection.md)):
+
+- A tap toggles only in the mode; single selection keeps one; Select and a long press enter, Done, Cancel and back
+  leave and clear; an always active selection has no mode (SL-01 to SL-05, SL-19).
+- Select all takes the loaded items only, never loading more; later pages arrive unselected; a maximum and disabled
+  items hold everywhere (SL-06, SL-07, SL-11, SL-12).
+- Selection by identity across refresh, paging and reorder; removed or newly disabled items drop out; nothing drops
+  while the items aren't known; an empty list ends the mode (SL-08 to SL-10, SL-25, SL-26).
+- Count and total stay right (SL-13). Actions run once on the IDs in selection order, lock the selection, wait for
+  confirmation when destructive, clear on success, keep on failure, and run nothing with nothing selected (SL-14 to
+  SL-18).
+- Restoration, selected state for screen readers, polite count announcements, a Select action on every row, and
+  localisable text (SL-20 to SL-24); React Native rows redraw and hardware back is cleaned up (SL-27, SL-28);
+  SwiftUI's `List` selection and `EditMode` follow the same rules (SL-29).
+
+<!-- End of selection. -->

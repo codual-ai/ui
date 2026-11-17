@@ -7,6 +7,9 @@ import ai.codual.ui.screenstates.SystemFailedView
 import ai.codual.ui.screenstates.SystemLoadingView
 import ai.codual.ui.screenstates.SystemOfflineView
 import ai.codual.ui.screenstates.SystemRefreshErrorDialog
+import ai.codual.ui.selection.SelectionAnnouncements
+import ai.codual.ui.selection.SelectionState
+import ai.codual.ui.selection.SyncSelection
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -49,6 +52,8 @@ import kotlinx.coroutines.flow.filter
  *
  * @param threshold how many rows from the end the last visible row loads the next page: at least 1.
  * @param row a row. Its scope also gives its [PagedListItemScope.index] and [PagedListItemScope.isLast].
+ * @param selection a selection kept to the items loaded so far: a new page keeps it, and a refresh drops the items
+ *   it no longer has. Its rows use `Modifier.selectionRow`.
  * @param footer after the last row. By default, a progress indicator, Try Again, Load More, or an end message.
  */
 @Composable
@@ -58,6 +63,7 @@ public fun <Item, Token : Any> PagedList(
   listState: LazyListState = rememberLazyListState(),
   contentPadding: PaddingValues = PaddingValues(0.dp),
   threshold: Int = 5,
+  selection: SelectionState<Item, *>? = null,
   footer: @Composable (PagedListFooter) -> Unit = { SystemPagedListFooter(it) },
   loading: @Composable () -> Unit = { SystemLoadingView() },
   empty: @Composable () -> Unit = { SystemEmptyView() },
@@ -71,6 +77,8 @@ public fun <Item, Token : Any> PagedList(
   row: @Composable PagedListItemScope.(Item) -> Unit,
 ) {
   requireValidThreshold(threshold)
+  // Outside the content, so the empty view, which ends the selection mode, reaches the selection too.
+  if (selection != null) SyncSelection(selection, state.state)
   ScreenStatesLayout(
     state = state.screen,
     appear = state::appear,
@@ -94,6 +102,7 @@ public fun <Item, Token : Any> PagedList(
         item { footer(state.footer(content)) }
       }
       PagedListAnnouncements(state)
+      if (selection != null) SelectionAnnouncements(selection)
     }
   }
 }

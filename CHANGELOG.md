@@ -20,6 +20,16 @@ and versions follow [Semantic Versioning](https://semver.org/).
   cancellation, announcements for screen readers, a first page the screen already has, and each row's position.
   The spec is `implemented`, with a test for each of its 27 edge cases on every platform it applies to.
 - The `codual-ui` skill covers lists.
+- Selection on SwiftUI (`SelectionModel`, `.selectionRow`, `.selectionMode`, `.syncSelection`,
+  `.restoresSelection`), Jetpack Compose (`SelectionState`, `rememberSelection`, `Modifier.selectionRow`,
+  `SyncSelection`, `SelectionBackHandler`, `SelectionAnnouncements`) and React Native (`useSelection`, `rowProps`),
+  with `SelectionModeButton` and `SelectAllButton` on each and a `selection` for `PagedList`: single and multiple
+  selection, a selection mode entered by Select or a long press and left by Done, Cancel or back, select all of the
+  loaded items, a maximum, disabled items, selection by identity across refresh and paging with removed items
+  dropped, bulk actions with confirmation, cleared after success and kept after failure, restoration, and
+  announcements. The spec is `implemented`, with a test for each of its 33 edge cases on every platform it applies
+  to. Filters and search hide selected items without dropping them, and an app can offer select all on the
+  server. The `codual-ui` skill covers selection.
 
 ### Changed
 

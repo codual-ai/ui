@@ -31,6 +31,7 @@ public struct PagedList<
   private let failed: (any Error, @escaping () -> Void) -> Failed
   private let offline: (@escaping () -> Void) -> Offline
   private let refreshError: (any Error, @escaping () -> Void) -> RefreshError
+  private let selection: SelectionModel<Item>?
   @State private var model: PagedListModel<Item, Token>
 
   /// - Parameters:
@@ -38,6 +39,8 @@ public struct PagedList<
   ///   - isOffline: Whether a failed first page shows the offline view. By default, a `URLError` for no connection.
   ///   - initialPage: A first page the screen already has, shown at once with no request. One with no items counts
   ///     as none, and the first page loads.
+  ///   - selection: A selection kept to the items loaded: selected items a refresh drops drop out of it, and the
+  ///     empty view ends its mode.
   ///   - loadPage: Loads the page with this token, or the first page for nil. The page's `next` is nil at the end.
   ///   - row: A row, with its position among the items loaded so far (`isLast`, say, for a rounded last card).
   ///   - footer: After the last row. By default, a progress indicator, Try Again, Load More, or an end message.
@@ -48,6 +51,7 @@ public struct PagedList<
     threshold: Int = 5,
     isOffline: @escaping (any Error) -> Bool = isOfflineError,
     initialPage: Page<Item, Token>? = nil,
+    selection: SelectionModel<Item>? = nil,
     loadPage: @escaping PagedListModel<Item, Token>.LoadPage,
     @ViewBuilder row: @escaping (_ item: Item, _ position: PagedListRowPosition) -> Row,
     @ViewBuilder footer: @escaping (PagedListFooter) -> Footer = { SystemPagedListFooter($0) },
@@ -73,6 +77,7 @@ public struct PagedList<
     self.failed = failed
     self.offline = offline
     self.refreshError = refreshError
+    self.selection = selection
     _model = State(
       initialValue: PagedListModel(
         threshold: threshold, isOffline: isOffline, initialPage: initialPage, loadPage: loadPage))
@@ -84,7 +89,9 @@ public struct PagedList<
     ScreenStatesView(
       model: model.screen, appear: model.appear, disappear: model.disappear, refresh: model.refresh,
       content: { content(Rows(model: model, content: $0, row: row, footer: footer)) },
-      loading: loading, empty: empty, failed: failed, offline: offline, refreshError: refreshError)
+      loading: loading, empty: empty, failed: failed, offline: offline, refreshError: refreshError
+    )
+    .modifier(SyncSelectionModifier(selection: selection, items: knownItems(in: model.state)))
   }
 
   private func updateModel() {
@@ -100,6 +107,7 @@ extension PagedList {
     threshold: Int = 5,
     isOffline: @escaping (any Error) -> Bool = isOfflineError,
     initialPage: Page<Item, Token>? = nil,
+    selection: SelectionModel<Item>? = nil,
     loadPage: @escaping PagedListModel<Item, Token>.LoadPage,
     @ViewBuilder row: @escaping (Item) -> Row,
     @ViewBuilder footer: @escaping (PagedListFooter) -> Footer = { SystemPagedListFooter($0) },
@@ -115,7 +123,7 @@ extension PagedList {
     }
   ) {
     self.init(
-      threshold: threshold, isOffline: isOffline, initialPage: initialPage, loadPage: loadPage,
+      threshold: threshold, isOffline: isOffline, initialPage: initialPage, selection: selection, loadPage: loadPage,
       row: { item, _ in row(item) }, footer: footer, content: content, loading: loading, empty: empty,
       failed: failed, offline: offline, refreshError: refreshError)
   }

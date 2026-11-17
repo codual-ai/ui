@@ -19,4 +19,24 @@
   </plurals>
   <string name="codual_ui_end_of_list">End of list.</string>
   <string name="codual_ui_load_more_failed">Couldn\'t load more items.</string>
+  <string name="codual_ui_select">Select</string>
+  <string name="codual_ui_done">Done</string>
+  <string name="codual_ui_select_all">Select All</string>
+  <string name="codual_ui_deselect_all">Deselect All</string>
+  <plurals name="codual_ui_selected_title">
+    <item quantity="one">%d Selected</item>
+    <item quantity="other">%d Selected</item>
+  </plurals>
+  <plurals name="codual_ui_selected_hidden_title">
+    <item quantity="one">%1$d Selected, %2$d Hidden</item>
+    <item quantity="other">%1$d Selected, %2$d Hidden</item>
+  </plurals>
+  <plurals name="codual_ui_selected_count">
+    <item quantity="one">%1$d of %2$d selected.</item>
+    <item quantity="other">%1$d of %2$d selected.</item>
+  </plurals>
+  <plurals name="codual_ui_selection_limit">
+    <item quantity="one">You can select up to %d item.</item>
+    <item quantity="other">You can select up to %d items.</item>
+  </plurals>
 </resources>

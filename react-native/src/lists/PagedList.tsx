@@ -1,7 +1,9 @@
-import type { ReactElement, ReactNode } from "react";
+import { type ReactElement, type ReactNode, useLayoutEffect } from "react";
 import { FlatList, type FlatListProps, type ListRenderItemInfo } from "react-native";
+import type { ScreenState } from "../screen-states/machine";
 import { ScreenStatesView, type ScreenStatesViews } from "../screen-states/ScreenStates";
 import type { ScreenStatesLabels } from "../screen-states/system-views";
+import type { SelectionController } from "../selection/use-selection";
 import type { LoadPage, PagedListFooter } from "./machine";
 import { defaultPagedListLabels, type PagedListLabels, SystemPagedListFooter } from "./system-footer";
 import { type PagedListOptions, usePagedList } from "./use-paged-list";
@@ -30,7 +32,11 @@ export interface PagedListProps<Item, Token>
   readonly footer?: (footer: PagedListFooter) => ReactNode;
   /** The text of the views you leave out, and of the announcements. */
   readonly labels?: Partial<ScreenStatesLabels & PagedListLabels>;
+  /** A selection kept to the items the list has loaded; rows redraw as it changes. */
+  readonly selection?: SelectionController<Item>;
 }
+
+const NO_ITEMS: readonly never[] = [];
 
 /**
  * A list of data that comes in pages, in a `FlatList` of the app's own rows: the first page as a screen state, the
@@ -40,13 +46,20 @@ export interface PagedListProps<Item, Token>
  */
 export function PagedList<Item, Token>(props: PagedListProps<Item, Token>) {
   checkThreshold(props.onEndReachedThreshold);
-  const { loadPage, keyExtractor, isOffline, initialPage, renderItem, footer, labels, ...rest } = props;
+  const { loadPage, keyExtractor, isOffline, initialPage, renderItem, footer, labels, selection, ...rest } =
+    props;
   const { loading, empty, failed, offline, refreshError, ...listProps } = rest;
   const list = usePagedList(loadPage, {
     keyExtractor,
     ...(isOffline && { isOffline }),
     ...(labels && { labels }),
     ...(initialPage && { initialPage }),
+  });
+  const loadedItems = knownItems(list.state);
+  const updateSelection = selection?.updateItems;
+  // Every render: updating is idempotent, and catches a changed `isDisabled` as well as new items.
+  useLayoutEffect(() => {
+    if (loadedItems !== undefined) updateSelection?.(loadedItems);
   });
   const footerLabels = { ...defaultPagedListLabels, ...labels };
   const footerView = list.footer && <FooterView footer={list.footer} render={footer} labels={footerLabels} />;
@@ -61,6 +74,7 @@ export function PagedList<Item, Token>(props: PagedListProps<Item, Token>) {
       <FlatList
         {...listProps}
         data={items}
+        // A new function each render, so rows redraw when the selection (or anything else) changes.
         renderItem={(info) => renderItem({ ...info, isLast: info.index === items.length - 1 })}
         keyExtractor={keyExtractor}
         refreshControl={refreshControl}
@@ -70,6 +84,12 @@ export function PagedList<Item, Token>(props: PagedListProps<Item, Token>) {
     ),
   };
   return <ScreenStatesView views={views} screen={list} />;
+}
+
+/** The items once the list has loaded: its content's, or none for the empty view. Until then, `undefined`. */
+function knownItems<Item>(state: ScreenState<readonly Item[]>): readonly Item[] | undefined {
+  if (state.status === "content") return state.value;
+  return state.status === "empty" ? NO_ITEMS : undefined;
 }
 
 function FooterView(props: {
