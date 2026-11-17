@@ -18,7 +18,7 @@
   "dependencies": {
     "fumadocs-core": "16.17.10",
     "fumadocs-ui": "16.17.10",
-    "next": "16.4.4",
+    "next": "16.4.6",
     "react": "19.2.9",
     "react-dom": "19.2.9"
   },
