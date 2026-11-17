@@ -62,6 +62,8 @@ describe("Compose names", () => {
     const permissions = readPlatformSource(["android/compose/src/main/kotlin/ai/codual/ui/permissions"], "android");
     assert.deepEqual(nameProblems("android", "AndroidPermission.Camera", permissions, NONE), []);
     assert.equal(nameProblems("android", "AndroidPermission.Telepathy", permissions, NONE).length, 1);
+    // `ask()` is PermissionState's, not AndroidPermission's.
+    assert.equal(nameProblems("android", "AndroidPermission.ask()", permissions, NONE).length, 1);
   });
 });
 
@@ -85,6 +87,8 @@ describe("React Native names", () => {
     assert.deepEqual(nameProblems("rn", "retry()", screenStates, exported), []);
     assert.equal(nameProblems("rn", "isEmptyCollection(value)", screenStates, exported).length, 1);
     assert.equal(nameProblems("rn", "showLoaded(value)", screenStates, exported).length, 1);
+    // A property of a private type (`RunningLoad.controller`) isn't public.
+    assert.equal(nameProblems("rn", "controller", screenStates, exported).length, 1);
   });
 });
 

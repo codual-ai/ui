@@ -149,10 +149,9 @@ function splitTopLevel(text: string, separator = ","): string[] {
   return parts;
 }
 
-/** Swift type names whose `init`s are in a file; an init's file is where its type (or an extension of it) is. */
-export function swiftInitSource(files: readonly { file: string; text: string }[], type: string): string {
-  // The bodies of the type's declaration and its extensions, so another type's init in the same file doesn't count.
-  const owner = new RegExp(`\\b(?:struct|class|enum|actor|extension)\\s+${escapeRegExp(type)}\\b[^{]*\\{`, "g");
+/** The bodies of a type's declarations: `keywords` such as `struct|class|extension`, then the type's name. */
+export function typeBodies(files: readonly { file: string; text: string }[], keywords: string, type: string): string {
+  const owner = new RegExp(`\\b(?:${keywords})\\s+${escapeRegExp(type)}\\b[^{]*\\{`, "g");
   const bodies: string[] = [];
   for (const { text } of files) {
     for (const match of text.matchAll(owner)) {
@@ -170,16 +169,28 @@ export function swiftInitSource(files: readonly { file: string; text: string }[]
   return bodies.join("\n");
 }
 
-/** Members of the interfaces, types and classes the package exports, and of the interfaces they extend. */
+/** The source an init of a Swift type may be in: its declaration and its extensions, not another type's. */
+export function swiftInitSource(files: readonly { file: string; text: string }[], type: string): string {
+  return typeBodies(files, "struct|class|enum|actor|extension", type);
+}
+
+/**
+ * Members of the interfaces, types and classes the package exports, and of every type those reach: the types they
+ * extend or intersect, and the types their members are declared with. A type no export reaches stays private.
+ */
 export function rnPublicMembers(text: string, exported: ReadonlySet<string>): string {
   const declarations = new Map<string, { body: string; bases: string[] }>();
-  const start = /^export\s+(?:interface|type|class)\s+(\w+)([^\n]*)\{\s*$/gm;
+  // The header may wrap (`extends …` on its own line) up to the body's opening brace.
+  const start = /^(?:export\s+)?(?:interface|type|class)\s+(\w+)([^{;]*)\{[ \t]*$/gm;
   for (const match of text.matchAll(start)) {
     const from = (match.index ?? 0) + match[0].length;
     const end = text.indexOf("\n}", from);
-    const heritage = /\bextends\s+(.*)$/.exec(match[2] ?? "")?.[1] ?? "";
-    const bases = [...heritage.replace(/<[^<>]*>/g, "").matchAll(/\b([A-Z]\w*)/g)].map((base) => base[1] ?? "");
-    declarations.set(match[1] ?? "", { body: text.slice(from, end === -1 ? undefined : end), bases });
+    const body = text.slice(from, end === -1 ? undefined : end);
+    // A class's own fields and methods aren't followed: only its declared shape is public.
+    const isClass = /^(?:export\s+)?class\b/.test(match[0]);
+    const referenced = `${match[2] ?? ""}\n${isClass ? "" : body}`;
+    const bases = [...referenced.matchAll(/\b([A-Z]\w*)/g)].map((base) => base[1] ?? "");
+    declarations.set(match[1] ?? "", { body, bases });
   }
   const reached = new Set<string>();
   const visit = (name: string): void => {

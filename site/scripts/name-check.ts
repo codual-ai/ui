@@ -26,6 +26,7 @@ import {
   rnExports,
   rnPublicMembers,
   swiftInitSource,
+  typeBodies,
   swiftSignatures,
 } from "./platform-source.ts";
 
@@ -73,17 +74,16 @@ export function nameProblems(
       const declared = new RegExp(
         `^(?!.*\\b(?:private|internal)\\b).*\\b(?:fun|val|var|class|object|interface)\\s+(?:<[^>]*>\\s*)?${receiver}${symbol}\\b`,
       );
-      // A receiver may also be a type whose member it is (`AndroidPermission.Camera`), when that type exists.
+      // A receiver may also be a type whose member it is (`AndroidPermission.Camera`): declared in that type's own
+      // body, its companion included, never in another type's.
       const member = new RegExp(
         `^(?!.*\\b(?:private|internal)\\b).*\\b(?:fun|val|var|class|object|interface)\\s+(?:<[^>]*>\\s*)?${symbol}\\b`,
       );
-      const receiverType = name.receiver
-        ? new RegExp(`\\b(?:class|object|interface)\\s+${escapeRegExp(name.receiver)}\\b`)
-        : undefined;
+      const receiverBody = name.receiver ? typeBodies(source.files, "class|object|interface", name.receiver) : "";
       const enumEntry = new RegExp(`^\\s*(?:\\w+\\s*,\\s*)*${symbol}\\s*(?:[,;(]|$)`);
       const found =
         lines.some((line) => declared.test(line)) ||
-        (receiverType?.test(source.text) === true && lines.some((line) => member.test(line))) ||
+        receiverBody.split("\n").some((line) => member.test(line)) ||
         (!name.receiver && lines.some((line) => enumEntry.test(line))) ||
         (!name.receiver && isLowercase(name.symbol) && isParameter(source.text, name.symbol));
       return found ? [] : [`no public declaration of \`${name.receiver ? `${name.receiver}.` : ""}${name.symbol}\``];
@@ -92,9 +92,7 @@ export function nameProblems(
       if (exported.has(name.symbol)) return [];
       // Two-space indent: a member of the block itself, not of a nested object or a method's body.
       const member = new RegExp(`^  (?:readonly\\s+)?${symbol}\\??\\s*[:(=]`, "m");
-      // Or a property of an options or props type: a `readonly name:` line, never a method of an internal class.
-      const property = new RegExp(`^\\s+readonly\\s+${symbol}\\??\\s*:`, "m");
-      return member.test(rnPublicMembers(source.text, exported)) || property.test(source.text)
+      return member.test(rnPublicMembers(source.text, exported))
         ? []
         : [`\`${name.symbol}\` is neither exported by the package nor a member of an exported type`];
     }
