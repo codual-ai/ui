@@ -70,6 +70,13 @@ public class ScreenStatesState<T>(
   private var running: Job? = null
   private var generation = 0
 
+  /** Set by [reload]: the running load is for a new input, so its failure replaces the content. */
+  private var failureReplacesContent = false
+
+  /** Whether a load is running, for a behaviour built on this one. */
+  internal val isLoadRunning: Boolean
+    get() = running != null
+
   /** Starts the first load. Safe to call on every appear: once a load has started or finished, it does nothing. */
   public fun appear() {
     if (state != ScreenState.Idle) return
@@ -137,7 +144,27 @@ public class ScreenStatesState<T>(
     }
   }
 
+  /**
+   * Cancels the running load, drops its result and loads again for a new input, for a behaviour built on this one
+   * (a chart's range). Content stays on screen meanwhile and anything else shows loading. Unlike a refresh's, its
+   * failure replaces the content, which belongs to the old input.
+   */
+  internal fun reload() {
+    val load = running
+    isRefreshing = false
+    if (state !is ScreenState.Content) state = ScreenState.Loading
+    failureReplacesContent = true
+    launch()
+    // Last, as an immediate dispatcher can resume the cancelled load inside cancel().
+    load?.cancel()
+  }
+
   private fun start() {
+    failureReplacesContent = false
+    launch()
+  }
+
+  private fun launch() {
     generation += 1
     val id = generation
     // Started lazily, so `running` is set before a load that never suspends can finish.
@@ -177,7 +204,8 @@ public class ScreenStatesState<T>(
     when (state) {
       // Even a load that cancelled itself lands here when nothing else is on screen, never a spinner.
       ScreenState.Idle, ScreenState.Loading -> show(error)
-      is ScreenState.Content -> if (!isCancellation(error)) refreshError = error
+      is ScreenState.Content ->
+        if (failureReplacesContent) show(error) else if (!isCancellation(error)) refreshError = error
       ScreenState.Empty, is ScreenState.Failed, ScreenState.Offline -> if (!isCancellation(error)) show(error)
     }
   }

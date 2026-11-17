@@ -1,0 +1,4 @@
+{
+  "main": "../dist/victory-native/index.js",
+  "types": "../dist/victory-native/index.d.ts"
+}

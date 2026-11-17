@@ -1,6 +1,22 @@
 /** The Codual UI release this build comes from. */
 export const version = "0.0.0";
 
+export type { ChartData, ChartPoint, ChartQuery, ChartSeries, PlottedData } from "./charts/data";
+export {
+  type ChartChangeText,
+  type ChartLabels,
+  type ChartXKind,
+  defaultChartLabels,
+} from "./charts/labels";
+export type { ChartInteractionSnapshot, LoadChart } from "./charts/machine";
+export { type ChartSelectedPoint, type ChartSelection, selectionNearest } from "./charts/points";
+export type { ChartComparison, ChartComparisonMeasure, ChartSeriesSummary } from "./charts/summary";
+export {
+  type ChartAccessibilityProps,
+  type ChartInteractionController,
+  type ChartInteractionOptions,
+  useChartInteraction,
+} from "./charts/use-chart-interaction";
 export { FormFieldErrors } from "./forms/field-errors";
 export type {
   Focusable,

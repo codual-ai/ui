@@ -84,9 +84,24 @@ and versions follow [Semantic Versioning](https://semver.org/).
   adapter on every platform. The spec is `implemented`, with a test for each of its 26 edge cases on every platform
   it applies to.
 - The `codual-ui` skill covers permissions.
+- Chart interactions on SwiftUI (`ChartInteraction`, `.chartAccessibility`, `xSelection` for Swift Charts'
+  `chartXSelection`, `scrubOverlay`), Jetpack Compose (`ChartInteractionState`, `rememberChartInteraction`,
+  `Modifier.chartScrub`, `Modifier.chartSemantics`) and React Native (`useChartInteraction`, `selectionNearest`, and
+  `useVictoryScrub` from `@codual-ai/react-native-ui/victory-native`, which imports neither Victory Native nor
+  Reanimated: the app passes its functions): headless, for charts the app draws with Swift Charts, Vico, Victory
+  Native or any other library. The selected range's series as a screen state, range switching that keeps the old
+  series on screen marked stale and drops late answers, previous-period comparison, nearest-point snapping across
+  series with a haptic tick per point, press and hold inside scrolling containers, release that clears or keeps the
+  selection, a summary (first, last, low, high, change) and a spoken summary in the person's locale, adjustable
+  point-by-point navigation for screen readers and an audio graph on iOS. The spec is `implemented`, with a test for
+  each of its 28 edge cases on every platform it applies to.
+- The `codual-ui` skill covers chart interactions.
 
 ### Changed
 
+- Screen states gained an internal `reload()` for behaviours built on it: a new input's load that keeps content on
+  screen and whose failure replaces it. Chart interactions uses it for range switches; screen states' own behaviour
+  is unchanged.
 - The Compose library exposes compose-foundation as an `api` dependency: forms' field bindings return its
   `KeyboardOptions` and `KeyboardActions`.
 - The Compose library builds on the Compose BOM 2026.06.01 (Compose 1.11), not 2026.09.00: Compose 1.12 needs
