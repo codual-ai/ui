@@ -55,10 +55,9 @@ final class SelectionFixture {
     await takeResult()
   }
 
-  /// Waits for the running action to end, unless the test was cancelled: then its call may never have been answered.
+  /// Waits for the running action to end; one that never does fails the test.
   private func takeResult() async {
-    guard !Task.isCancelled else { return }
-    await selection.running?.value
+    await waitUntil("the action to end") { selection.running == nil }
   }
 
   private var bulkAction: SelectionModel<TestItem>.Action {

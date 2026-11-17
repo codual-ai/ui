@@ -1,45 +1,26 @@
 import { type ScreenState, ScreenStatesMachine, type ScreenStatesSnapshot } from "../screen-states/machine";
-import { addingPage, firstPageContent, type Page, type PagedContent, type Paging } from "./paged-content";
+import { NewestEnd, type NewestEndSnapshot } from "./newest-end";
+import {
+  addingNewer,
+  addingPage,
+  firstPageContent,
+  loadFirstPages,
+  type Page,
+  type PagedContent,
+  type Paging,
+} from "./paged-content";
+import type { Arrival, PagedListFooter, PagedListSnapshot, PagedListSource } from "./paged-list-types";
+
+export type {
+  LoadPage,
+  PagedListAnnouncement,
+  PagedListFooter,
+  PagedListSnapshot,
+  PagedListSource,
+} from "./paged-list-types";
 
 /** A page load that adds no new items is followed at once by the next, at most this many times in a row. */
 const MAX_PAGES_WITH_NOTHING_NEW = 3;
-
-/**
- * Loads the page with this token, or the first page for `undefined`. Abort the work when `signal` aborts: the
- * list went away or is refreshing, and the result is dropped.
- */
-export type LoadPage<Item, Token> = (
-  token: Token | undefined,
-  signal: AbortSignal,
-) => Promise<Page<Item, Token>>;
-
-/** What the end of a paged list shows, after its last row. */
-export type PagedListFooter =
-  /** There is a next page and none is loading; `loadMore` loads it. */
-  | { readonly status: "more"; readonly loadMore: () => void }
-  | { readonly status: "loading" }
-  /** The last page failed; every item already loaded stays. `retry` loads that page again. */
-  | { readonly status: "failed"; readonly error: unknown; readonly retry: () => void }
-  | { readonly status: "end" };
-
-/** What a screen reader hears when a page after the first finishes. */
-export type PagedListAnnouncement =
-  | { readonly kind: "loaded"; readonly count: number; readonly isEnd: boolean }
-  | { readonly kind: "end" }
-  | { readonly kind: "failed" };
-
-/** The first page's state, with every item loaded so far, first page first, as its content. */
-export interface PagedListSnapshot<Item> extends ScreenStatesSnapshot<readonly Item[]> {
-  /** What to show after the last row, or `undefined` when the list isn't on screen. */
-  readonly footer: PagedListFooter | undefined;
-}
-
-export interface PagedListSource<Item, Token> {
-  readonly loadPage: LoadPage<Item, Token>;
-  readonly keyExtractor: (item: Item) => string;
-  readonly isOffline: (error: unknown) => boolean;
-  readonly announce: (announcement: PagedListAnnouncement) => void;
-}
 
 type Content<Item, Token> = PagedContent<Item, Token>;
 
@@ -52,18 +33,27 @@ export class PagedListMachine<Item, Token> {
   private readonly screen: ScreenStatesMachine<Content<Item, Token>>;
   private pageLoad: AbortController | undefined;
   private generation = 0;
+  private readonly listeners = new Set<() => void>();
+  private readonly newest = new NewestEnd(() => {
+    for (const listener of this.listeners) listener();
+  });
+  /** The newer items that arrived while the first page loads, for the page it brings, and whether each was shown. */
+  private arrivedDuringFirstPage: Arrival<Item>[] | undefined;
   private derived: {
     readonly from: ScreenStatesSnapshot<Content<Item, Token>>;
+    readonly newest: NewestEndSnapshot;
     readonly to: PagedListSnapshot<Item>;
   };
 
   /**
    * @param initialPage A first page the app already has, shown at once with no request. One with no items counts as
    *   none, and the first page loads.
+   * @param inverted A chat: the first page is the newest, at the bottom, with its items newest first.
    */
   constructor(
     private readonly source: () => PagedListSource<Item, Token>,
     initialPage?: Page<Item, Token>,
+    readonly inverted = false,
   ) {
     this.screen = new ScreenStatesMachine(() => ({
       load: (signal) => this.loadFirstPage(signal),
@@ -74,14 +64,25 @@ export class PagedListMachine<Item, Token> {
       this.screen.showLoaded(firstPageContent(initialPage, this.source().keyExtractor));
     }
     const from = this.screen.getSnapshot();
-    this.derived = { from, to: this.derive(from) };
+    const newest = this.newest.snapshot;
+    this.derived = { from, newest, to: this.derive(from, newest) };
   }
 
-  readonly subscribe = (listener: () => void): (() => void) => this.screen.subscribe(listener);
+  readonly subscribe = (listener: () => void): (() => void) => {
+    const unsubscribe = this.screen.subscribe(listener);
+    this.listeners.add(listener);
+    return () => {
+      unsubscribe();
+      this.listeners.delete(listener);
+    };
+  };
 
   readonly getSnapshot = (): PagedListSnapshot<Item> => {
     const from = this.screen.getSnapshot();
-    if (from !== this.derived.from) this.derived = { from, to: this.derive(from) };
+    const newest = this.newest.snapshot;
+    if (from !== this.derived.from || newest !== this.derived.newest) {
+      this.derived = { from, newest, to: this.derive(from, newest) };
+    }
     return this.derived.to;
   };
 
@@ -144,11 +145,48 @@ export class PagedListMachine<Item, Token> {
       this.startPageLoad(content.next, 0);
   };
 
-  private derive(from: ScreenStatesSnapshot<Content<Item, Token>>): PagedListSnapshot<Item> {
+  /**
+   * Adds items that arrived after the newest one (a message just received), oldest first, below the newest row.
+   * Items already in the list are dropped. When the newest row is on screen they scroll into view; otherwise the
+   * rows on screen stay still and `newItemCount` goes up. Only for an inverted list.
+   */
+  readonly appendNewer = (items: readonly Item[]): void => {
+    if (!this.inverted) throw new Error("appendNewer is for an inverted paged list: pass inverted: true.");
+    const { state } = this.screen.getSnapshot();
+    const { keyExtractor } = this.source();
+    const content =
+      state.status === "content"
+        ? state.value
+        : state.status === "empty"
+          ? firstPageContent<Item, Token>({ items: [] }, keyExtractor)
+          : undefined;
+    this.arrivedDuringFirstPage?.push(...items.map((item) => ({ item, shown: content !== undefined })));
+    if (content === undefined) return;
+    const { content: next, added } = addingNewer(content, items, keyExtractor);
+    if (added === 0) return;
+    this.screen.replaceLoaded(next);
+    this.source().announce({ kind: "newItems", count: added });
+    this.newest.arrived(added);
+  };
+
+  /** Scrolls to the newest row and sets `newItemCount` back to 0: the action of the app's "new items" indicator. */
+  readonly scrollToBottom = (): void => this.newest.scrollToBottom();
+
+  /** Call as the newest row comes on screen and goes off it; `PagedList` does. */
+  readonly bottomChanged = (isAtBottom: boolean): void => this.newest.bottomChanged(isAtBottom);
+
+  /** Call when the user starts dragging the list (`onScrollBeginDrag`); `PagedList` does. */
+  readonly userScrolled = (): void => this.newest.userScrolled();
+
+  private derive(
+    from: ScreenStatesSnapshot<Content<Item, Token>>,
+    newest: NewestEndSnapshot,
+  ): PagedListSnapshot<Item> {
     const { state, isRefreshing, refreshError } = from;
-    if (state.status !== "content") return { state, isRefreshing, refreshError, footer: undefined };
+    if (state.status !== "content")
+      return { state, isRefreshing, refreshError, ...newest, footer: undefined };
     const items: ScreenState<readonly Item[]> = { status: "content", value: state.value.items };
-    return { state: items, isRefreshing, refreshError, footer: this.footer(state.value) };
+    return { state: items, isRefreshing, refreshError, ...newest, footer: this.footer(state.value) };
   }
 
   private footer(content: Content<Item, Token>): PagedListFooter {
@@ -175,19 +213,27 @@ export class PagedListMachine<Item, Token> {
   }
 
   private async loadFirstPage(signal: AbortSignal): Promise<Content<Item, Token>> {
-    let content = firstPageContent(
-      await this.source().loadPage(undefined, signal),
-      this.source().keyExtractor,
-    );
-    for (let pages = 1; content.items.length === 0 && pages < MAX_PAGES_WITH_NOTHING_NEW; pages += 1) {
-      if (content.next === undefined) break;
-      // A load that ignored the abort must not start another; the list has gone or moved on.
-      // `throwIfAborted()` is missing from older React Native's AbortSignal.
-      if (signal.aborted) throw new Error("The list stopped loading its first page.");
-      const page = await this.source().loadPage(content.next, signal);
-      content = addingPage(content, page, this.source().keyExtractor).content;
+    const arrived: Arrival<Item>[] = [];
+    this.arrivedDuringFirstPage = arrived;
+    try {
+      const { keyExtractor, announce } = this.source();
+      const page = await loadFirstPages(this.source, signal, MAX_PAGES_WITH_NOTHING_NEW);
+      const content = addingNewer(
+        page,
+        arrived.map(({ item }) => item),
+        keyExtractor,
+      ).content;
+      // A load the list cancelled is dropped: it mustn't move the list or announce anything.
+      if (this.inverted && !signal.aborted) {
+        this.newest.scrollToBottom();
+        const unannounced = arrived.filter(({ item, shown }) => !shown && !page.keys.has(keyExtractor(item)));
+        const count = new Set(unannounced.map(({ item }) => keyExtractor(item))).size;
+        if (count > 0) announce({ kind: "newItems", count });
+      }
+      return content;
+    } finally {
+      if (this.arrivedDuringFirstPage === arrived) this.arrivedDuringFirstPage = undefined;
     }
-    return content;
   }
 
   private startPageLoad(token: Token, pagesWithNothingNew: number): void {

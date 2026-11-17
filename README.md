@@ -66,6 +66,11 @@ once, and a page still loading when the screen goes away or a refresh starts is 
 a page loader, which takes a token (none for the first page) and returns the page's items and the next token, or
 none at the end, and your row.
 
+A chat runs the other way: a reversed list starts at the newest item at the bottom, loads older pages as the top
+comes near without moving what's on screen (React Native: `FlatList`'s `maintainVisibleContentPosition`, on iOS
+and Android), and takes new messages through `appendNewer`, scrolling to them only
+when the newest row is showing and counting them otherwise.
+
 ```swift
 // SwiftUI: rows in your List or LazyVStack
 PagedList(loadPage: { token in try await api.items(after: token) }) { item in
@@ -103,6 +108,7 @@ PagedList(rememberPagedList(key = { it.id }) { token -> api.items(after = token)
 | Cancelling | the page's task is cancelled | the page's coroutine is cancelled | the page's `AbortSignal` aborts |
 | New items announced | `AccessibilityNotification.Announcement`, from the model too | a polite live region; drawing it yourself, add `PagedListAnnouncements(state)` | `AccessibilityInfo.announceForAccessibilityWithOptions`, queued |
 | Built-in text | your app's string catalog | string resources named `codual_ui_*` | the `labels` prop |
+| A chat (reversed) | `PagedListModel(direction: .reversed)`, `PagedList(model:)`; `appendNewer`, `newItemCount`, `scrollToBottom()` | `rememberPagedList(reverseLayout = true)`; the same three | `usePagedList(…, { inverted: true })`, `<PagedListView list keyExtractor />`; the same three |
 
 ## Forms
 

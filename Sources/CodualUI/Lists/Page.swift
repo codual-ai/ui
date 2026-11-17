@@ -11,6 +11,15 @@ public struct Page<Item, Token> {
 
 extension Page: Sendable where Item: Sendable, Token: Sendable {}
 
+/// Which way a paged list runs.
+public enum PagedListDirection: Sendable {
+  /// The first page at the top, later pages below it, and the footer after the last row.
+  case standard
+  /// A chat: the first page is the newest, at the bottom; older pages load above it, under the footer at the top,
+  /// and newer items arrive at the bottom through `appendNewer(_:)`.
+  case reversed
+}
+
 /// What the end of a paged list shows, after its last row.
 public enum PagedListFooter {
   /// There is a next page and none is loading; `loadMore` loads it.
@@ -63,5 +72,18 @@ struct PagedContent<Item: Identifiable, Token> {
     }
     next = page.next
     return items.count - count
+  }
+
+  /// Puts the items not in the list yet before its first, the newest first; `arrived` runs oldest first, as the
+  /// items arrived. Returns how many it added.
+  @discardableResult
+  mutating func addNewer(_ arrived: [Item]) -> Int {
+    var newer: [Item] = []
+    for item in arrived where !ids.contains(item.id) {
+      ids.insert(item.id)
+      newer.append(item)
+    }
+    items.insert(contentsOf: newer.reversed(), at: 0)
+    return newer.count
   }
 }

@@ -18,6 +18,12 @@
     <item quantity="other">Loaded %d more items.</item>
   </plurals>
   <string name="codual_ui_end_of_list">End of list.</string>
+  <string name="codual_ui_no_earlier_items">No Earlier Items</string>
+  <string name="codual_ui_start_of_list">Start of list.</string>
+  <plurals name="codual_ui_new_items">
+    <item quantity="one">%d new item.</item>
+    <item quantity="other">%d new items.</item>
+  </plurals>
   <string name="codual_ui_load_more_failed">Couldn\'t load more items.</string>
   <string name="codual_ui_select">Select</string>
   <string name="codual_ui_done">Done</string>

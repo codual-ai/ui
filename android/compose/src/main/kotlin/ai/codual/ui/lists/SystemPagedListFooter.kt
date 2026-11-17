@@ -9,6 +9,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -18,6 +19,9 @@ import androidx.compose.ui.unit.dp
 
 // The footer `PagedList` shows when the app leaves it out: Material 3 components in the app's theme. Its text is in
 // string resources, so the app translates or replaces it by defining the same names.
+
+/** Whether the paged list around a footer is reversed, so the system footer's end reads as the start of a chat. */
+internal val LocalPagedListReversed = staticCompositionLocalOf { false }
 
 @Composable
 public fun SystemPagedListFooter(footer: PagedListFooter) {
@@ -36,8 +40,11 @@ public fun SystemPagedListFooter(footer: PagedListFooter) {
         Text(stringResource(R.string.codual_ui_couldnt_load_more))
         TextButton(onClick = footer.retry) { Text(stringResource(R.string.codual_ui_try_again)) }
       }
-      PagedListFooter.End ->
-        Text(stringResource(R.string.codual_ui_no_more_items), style = MaterialTheme.typography.bodyMedium)
+      PagedListFooter.End -> {
+        val reversed = LocalPagedListReversed.current
+        val end = if (reversed) R.string.codual_ui_no_earlier_items else R.string.codual_ui_no_more_items
+        Text(stringResource(end), style = MaterialTheme.typography.bodyMedium)
+      }
     }
   }
 }
