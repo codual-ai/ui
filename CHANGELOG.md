@@ -37,6 +37,16 @@ and versions follow [Semantic Versioning](https://semver.org/).
   sits behind a small `PurchaseStore` interface on every platform. The spec is `implemented`, with a test for each of
   its 31 edge cases on every platform it applies to.
 - The `codual-ui` skill covers purchases.
+- Sheets on SwiftUI (`SheetPresenter`, `.sheet(presenter)`, `.fullScreenCover(presenter)`), Jetpack Compose
+  (`SheetPresenter`, `rememberSheetPresenter`, `PresentedBottomSheet`, `PresentedDialog`, `DiscardConfirmation`)
+  and React Native (`useSheet`, `modalSheet`, `SheetAdapter`): a sheet that edits an item and reports saved or
+  cancelled, a discard confirmation for unsaved changes, swipes, taps outside, back and Escape that follow the same
+  rules, no closing while saving, closing after a save, one sheet at a time with a queue, focus back to the opener,
+  and restoration on Compose. The spec is `implemented`, with a test for each of its 21 edge cases on every platform
+  it applies to.
+- The `codual-ui` skill covers sheets.
+- The Compose library depends on `androidx.activity:activity-compose` directly, for `BackHandler`, at the version
+  Material 3 already brings (1.8.2).
 
 ### Changed
 
