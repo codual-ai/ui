@@ -115,7 +115,7 @@ sheet already open is the usual double tap, so it is dropped.
 
 - The sheet's content, its buttons, its progress view while saving and how it shows a save error.
 - Whether a sheet has unsaved changes: the app says so (`hasUnsavedChanges`), from its own form state or the
-  forms behaviour's dirty state. Sheets never compares values itself.
+  [forms](forms.md) behaviour's dirty state. Sheets never compares values itself.
 - The save itself: what it sends, and the value it returns to the presenter.
 - Detents and heights (medium, large, a fixed height), drag indicators, corner radius and background: the platform's
   own modifiers and parameters.

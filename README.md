@@ -5,13 +5,14 @@
 
 **Headless behaviours for mobile apps, the same on SwiftUI, Jetpack Compose and React Native, built for coding
 agents.** We handle the logic; your app keeps its design. A behaviour is the state, timing and edge cases behind a
-common screen: loading and retry, paging, form checks, purchases. It has no look of its own and shows your app's own
+common screen: loading and retry, paging, form checks, purchases, sheets that ask before discarding changes. It has no look of its own and shows your app's own
 views, so the code your agent writes shrinks to the part that is really yours.
 
 > [!NOTE]
-> Not published yet: use the packages from source. [Screen states](spec/screen-states.md) and
-> [lists](spec/lists.md) are done on all three platforms; forms and purchases are on their way, with a skill that
-> teaches coding agents to use them ([`skills/codual-ui`](skills/codual-ui/SKILL.md)).
+> Not published yet: use the packages from source. [Screen states](spec/screen-states.md),
+> [lists](spec/lists.md), [forms](spec/forms.md), [purchases](spec/purchases.md) and [sheets](spec/sheets.md) are
+> done on all three platforms, with a skill that teaches coding agents to use them
+> ([`skills/codual-ui`](skills/codual-ui/SKILL.md)).
 
 ## Screen states
 
@@ -102,6 +103,143 @@ PagedList(rememberPagedList(key = { it.id }) { token -> api.items(after = token)
 | New items announced | `AccessibilityNotification.Announcement`, from the model too | a polite live region; drawing it yourself, add `PagedListAnnouncements(state)` | `AccessibilityInfo.announceForAccessibilityWithOptions`, queued |
 | Built-in text | your app's string catalog | string resources named `codual_ui_*` | the `labels` prop |
 
+## Forms
+
+A form keeps what is typed, checks each field with its rules, and shows a field's error once the field is left or a
+submit is tried, never while it is first typed. A rule that asks the server (a username that's taken) waits for
+typing to pause and drops answers for old values. Submit runs once however often it is tapped, waits for those
+checks, moves focus to the first field with an error, puts errors the server sends back under their fields, and
+keeps everything typed when it fails. Next and Done move through the fields, and the form tells you when leaving
+would lose changes. Every message is your app's, and your own fields, labels and buttons draw it all.
+
+```swift
+// SwiftUI
+enum Field { case email, password }
+@State private var form = FormModel<Field>([
+  FormField(.email, rules: [.required("Enter your email"), .email("Enter a valid email")]),
+  FormField(.password, trim: false, rules: [.minLength(8, "Use 8 characters or more")]),
+])
+@FocusState private var focus: Field?
+
+TextField("Email", text: form.binding(.email)).formField(form, .email, focus: $focus)
+SecureField("Password", text: form.binding(.password)).formField(form, .password, focus: $focus, onDone: signUp)
+Button("Sign Up", action: signUp).disabled(form.isSubmitting)
+
+func signUp() { form.submit { values in try await api.signUp(values[.email], values[.password]) } }
+```
+
+```kotlin
+// Jetpack Compose
+val form = rememberForm(listOf(
+  FormField(Field.Email, rules = listOf(required("Enter your email"), email("Enter a valid email"))),
+  FormField(Field.Password, trim = false, rules = listOf(minLength(8, "Use 8 characters or more"))),
+))
+val email = form.field(Field.Email)
+OutlinedTextField(email.value, email.onValueChange, email.modifier, isError = email.error != null,
+  supportingText = email.error?.let { { Text(it) } }, keyboardOptions = email.keyboardOptions,
+  keyboardActions = email.keyboardActions)
+Button(onClick = { form.submit { values -> api.signUp(values[Field.Email], values[Field.Password]) } },
+  enabled = !form.isSubmitting) { Text("Sign Up") }
+```
+
+```tsx
+// React Native
+const form = useForm({
+  fields: {
+    email: { rules: [required("Enter your email"), email("Enter a valid email")] },
+    password: { trim: false, rules: [minLength(8, "Use 8 characters or more")] },
+  },
+});
+const signUp = () => form.submit((values) => api.signUp(values.email, values.password));
+
+<TextInput {...form.field("email")} accessibilityLabel="Email" keyboardType="email-address" />
+{form.error("email") && <Text>{form.error("email")}</Text>}
+<TextInput {...form.field("password", { onDone: signUp })} accessibilityLabel="Password" secureTextEntry />
+<Button title="Sign Up" onPress={signUp} disabled={form.isSubmitting} />
+```
+
+| | SwiftUI | Jetpack Compose | React Native |
+|---|---|---|---|
+| The form | `FormModel(fields, initialValues:)`, in `@State` | `FormState`: `rememberForm(fields)`, or in a ViewModel with `viewModelScope` | `useForm({ fields, initialValues })` |
+| A field | `FormField(.email, trim:, rules:, asyncRule:)` | `FormField(Field.Email, trim, rules, asyncRule)` | `email: { trim, rules, asyncRule }`, in key order |
+| Rules | `.required`, `.minLength`, `.maxLength`, `.pattern`, `.email`, `.number`, `.matches`, `FormRule(message) { value, values in … }` | `required`, `minLength`, `maxLength`, `pattern`, `email`, `number`, `matches`, `rule(message) { value, values -> … }` | `required`, `minLength`, `maxLength`, `pattern`, `email`, `number`, `matches`, `rule(message, (value, values) => …)` |
+| A server check | `AsyncFormRule { value in … }`, cancelled with its task | `AsyncFormRule { value -> … }`, cancelled with its coroutine | `asyncRule((value, signal) => …)`, aborted with its signal |
+| Wiring a field | `TextField(…, text: form.binding(.email)).formField(form, .email, focus: $focus)` | `form.field(Field.Email)`: `value`, `onValueChange`, `modifier`, `keyboardOptions`, `keyboardActions` | `<TextInput {...form.field("email")} />` |
+| The error to show | `form.error(.email)` | `form.error(Field.Email)`, or the binding's `error` | `form.error("email")` |
+| Submit | `form.submit { values in … }`, `isSubmitting`, `submitError` | `form.submit { values -> … }`, `isSubmitting`, `submitError` | `form.submit(async (values) => …)`, `isSubmitting`, `submitError` |
+| Server errors for fields | `throw FormFieldErrors([.email: "…"])` | `throw FormFieldErrors(mapOf(Field.Email to "…"))` | `throw new FormFieldErrors({ email: "…" })` |
+| Numbers in the person's locale | `.number("…", min: 0)`, `parseNumber(_:)` | `number("…", min = 0.0)`, `parseNumber(text)` | `number("…", { min: 0 })`, `parseNumber(text)` |
+| A field that's hidden for now | `FormField(…, isActive: false)`, `form.setActive(.password, false)` | `FormField(…, isActive = false)`, `form.setActive(Field.Password, false)` | `password: { active: !usePasskey }` |
+| "Discard changes?" | `shouldConfirmDiscard`, `reset()` | `shouldConfirmDiscard`, `reset()` | `shouldConfirmDiscard`, `reset()` |
+| Errors for screen readers | an accessibility hint on the field; submit errors announced | the field's error semantics; focus moves to it, and `FormAnnouncements(form)` speaks it when it has focus already | `accessibilityHint` on the field; submit errors announced |
+
+## Purchases
+
+In-app purchases and subscriptions, with the store behind a small adapter: StoreKit 2 on SwiftUI, Google Play
+Billing on Compose, react-native-iap (or your own) on React Native. Create one purchases object when the app launches:
+it listens for transactions for as long as the app runs (renewals, Ask to Buy approvals, purchases on another device,
+refunds), finishes each one once, after your `deliver` step, and says what the user owns. A paywall loads the
+products as a screen state and shows your rows and buttons; a second tap never buys twice, and a cancelled purchase
+is never an error. Receipts are not checked on a server: `deliver` gets the store's signed proof to send to yours.
+
+```swift
+// SwiftUI: once, for the app's lifetime, in the App struct (not a view's @State, which SwiftUI builds again)
+private let purchases = PurchasesModel(store: StoreKitStore())  // then .environment(purchases)
+
+Paywall(purchases, productIds: ["pro.monthly", "pro.yearly"]) { paywall in
+  VStack {
+    ForEach(paywall.products) { SystemProductRow($0, paywall: paywall) }
+    SystemBuyButton(paywall)
+    SystemRestoreButton(paywall)
+  }
+}
+```
+
+```kotlin
+// Jetpack Compose: once, for the app's lifetime (ai.codual.ui:codual-ui-play-billing)
+val purchases = Purchases(PlayBillingStore(application), MainScope())
+
+Paywall(purchases, listOf("pro.monthly", "pro.yearly")) { paywall ->
+  Column {
+    paywall.products.forEach { SystemProductRow(it, paywall) }
+    SystemBuyButton(paywall)
+    SystemRestoreButton(paywall)
+  }
+}
+```
+
+```tsx
+// React Native: once, outside any component (react-native-iap is an optional peer dependency)
+import * as iap from "react-native-iap";
+import { createReactNativeIapStore } from "@codual-ai/react-native-ui/react-native-iap";
+const purchases = createPurchases(createReactNativeIapStore(iap));
+
+<Paywall
+  purchases={purchases}
+  productIds={["pro.monthly", "pro.yearly"]}
+  content={(paywall) => (
+    <View>
+      {paywall.products.map((product) => <SystemProductRow key={product.id} product={product} paywall={paywall} />)}
+      <SystemBuyButton paywall={paywall} />
+      <SystemRestoreButton paywall={paywall} />
+    </View>
+  )}
+/>
+```
+
+| | SwiftUI | Jetpack Compose | React Native |
+|---|---|---|---|
+| Purchases, for the app's lifetime | `PurchasesModel(store:deliver:)` | `Purchases(store, scope, deliver)` | `createPurchases(store, { deliver })`, read with `usePurchases` |
+| The store | `StoreKitStore()` | `PlayBillingStore(application, consumableProductIds)`, in `codual-ui-play-billing` | `createReactNativeIapStore(iap, { consumableProductIds })` |
+| Your own store | `PurchaseStore` | `PurchaseStore` | `PurchaseStore` |
+| What the user owns | `entitlements` (nil until known), `isEntitled(to:)` | `entitlements` (null until known), `isEntitled(id)` | `entitlements` (undefined until known), `isEntitled(id)` |
+| The paywall | `Paywall(purchases, productIds:) { paywall in … }` | `Paywall(purchases, productIds) { paywall -> … }` | `<Paywall purchases productIds content />` |
+| Your views | `content`, `message(message, dismiss)`, and screen states' `loading`, `empty`, `failed`, `offline` | the same parameters | the same props |
+| System parts | `SystemProductRow`, `SystemBuyButton`, `SystemRestoreButton`, `SystemPurchaseMessageAlert` | the same, with `SystemPurchaseMessageDialog` | the same |
+| Status | `status`: `.purchasing`, `.pending`, `.purchased`, `.cancelled`, `.failed`, `.restoring`, `.restored`, `.nothingToRestore`, `.restoreFailed` | `status`: the same, as `PurchaseStatus` | `status.status`: the same names, kebab-case |
+| Server verification | `deliver: { transaction in … transaction.proof … }`; throw to leave it unfinished | the same | the same; reject to leave it unfinished |
+| Built-in text | your app's string catalog | string resources named `codual_ui_*` | the `labels` and `paywallLabels` props |
+
 ## Sheets
 
 A sheet, bottom sheet or full-screen cover that edits an item hands a result back to the screen that presented it:
@@ -155,7 +293,7 @@ them, named by its ID (`SS-07`), so the behaviour is identical on iOS and Androi
 spec/            one spec per behaviour, shared by every platform
 Sources/         the Swift package (SwiftUI, iOS 17 or later)
 Tests/
-android/         the Jetpack Compose library (Android 7.0, API 24, or later)
+android/         the Jetpack Compose library (Android 7.0, API 24, or later) and its Play Billing store
 react-native/    the React Native package
 scripts/         the check that every edge case is tested on every platform
 skills/          the skill that teaches coding agents to use the behaviours

@@ -58,7 +58,8 @@ dependencies {
   api(libs.compose.runtime)
   api(libs.compose.ui)
   api(libs.kotlinx.coroutines.core)
-  implementation(libs.compose.foundation)
+  // Forms' field bindings return its KeyboardOptions and KeyboardActions.
+  api(libs.compose.foundation)
   implementation(libs.compose.material3)
   implementation(libs.activity.compose)
 

@@ -87,17 +87,19 @@ public struct SystemRefreshErrorAlert: View {
       .alert(ScreenStatesText.refreshFailed, isPresented: isPresented) {
         Button(ScreenStatesText.ok) {}
       } message: {
-        if isOfflineError(error) {
-          Text(ScreenStatesText.offlineMessage)
-        } else if let message = userFacingMessage(error) {
-          Text(message)
-        } else {
-          Text(ScreenStatesText.failedMessage)
-        }
+        failureMessage(error)
       }
   }
 
   private var isPresented: Binding<Bool> {
     Binding(get: { true }, set: { isShowing in if !isShowing { dismiss() } })
   }
+}
+
+/// What an alert says about a failure: no connection, the error's own message, or that something went wrong.
+@MainActor
+func failureMessage(_ error: any Error) -> Text {
+  if isOfflineError(error) { return Text(ScreenStatesText.offlineMessage) }
+  if let message = userFacingMessage(error) { return Text(message) }
+  return Text(ScreenStatesText.failedMessage)
 }

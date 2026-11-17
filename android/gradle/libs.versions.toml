@@ -7,6 +7,7 @@ junit = "4.13.2"
 robolectric = "4.17"
 # Material 3 1.4 already brings this version; the library uses its BackHandler itself.
 activity-compose = "1.8.2"
+play-billing = "9.1.0"
 
 [libraries]
 compose-bom = { module = "androidx.compose:compose-bom", version.ref = "compose-bom" }
@@ -20,6 +21,7 @@ kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-c
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
 junit = { module = "junit:junit", version.ref = "junit" }
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
+play-billing-ktx = { module = "com.android.billingclient:billing-ktx", version.ref = "play-billing" }
 
 [plugins]
 android-library = { id = "com.android.library", version.ref = "android-gradle-plugin" }

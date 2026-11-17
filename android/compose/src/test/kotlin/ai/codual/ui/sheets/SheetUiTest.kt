@@ -2,8 +2,7 @@
 
 package ai.codual.ui.sheets
 
-import android.content.ComponentName
-import androidx.activity.ComponentActivity
+import ai.codual.ui.DeclareComposeActivity
 import androidx.activity.ComponentDialog
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
@@ -41,29 +40,16 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.ExternalResource
 import org.junit.rules.RuleChain
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.RuntimeEnvironment
-import org.robolectric.Shadows.shadowOf
 import org.robolectric.shadows.ShadowDialog
 
 /** The screen, the rules and the presenter both sheet UI tests share. */
 internal abstract class SheetUiTest {
   protected val compose = createComposeRule()
 
-  // The compose rule launches a ComponentActivity, which a library's test manifest doesn't declare.
-  private val declareActivity =
-    object : ExternalResource() {
-      override fun before() {
-        val application = RuntimeEnvironment.getApplication()
-        val activity = ComponentName(application, ComponentActivity::class.java)
-        shadowOf(application.packageManager).addActivityIfNotPresent(activity)
-      }
-    }
-
-  @get:Rule val rules: RuleChain = RuleChain.outerRule(declareActivity).around(compose)
+  @get:Rule val rules: RuleChain = RuleChain.outerRule(DeclareComposeActivity()).around(compose)
 
   protected val test = TestScope(StandardTestDispatcher())
   protected val log = ResultLog()
