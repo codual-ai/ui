@@ -8,7 +8,8 @@ final class FakeLoader<Value: Sendable> {
   private(set) var answeredAfterCancel = 0
   private var waiting: [CheckedContinuation<Value, any Error>] = []
   private var answered = 0
-  private var callWaiters: [(calls: Int, continuation: CheckedContinuation<Void, Never>)] = []
+  private var callWaiters: [(id: Int, calls: Int, continuation: CheckedContinuation<Void, Never>)] = []
+  private var nextWaiterID = 0
   private let throwsOnCancel: Bool
 
   /// - Parameter throwsOnCancel: Throw `CancellationError` when answered after cancellation, like `URLSession`.
@@ -30,25 +31,41 @@ final class FakeLoader<Value: Sendable> {
     return value
   }
 
-  /// Waits until the load has been called `count` times, without polling, so a busy machine can't time it out.
+  /// Waits until the load has been called `count` times, without polling, so a busy machine can't time it out. A
+  /// cancelled test (its time limit, say) stops waiting, so a call that never comes fails the test instead of
+  /// hanging the run.
   func waitForCalls(_ count: Int) async {
     if calls >= count { return }
-    await withCheckedContinuation { callWaiters.append((count, $0)) }
+    let id = nextWaiterID
+    nextWaiterID += 1
+    await withTaskCancellationHandler {
+      await withCheckedContinuation { continuation in
+        if Task.isCancelled { continuation.resume() } else { callWaiters.append((id, count, continuation)) }
+      }
+    } onCancel: {
+      Task { @MainActor in self.stopWaiting(id) }
+    }
   }
 
   /// Answers the oldest unanswered call, once it has been made.
   func succeed(_ value: Value) async {
-    await nextCall().resume(returning: value)
+    await nextCall()?.resume(returning: value)
   }
 
   func fail(_ error: any Error) async {
-    await nextCall().resume(throwing: error)
+    await nextCall()?.resume(throwing: error)
   }
 
-  private func nextCall() async -> CheckedContinuation<Value, any Error> {
+  /// The oldest unanswered call, or nil when the test was cancelled before it came.
+  private func nextCall() async -> CheckedContinuation<Value, any Error>? {
     answered += 1
     await waitForCalls(answered)
-    return waiting.removeFirst()
+    return waiting.isEmpty ? nil : waiting.removeFirst()
+  }
+
+  private func stopWaiting(_ id: Int) {
+    guard let index = callWaiters.firstIndex(where: { $0.id == id }) else { return }
+    callWaiters.remove(at: index).continuation.resume()
   }
 
   private func resumeCallWaiters() {
@@ -62,11 +79,12 @@ struct TestError: Error {}
 
 let offlineError = URLError(.notConnectedToInternet)
 
-/// Lets other main-actor work run until a view the test hosts reaches the condition, or gives up after a minute.
+/// Lets other main-actor work run until a view the test hosts reaches the condition, or gives up after a minute or
+/// when the test is cancelled.
 @MainActor
 func waitUntil(_ condition: () -> Bool) async {
   let deadline = ContinuousClock.now + .seconds(60)
-  while !condition(), ContinuousClock.now < deadline {
+  while !condition(), ContinuousClock.now < deadline, !Task.isCancelled {
     try? await Task.sleep(for: .milliseconds(1))
   }
 }

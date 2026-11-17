@@ -1,6 +1,6 @@
 ---
 name: codual-ui
-description: Use Codual UI's headless behaviours instead of writing their logic by hand, on SwiftUI, Jetpack Compose and React Native. Load before writing any screen that loads data (a list, a detail page, a feed, a profile) — anything with a spinner, an empty state, an error with retry, an offline message, pull to refresh, or paging (load more, infinite scroll) — a form (sign up, sign in, edit profile, validation, submit), before any in-app purchase, subscription, paywall, tip jar or restore button (StoreKit, Google Play Billing, react-native-iap), any list whose items the person selects (an edit mode, select all, bulk delete or share, a picker), before any sheet, bottom sheet, modal or full-screen cover that edits something and closes with Cancel or Save, and any search field (search as you type, recent searches, filtering a list).
+description: Use Codual UI's headless behaviours instead of writing their logic by hand, on SwiftUI, Jetpack Compose and React Native. Load before writing any screen that loads data (a list, a detail page, a feed, a profile) — anything with a spinner, an empty state, an error with retry, an offline message, pull to refresh, or paging (load more, infinite scroll) — a form (sign up, sign in, edit profile, validation, submit), before any in-app purchase, subscription, paywall, tip jar or restore button (StoreKit, Google Play Billing, react-native-iap), any list whose items the person selects (an edit mode, select all, bulk delete or share, a picker), before any sheet, bottom sheet, modal or full-screen cover that edits something and closes with Cancel or Save, any search field (search as you type, recent searches, filtering a list), and before asking for any permission (notifications, camera, photos, location, microphone, contacts; a pre-permission explanation, "open Settings", requestPermissions, react-native-permissions).
 ---
 
 # Codual UI
@@ -598,3 +598,95 @@ Don't write code for these ([spec](../../spec/search.md)):
 - Keyboard dismissed on scroll; cancel; leaving and coming back; an initial or restored query (SR-23 to SR-27).
 - One polite announcement of the results after the typing settles; the field's text is never rewritten; a search
   that cancels itself fails instead of spinning; system views with localisable text (SR-28 to SR-32).
+
+## Permissions
+
+**Use it for** any system permission a feature needs: notifications, the camera, photos, location while in use, the
+microphone, contacts, and others (Bluetooth, the calendar) through a small adapter. **Don't use it for** background
+("always") location or a photo picker: Android's and iOS's pickers need no permission, so use them instead when the
+user only picks a few photos.
+
+```swift
+// SwiftUI: needs NSCameraUsageDescription in Info.plist (a missing one reads as .unavailable, not a crash).
+// Never `.constant(camera.phase == …)`: a swipe or an alert closing must decline, or ask() waits for ever.
+@State private var camera = PermissionModel(.camera)
+
+Button("Scan") { Task { if await camera.ask().isUsable { scanning = true } } }
+  .sheet(isPresented: camera.isExplaining) {
+    CameraExplanation(onContinue: camera.accept)  // one button on iOS; a swipe down declines through the binding
+  }
+  .alert("Turn On the Camera", isPresented: camera.isShowingSettingsGuidance) {
+    Button("Open Settings", action: camera.openSettings)
+    Button("Not Now", role: .cancel) {}  // closing the alert declines through the binding
+  }
+```
+
+```kotlin
+// Jetpack Compose: needs <uses-permission android:name="android.permission.CAMERA" /> in the manifest
+val camera = rememberPermission(AndroidPermission.Camera)
+
+Button(onClick = { scope.launch { if (camera.ask().isUsable) scanning = true } }) { Text("Scan") }
+when (camera.phase) {
+  PermissionPhase.Explaining -> CameraExplanation(onContinue = camera::accept, onNoThanks = camera::decline)
+  PermissionPhase.SettingsGuidance -> SettingsDialog(onOpen = camera::openSettings, onDismiss = camera::decline)
+  else -> {}
+}
+```
+
+```tsx
+// React Native: PermissionsAndroid on Android; react-native-permissions (optional peer dependency) on iOS
+import * as permissions from "react-native-permissions";
+import { createReactNativePermissionsAccess } from "@codual-ai/react-native-ui/react-native-permissions";
+import { configurePermissions, isUsable, permissionMemory, usePermission } from "@codual-ai/react-native-ui";
+import { createMMKV } from "react-native-mmkv";
+configurePermissions({ memory: permissionMemory(createMMKV()) }); // once, at launch, before any permission
+const cameraAccess = createReactNativePermissionsAccess(permissions, "camera"); // once, in a module
+
+const camera = usePermission(cameraAccess);
+<Button title="Scan" onPress={async () => setScanning(isUsable(await camera.ask()))} />
+<CameraExplanation visible={camera.phase === "explaining"} onContinue={camera.accept} onDismiss={camera.decline} />
+// Android only, no dependency: usePermission(androidPermission("camera"))
+```
+
+**How to wire it right:**
+
+- **Never request the permission yourself** (`AVCaptureDevice.requestAccess`, `requestPermissions`,
+  `PermissionsAndroid.request`). Call `ask()` from the user's tap on the feature; the system prompt comes from
+  `accept()` on your explanation. Never ask on launch or in `onAppear`: use `suggest()` for a moment you choose (after
+  onboarding), which never explains again once declined.
+- **Draw two views from `phase`:** the explanation (`explaining`: why, and a button calling `accept()`) and the
+  Settings guidance (`settingsGuidance`: a button calling `openSettings()`, and one calling `decline()`). Call
+  `decline()` whenever either closes another way (SwiftUI's `isExplaining` and `isShowingSettingsGuidance` bindings
+  do it for you). On iOS give the explanation one button only: App Review rejects a
+  "Not Now" before the system prompt. On Android a "No Thanks" is fine.
+- **Decide with the answer:** `ask()` answers with the status when the flow ends; run the feature when `isUsable`
+  (granted, limited or provisional), and fall back otherwise (a picker, typing an address). `status == nil` means not
+  read yet.
+- **Limited is usable.** Limited photos, iOS 18 limited contacts and an approximate location work; call
+  `askForFullAccess()` only when the feature truly needs more.
+- **Don't add your own "returned from Settings" check**, "asked before" flag, `shouldShowRequestPermissionRationale`
+  logic or double-tap guard: it reads again on return, remembers each "no", and joins a second `ask()`.
+- **The usage string / manifest entry is required.** If `status` is `unavailable`, its `reason` names what's missing.
+  On React Native, JavaScript can't see Info.plist: add every usage string yourself (Info.plist or Expo's config), or
+  iOS ends the app at the prompt.
+- **On React Native, `configurePermissions({ memory })` is required setup**, once at launch: `permissionMemory(mmkv)`
+  wraps MMKV (or any synchronous store with `getBoolean`, `set` and `remove` or `delete`). Without it declines and
+  Android's "don't ask again" are forgotten on relaunch (it warns once). Pass `androidApplicationId` too so Android
+  notifications open their own Settings page.
+- **Testing**: implement `PermissionAccess` with a fake.
+
+### Edge cases it already handles
+
+Don't write code for these ([spec](../../spec/permissions.md)):
+
+- The status read without prompting, unknown until read; nothing asked on launch or on return (PM-01, PM-02, PM-05).
+- The explanation first, the system prompt only after it, a declined explanation saving the prompt, usable
+  permissions answering at once (PM-03, PM-04, PM-06).
+- Never twice in a row; a "no" ends the flow; Settings guidance once the system won't ask, opening the app's (or its
+  notification) settings (PM-07 to PM-10).
+- A fresh read on return from Settings, which ends the guidance; stale reads never overwrite the prompt's answer;
+  double taps (PM-11 to PM-13).
+- Limited and approximate grants, full access, provisional notifications, restricted (PM-14 to PM-17).
+- Missing usage strings and manifest entries, failing adapters (PM-18, PM-25); Android's denied, blocked, two-denials,
+  one-time and auto-reset permissions, notifications before Android 13 and turned off in Settings, and the right
+  manifest permissions per version (PM-19 to PM-23, PM-26); any other permission (PM-24).

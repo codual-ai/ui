@@ -47,11 +47,17 @@ final class SelectionFixture {
   /// Answers the running action, then waits for the selection to take its result.
   func succeed() async {
     await action.succeed(())
-    await selection.running?.value
+    await takeResult()
   }
 
   func fail(_ error: any Error) async {
     await action.fail(error)
+    await takeResult()
+  }
+
+  /// Waits for the running action to end, unless the test was cancelled: then its call may never have been answered.
+  private func takeResult() async {
+    guard !Task.isCancelled else { return }
     await selection.running?.value
   }
 

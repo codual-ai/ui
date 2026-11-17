@@ -67,6 +67,18 @@ and versions follow [Semantic Versioning](https://semver.org/).
   initial or restored query, and one polite announcement of the results once the typing settles. The spec is
   `implemented`, with a test for each of its 32 edge cases on every platform it applies to.
 - The `codual-ui` skill covers search.
+- Permissions on SwiftUI (`PermissionModel`, with `.notifications`, `.camera`, `.photos`, `.locationWhenInUse`,
+  `.microphone` and `.contacts`), Jetpack Compose (`PermissionState`, `rememberPermission`, `AndroidPermission`) and
+  React Native (`usePermission`, `createPermission`, `configurePermissions`, `androidPermission`, and `createReactNativePermissionsAccess` from
+  `@codual-ai/react-native-ui/react-native-permissions`, with react-native-permissions as an optional peer dependency):
+  the status read without prompting, the app's explanation before the system prompt, never asking on launch or twice
+  in a row, Settings guidance once the system won't ask again, Android's "don't ask again" and two-denials rules, a
+  fresh read when the app returns from Settings, limited and approximate grants, no double prompts, and (on SwiftUI
+  and Compose) a missing usage string or manifest entry reported as unavailable. React Native keeps declines in the
+  store given to `configurePermissions`, such as MMKV through `permissionMemory`. Each permission sits behind a small `PermissionAccess`
+  adapter on every platform. The spec is `implemented`, with a test for each of its 26 edge cases on every platform
+  it applies to.
+- The `codual-ui` skill covers permissions.
 
 ### Changed
 

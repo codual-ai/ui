@@ -5,9 +5,11 @@ compose-bom = "2026.06.01"
 kotlinx-coroutines = "1.11.0"
 junit = "4.13.2"
 robolectric = "4.17"
-# Material 3 1.4 already brings this version; the library uses its BackHandler itself.
-activity-compose = "1.8.2"
 play-billing = "9.1.0"
+# The versions Compose and Material 3 already bring; sheets and permissions use them directly.
+activity-compose = "1.8.2"
+lifecycle = "2.9.4"
+core = "1.16.0"
 
 [libraries]
 compose-bom = { module = "androidx.compose:compose-bom", version.ref = "compose-bom" }
@@ -21,6 +23,8 @@ kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-c
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
 junit = { module = "junit:junit", version.ref = "junit" }
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
+lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle" }
+core-ktx = { module = "androidx.core:core-ktx", version.ref = "core" }
 play-billing-ktx = { module = "com.android.billingclient:billing-ktx", version.ref = "play-billing" }
 
 [plugins]
