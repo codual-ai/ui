@@ -53,7 +53,7 @@ const IOS_NAMES = {
  *
  * ```ts
  * import * as permissions from "react-native-permissions";
- * import { createReactNativePermissionsAccess } from "@codual-ai/react-native-ui/react-native-permissions";
+ * import { createReactNativePermissionsAccess } from "@codual/react-native-ui/react-native-permissions";
  * const camera = createReactNativePermissionsAccess(permissions, "camera");
  * ```
  */

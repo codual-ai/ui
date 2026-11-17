@@ -170,7 +170,7 @@ Granted, limited and provisional are **usable**: the feature runs. Every other s
   and `.contacts` (`CNContactStore`), each checking its usage string first. Compose: `AndroidPermission`s over
   `ActivityResultContracts.RequestMultiplePermissions` and `shouldShowRequestPermissionRationale`, each checking the
   app's manifest first. React Native: `androidPermission` over React Native's own `PermissionsAndroid`, and
-  `createReactNativePermissionsAccess` from `@codual-ai/react-native-ui/react-native-permissions` for iOS (an optional
+  `createReactNativePermissionsAccess` from `@codual/react-native-ui/react-native-permissions` for iOS (an optional
   peer dependency, react-native-permissions; on Android it uses `androidPermission`).
 - **Usage strings (PM-18).** iOS ends an app that asks for the camera, photos, location, the microphone or contacts
   without its Info.plist string (`NSCameraUsageDescription`, `NSPhotoLibraryUsageDescription`,

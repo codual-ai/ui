@@ -305,7 +305,7 @@ Paywall(purchases, listOf("pro.monthly", "pro.yearly")) { paywall ->
 ```tsx
 // React Native: once, in a module, outside any component
 import * as iap from "react-native-iap";
-import { createReactNativeIapStore } from "@codual-ai/react-native-ui/react-native-iap";
+import { createReactNativeIapStore } from "@codual/react-native-ui/react-native-iap";
 export const purchases = createPurchases(createReactNativeIapStore(iap, { consumableProductIds: ["tip"] }));
 
 <Paywall purchases={purchases} productIds={["pro.monthly"]} content={(paywall) => <MyPaywall paywall={paywall} />} />
@@ -553,8 +553,8 @@ when (camera.phase) {
 ```tsx
 // React Native: PermissionsAndroid on Android; react-native-permissions (optional peer dependency) on iOS
 import * as permissions from "react-native-permissions";
-import { createReactNativePermissionsAccess } from "@codual-ai/react-native-ui/react-native-permissions";
-import { configurePermissions, isUsable, permissionMemory, usePermission } from "@codual-ai/react-native-ui";
+import { createReactNativePermissionsAccess } from "@codual/react-native-ui/react-native-permissions";
+import { configurePermissions, isUsable, permissionMemory, usePermission } from "@codual/react-native-ui";
 import { createMMKV } from "react-native-mmkv";
 configurePermissions({ memory: permissionMemory(createMMKV()) }); // once, at launch, before any permission
 const cameraAccess = createReactNativePermissionsAccess(permissions, "camera"); // once, in a module
@@ -639,7 +639,7 @@ const chart = useChartInteraction({
   load: ({ range }, signal) => api.prices(range, { signal }),
   haptic: () => Haptics.selectionAsync(),
 });
-// Victory Native: import { useVictoryScrub } from "@codual-ai/react-native-ui/victory-native";
+// Victory Native: import { useVictoryScrub } from "@codual/react-native-ui/victory-native";
 // Reanimated 4: { useAnimatedReaction } from reanimated, { scheduleOnRN } from react-native-worklets;
 // Reanimated 3: pass runOnJS instead of scheduleOnRN.
 const { state: press } = useChartPressState({ x: 0, y: { y: 0 } });

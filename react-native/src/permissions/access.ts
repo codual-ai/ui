@@ -2,7 +2,7 @@ import type { PermissionStatus } from "./status";
 
 /**
  * One system permission behind `usePermission`: `androidPermission("camera")`, `createReactNativePermissionsAccess`
- * from `@codual-ai/react-native-ui/react-native-permissions`, the app's own, or a fake in tests. A rejection is
+ * from `@codual/react-native-ui/react-native-permissions`, the app's own, or a fake in tests. A rejection is
  * reported as unavailable.
  */
 export interface PermissionAccess {

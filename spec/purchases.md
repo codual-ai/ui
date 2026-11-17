@@ -175,7 +175,7 @@ The buy button has its own state, from the status and the selected product:
   `PlayBillingStore`, on the Play Billing Library (`queryProductDetailsAsync`, `launchBillingFlow`,
   `PurchasesUpdatedListener`, `queryPurchasesAsync`, `acknowledgePurchase`, `consumeAsync`), in its own module
   (`codual-ui-play-billing`) so apps that don't sell anything don't get the billing permission. React Native:
-  `createReactNativeIapStore` from `@codual-ai/react-native-ui/react-native-iap`, on react-native-iap, an optional
+  `createReactNativeIapStore` from `@codual/react-native-ui/react-native-iap`, on react-native-iap, an optional
   peer dependency. Every platform takes any other store through the same small interface.
 - **No answer (PU-30).** Google Play answers a purchase as its sheet closes; when no answer has come 30 seconds after
   the app is back on screen, `PlayBillingStore` fails the purchase rather than keep it busy for ever.
