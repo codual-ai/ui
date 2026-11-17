@@ -152,8 +152,12 @@ struct SheetViewTests {
   func theEscapeGestureIsACloseRequest() async throws {
     let (window, host) = showSheetContent()
     defer { window.isHidden = true }
-    await waitUntil { performEscape(in: host.view) }
-    #expect(presenter.item == nil, "nothing in the sheet handled the escape gesture")
+    var tried: [String] = []
+    await waitUntil {
+      tried = performEscape(in: host.view) { presenter.item == nil }
+      return presenter.item == nil
+    }
+    #expect(presenter.item == nil, "nothing in the sheet handled the escape gesture; tried \(tried)")
     #expect(log.results == ["cancelled 1"])
   }
 
@@ -206,12 +210,17 @@ struct SheetViewTests {
     return nil
   }
 
-  /// Performs the escape gesture on the first element or container, as VoiceOver walks them, that handles it.
-  private func performEscape(in view: UIView) -> Bool {
+  /// Performs the escape gesture, as VoiceOver does, on each element and container in the hosted view, the screen
+  /// reader's own elements first, until `isHandled`. An element saying it handled the gesture isn't enough: on newer
+  /// SDKs the hosting view itself answers for some gestures without running the sheet's action. Returns the types
+  /// of the elements tried, for the failure message.
+  private func performEscape(in view: UIView, until isHandled: () -> Bool) -> [String] {
+    var elements: [NSObject] = []
+    var views: [NSObject] = []
     var queue: [NSObject] = [view]
     while !queue.isEmpty {
       let element = queue.removeFirst()
-      if element.accessibilityPerformEscape() { return true }
+      if element is UIView { views.append(element) } else { elements.append(element) }
       queue += (element as? UIView)?.subviews ?? []
       queue += (element.accessibilityElements as? [NSObject]) ?? []
       let count = element.accessibilityElementCount()
@@ -219,7 +228,13 @@ struct SheetViewTests {
         queue += (0..<count).compactMap { element.accessibilityElement(at: $0) as? NSObject }
       }
     }
-    return false
+    var tried: [String] = []
+    for element in elements + views {
+      tried.append(String(describing: type(of: element)))
+      _ = element.accessibilityPerformEscape()
+      if isHandled() { break }
+    }
+    return tried
   }
 }
 
