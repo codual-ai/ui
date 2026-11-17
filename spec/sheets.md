@@ -139,7 +139,8 @@ sheet already open is the usual double tap, so it is dropped.
 - **Back (SH-15).** Compose: a `BackHandler` inside the bottom sheet's window, with the window's own back
   dismissal turned off; a `PresentedDialog`'s back reaches its `onDismissRequest`, a close request. React Native: `Modal`'s `onRequestClose`, and `BackHandler` while a sheet open through an adapter (which has
   no window of its own) is on screen.
-- **Escape (SH-14).** SwiftUI: the Cancel action's keyboard shortcut and `accessibilityAction(.escape)`. Compose: a
+- **Escape (SH-14).** SwiftUI: the Cancel action's keyboard shortcut and `accessibilityAction(.escape)`, and the
+  presented sheet's own view answers the VoiceOver escape gesture too, since iOS 26 doesn't always pass it to SwiftUI. Compose: a
   `PresentedDialog`'s window turns Escape into a dismiss request; a bottom sheet's window ignores it, so
   `PresentedBottomSheet` handles the Escape key itself while focus is inside the sheet. React Native's `Modal` has no
   Escape key handling of its own.

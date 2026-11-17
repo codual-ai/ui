@@ -113,6 +113,7 @@ private struct DismissAttemptReader: UIViewControllerRepresentable {
 }
 
 final class DismissAttemptController: UIViewController {
+  /// A close request: a blocked swipe, or the escape gesture on the presented sheet.
   var onAttempt: () -> Void = {}
   private let forwarder = DismissAttemptForwarder()
   private var retry: Task<Void, Never>?
@@ -139,6 +140,13 @@ final class DismissAttemptController: UIViewController {
 
   func install(on presentation: UIPresentationController) {
     forwarder.onAttempt = { [weak self] in self?.onAttempt() }
+    if let view = presentation.presentedViewController.viewIfLoaded {
+      SheetEscape.install(on: view) { [weak self] in
+        guard let self else { return false }
+        onAttempt()
+        return true
+      }
+    }
     guard presentation.delegate !== forwarder else { return }
     forwarder.original = presentation.delegate
     presentation.delegate = forwarder

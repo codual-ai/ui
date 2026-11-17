@@ -148,17 +148,49 @@ struct SheetViewTests {
     #expect(presenter.isConfirmingDiscard)
   }
 
-  @Test("SH-14 the VoiceOver escape gesture is a close request")
+  @Test("SH-14 the VoiceOver escape gesture on a presented sheet is a close request")
   func theEscapeGestureIsACloseRequest() async throws {
-    let (window, host) = showSheetContent()
-    defer { window.isHidden = true }
-    var tried: [String] = []
-    await waitUntil {
-      tried = performEscape(in: host.view) { presenter.item == nil }
-      return presenter.item == nil
+    try await expectEscapeCloses(cover: false)
+  }
+
+  @Test("SH-14 the VoiceOver escape gesture on a presented cover is a close request")
+  func theEscapeGestureOnACoverIsACloseRequest() async throws {
+    try await expectEscapeCloses(cover: true)
+  }
+
+  /// Presents note 1 for real and performs the escape gesture on the presented controller's view, where UIKit ends up
+  /// when nothing inside the sheet handles it.
+  private func expectEscapeCloses(cover: Bool) async throws {
+    let host = UIHostingController(rootView: PresentingScreen(presenter: presenter, cover: cover))
+    let window = show(host)
+    defer {
+      host.dismiss(animated: false)
+      window.isHidden = true
     }
-    #expect(presenter.item == nil, "nothing in the sheet handled the escape gesture; tried \(tried)")
+    presenter.present(Note(id: 1))
+    await waitUntil { host.presentedViewController?.presentationController?.delegate is DismissAttemptForwarder }
+    let presented = try #require(host.presentedViewController, "nothing was presented")
+    #expect(presented.view.accessibilityPerformEscape(), "the sheet's view didn't handle the escape gesture")
+    #expect(presenter.item == nil)
     #expect(log.results == ["cancelled 1"])
+  }
+
+  @Test("SH-14 the escape gesture on a sheet with unsaved changes asks instead of closing")
+  func theEscapeGestureWithUnsavedChangesAsks() async throws {
+    let host = UIHostingController(rootView: PresentingScreen(presenter: presenter, cover: false))
+    let window = show(host)
+    defer {
+      host.dismiss(animated: false)
+      window.isHidden = true
+    }
+    presenter.present(Note(id: 1))
+    presenter.hasUnsavedChanges = true
+    await waitUntil { host.presentedViewController?.presentationController?.delegate is DismissAttemptForwarder }
+    let presented = try #require(host.presentedViewController, "nothing was presented")
+    #expect(presented.view.accessibilityPerformEscape())
+    #expect(presenter.isConfirmingDiscard)
+    #expect(presenter.item == Note(id: 1))
+    #expect(!NSStringFromClass(presented.view.classForCoder).hasPrefix("CodualUI"), "the view reports a new class")
   }
 
   @Test("SH-19 the discard confirmation is a system dialog with a destructive Discard Changes and Keep Editing")
@@ -208,33 +240,6 @@ struct SheetViewTests {
       controllers += next.children
     }
     return nil
-  }
-
-  /// Performs the escape gesture, as VoiceOver does, on each element and container in the hosted view, the screen
-  /// reader's own elements first, until `isHandled`. An element saying it handled the gesture isn't enough: on newer
-  /// SDKs the hosting view itself answers for some gestures without running the sheet's action. Returns the types
-  /// of the elements tried, for the failure message.
-  private func performEscape(in view: UIView, until isHandled: () -> Bool) -> [String] {
-    var elements: [NSObject] = []
-    var views: [NSObject] = []
-    var queue: [NSObject] = [view]
-    while !queue.isEmpty {
-      let element = queue.removeFirst()
-      if element is UIView { views.append(element) } else { elements.append(element) }
-      queue += (element as? UIView)?.subviews ?? []
-      queue += (element.accessibilityElements as? [NSObject]) ?? []
-      let count = element.accessibilityElementCount()
-      if count != NSNotFound, count > 0 {
-        queue += (0..<count).compactMap { element.accessibilityElement(at: $0) as? NSObject }
-      }
-    }
-    var tried: [String] = []
-    for element in elements + views {
-      tried.append(String(describing: type(of: element)))
-      _ = element.accessibilityPerformEscape()
-      if isHandled() { break }
-    }
-    return tried
   }
 }
 
