@@ -2,7 +2,7 @@
   "name": "codual-ui-site",
   "version": "0.0.0",
   "private": true,
-  "description": "The Codual UI docs site, built from the specs, the README and the skill.",
+  "description": "The Codual UI docs site.",
   "license": "Apache-2.0",
   "type": "module",
   "engines": {
