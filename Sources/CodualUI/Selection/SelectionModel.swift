@@ -1,23 +1,4 @@
-import Foundation
 import Observation
-
-/// How many items a selection holds.
-public enum SelectionKind: Sendable {
-  /// Any number, up to the selection's `max`.
-  case multiple
-  /// At most one: selecting another deselects the first.
-  case single
-}
-
-/// When a selection takes taps.
-public enum SelectionActivation: Sendable {
-  /// Only in the selection mode, which the Select button or a long press enters, and Done, Cancel or back leave.
-  case onDemand
-  /// Always, as in a picker: there is no mode to leave.
-  case always
-}
-
-let maxMessage = "A selection's max is how many items it may hold: at least 1, and only for multiple selection."
 
 /// The state behind a list whose items the person selects, for the app's own rows: the selection mode, which items
 /// are selected (by identity, in the order they were selected), select all, a maximum, and bulk actions.
@@ -38,20 +19,20 @@ public final class SelectionModel<Item: Identifiable> {
   @ObservationIgnored public var isDisabled: (Item) -> Bool
 
   /// The selection mode is on: a tap toggles a row. Always true for an always active selection.
-  public private(set) var isActive: Bool
+  public internal(set) var isActive: Bool
   /// The selected items' IDs, in the order they were selected.
-  public private(set) var selectedIDs: [Item.ID] = [] {
+  public internal(set) var selectedIDs: [Item.ID] = [] {
     didSet { selectedSet = Set(selectedIDs) }
   }
   /// `selectedIDs` as a set, so lookups stay constant time on long lists. Observed, so a row that reads
   /// `isSelected(_:)` redraws when it changes.
-  private var selectedSet: Set<Item.ID> = []
+  private(set) var selectedSet: Set<Item.ID> = []
   /// A destructive action waits for the person to confirm it.
-  public private(set) var isConfirming = false
+  public internal(set) var isConfirming = false
   /// A bulk action is running; the selection can't change.
-  public private(set) var isPerforming = false
+  public internal(set) var isPerforming = false
   /// The last action failed; the selection stays until the app dismisses this or another action starts.
-  public private(set) var actionError: (any Error)?
+  public internal(set) var actionError: (any Error)?
   /// The items the list has loaded, or nil while they aren't known (the first page is loading, say).
   private(set) var items: [Item]? {
     didSet { itemsByID = items.map(Self.byID) }
@@ -67,12 +48,12 @@ public final class SelectionModel<Item: Identifiable> {
   /// How many items the server has, for select all on the server. Nil when the app can't act on them all.
   public var serverTotal: Int?
   /// Every item on the server is selected, loaded or not: the action reads this and acts on them all.
-  public private(set) var isAllOnServerSelected = false
+  public internal(set) var isAllOnServerSelected = false
 
   /// Speaks what a change did; tests replace it.
   @ObservationIgnored var announce: (SelectionAnnouncement) -> Void = { $0.post() }
-  @ObservationIgnored private var pendingAction: Action?
-  @ObservationIgnored private(set) var running: Task<Void, Never>?
+  @ObservationIgnored var pendingAction: Action?
+  @ObservationIgnored var running: Task<Void, Never>?
 
   /// - Parameters:
   ///   - kind: Multiple (the default) or single.
@@ -240,37 +221,6 @@ public final class SelectionModel<Item: Identifiable> {
     if let items = knownItems(in: state) { update(items: items) }
   }
 
-  /// Runs a bulk action on the selected items' IDs, once. When it succeeds the selection clears and the mode ends;
-  /// when it fails both stay, and `actionError` reports it.
-  public func perform(_ action: @escaping Action) {
-    guard canStartAction else { return }
-    run(action)
-  }
-
-  /// A destructive bulk action: waits for `confirmPendingAction()`, which the app's confirmation calls.
-  public func performAfterConfirmation(_ action: @escaping Action) {
-    guard canStartAction else { return }
-    pendingAction = action
-    isConfirming = true
-  }
-
-  /// Runs the action waiting for confirmation, on the selection as it is now; with nothing selected, runs nothing.
-  public func confirmPendingAction() {
-    guard let action = pendingAction else { return }
-    pendingAction = nil
-    isConfirming = false
-    if !selectedIDs.isEmpty { run(action) }
-  }
-
-  public func cancelPendingAction() {
-    pendingAction = nil
-    isConfirming = false
-  }
-
-  public func dismissActionError() {
-    actionError = nil
-  }
-
   /// Adds `added` in order, up to the maximum, and announces the count once, or the limit if it stopped every one.
   /// The caller has checked the mode and that none is disabled or selected.
   func select(_ added: [Item]) {
@@ -288,93 +238,38 @@ public final class SelectionModel<Item: Identifiable> {
     announceCount()
   }
 
-  /// A `List`'s selection binding changing: removals and additions, through the same rules as taps.
-  func setListSelection(_ ids: Set<Item.ID>) {
-    guard isActive, !isPerforming else { return }
-    let current = selectedSet
-    let added = (shownItems ?? []).filter { ids.contains($0.id) && isSelectable($0) && !current.contains($0.id) }
-    let isRemoving = !current.isSubset(of: ids)
-    if isRemoving { isAllOnServerSelected = false }
-    if added.isEmpty {
-      guard isRemoving else { return }
-      selectedIDs.removeAll { !ids.contains($0) }
-      announceCount()
-      return
-    }
-    if kind == .multiple && isRemoving { selectedIDs.removeAll { !ids.contains($0) } }
-    select(added)
-  }
-
-  /// A tap on a row: toggles it in the selection mode, or runs the row's own action outside it.
-  func tap(_ item: Item, otherwise action: () -> Void) {
-    if isActive { toggle(item) } else { action() }
-  }
-
-  private var canStartAction: Bool {
-    isActive && !isPerforming && !isConfirming && !selectedIDs.isEmpty
-  }
-
-  private func run(_ action: @escaping Action) {
-    isPerforming = true
-    actionError = nil
-    let ids = selectedIDs
-    let context = SelectionActionContext(isAllOnServer: isAllOnServerSelected)
-    running = Task { [weak self] in
-      let result: Result<Void, any Error>
-      do {
-        try await action(ids, context)
-        result = .success(())
-      } catch {
-        result = .failure(error)
-      }
-      self?.finish(result)
-    }
-  }
-
-  private func finish(_ result: Result<Void, any Error>) {
-    running = nil
-    isPerforming = false
-    switch result {
-    case .success:
-      if activation == .onDemand && isActive { leaveMode() } else { clearSelection() }
-    case .failure(let error):
-      actionError = error
-      if items?.isEmpty == true && activation == .onDemand { isActive = false }
-    }
-  }
-
-  /// One of the items once they are known (before that, one of the visible items, if given), and its current copy
-  /// isn't disabled. The data wins, so a stale visible list can't bring back an item the data dropped.
   private static func byID(_ items: [Item]) -> [Item.ID: Item] {
     Dictionary(items.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
   }
 
-  private func isSelectable(_ item: Item) -> Bool {
+  /// One of the items once they are known (before that, one of the visible items, if given), and its current copy
+  /// isn't disabled. The data wins, so a stale visible list can't bring back an item the data dropped.
+  func isSelectable(_ item: Item) -> Bool {
     guard let current = (itemsByID ?? visibleByID).map({ $0[item.id] }) else { return !isDisabled(item) }
     guard let current else { return false }
     return !isDisabled(current)
   }
 
   /// What select all and the total cover: the current copies of the visible items still in the data, or every item.
-  private var shownItems: [Item]? {
+  var shownItems: [Item]? {
     guard let visibleItems else { return items }
     guard let itemsByID else { return visibleItems }
     return visibleItems.compactMap { itemsByID[$0.id] }
   }
 
-  private func clearSelection() {
+  func clearSelection() {
     selectedIDs = []
     isAllOnServerSelected = false
   }
 
-  private func leaveMode() {
+  func leaveMode() {
     clearSelection()
     cancelPendingAction()
     actionError = nil
     isActive = activation == .always
   }
 
-  private func announceCount() {
+  func announceCount() {
     announce(.count(selected: count, total: total))
   }
 }
@@ -387,58 +282,3 @@ func knownItems<Item>(in state: ScreenState<[Item]>) -> [Item]? {
   case .idle, .loading, .failed, .offline: nil
   }
 }
-
-extension SelectionModel where Item.ID: Codable {
-  /// The mode and the selected IDs, to keep across the system ending the app (see `.restoresSelection(_:key:)`).
-  public var saved: SavedSelection<Item.ID> {
-    SavedSelection(isActive: isActive, ids: selectedIDs, isAllOnServer: isAllOnServerSelected)
-  }
-
-  /// The saved selection as data, for `@SceneStorage`.
-  var savedData: Data? { try? JSONEncoder().encode(saved) }
-
-  /// Brings back a selection saved as data. Data an older version of the app saved that no longer decodes is a
-  /// selection that can't come back, so it is ignored.
-  func restore(from data: Data) {
-    guard let saved = try? JSONDecoder().decode(SavedSelection<Item.ID>.self, from: data) else { return }
-    restore(saved)
-  }
-
-  /// Brings back a saved selection. Its IDs stay until the items are known, then drop out like any others.
-  public func restore(_ saved: SavedSelection<Item.ID>) {
-    guard !isPerforming else { return }
-    isActive = activation == .always || saved.isActive
-    var seen = Set<Item.ID>()
-    let ids = saved.ids.filter { seen.insert($0).inserted }
-    let limit = kind == .single ? 1 : max ?? ids.count
-    selectedIDs = isActive ? Array(ids.prefix(limit)) : []
-    isAllOnServerSelected = isActive && saved.isAllOnServer == true && kind == .multiple && max == nil
-    if let items { update(items: items) }
-  }
-}
-
-/// What a bulk action knows besides the IDs, as it is when the action starts.
-public struct SelectionActionContext: Equatable, Sendable {
-  /// All on the server was chosen: act on every item the server has, not only the IDs.
-  public let isAllOnServer: Bool
-
-  public init(isAllOnServer: Bool) {
-    self.isAllOnServer = isAllOnServer
-  }
-}
-
-/// A selection's mode and IDs, saved.
-public struct SavedSelection<ID: Codable & Hashable>: Codable, Hashable {
-  public var isActive: Bool
-  public var ids: [ID]
-  /// Optional, so a selection saved before it existed still decodes.
-  public var isAllOnServer: Bool?
-
-  public init(isActive: Bool, ids: [ID], isAllOnServer: Bool = false) {
-    self.isActive = isActive
-    self.ids = ids
-    self.isAllOnServer = isAllOnServer
-  }
-}
-
-extension SavedSelection: Sendable where ID: Sendable {}

@@ -2,7 +2,6 @@ import { act, render, screen } from "@testing-library/react-native";
 import { useState } from "react";
 import { AccessibilityInfo, Text } from "react-native";
 import { PagedList } from "../../src/lists/PagedList";
-import { SelectAllButton } from "../../src/selection/system-views";
 import { type SelectionController, useSelection } from "../../src/selection/use-selection";
 import { FakePageLoader, keyExtractor, page, type TestItem } from "../lists/helpers/paged-list";
 import { keyOf, type Row } from "./helpers/selection";
@@ -11,21 +10,18 @@ beforeEach(() => {
   jest.spyOn(AccessibilityInfo, "announceForAccessibilityWithOptions").mockImplementation(() => {});
 });
 
-afterEach(() => {
-  jest.restoreAllMocks();
-  jest.clearAllMocks();
-});
-
 let latest: SelectionController<Row> | undefined;
 let disable: ((ids: readonly number[]) => void) | undefined;
 
-/** A screen whose `items` array is made anew on every render, with the IDs of disabled rows in its own state. */
-function InlineItems() {
+const STABLE_ITEMS: readonly Row[] = [{ id: 1 }, { id: 2 }];
+
+/** A screen with the IDs of disabled rows in its own state, and its items from `items` on each render. */
+function DisablingScreen(props: { readonly items: () => readonly Row[] }) {
   const [disabled, setDisabled] = useState<readonly number[]>([]);
   disable = setDisabled;
   latest = useSelection<Row>({
     keyExtractor: keyOf,
-    items: [{ id: 1 }, { id: 2 }],
+    items: props.items(),
     isDisabled: (row) => disabled.includes(row.id),
   });
   return <Text>{latest.title}</Text>;
@@ -37,7 +33,7 @@ function current(): SelectionController<Row> {
 }
 
 test("SL-09 an items array made anew on every render keeps the selection, without rendering for ever", async () => {
-  await render(<InlineItems />);
+  await render(<DisablingScreen items={() => [{ id: 1 }, { id: 2 }]} />);
   await act(async () => current().enter());
   await act(async () => current().toggle({ id: 2 }));
   expect(screen.getByText("1 Selected")).toBeTruthy();
@@ -45,7 +41,7 @@ test("SL-09 an items array made anew on every render keeps the selection, withou
 });
 
 test("SL-12 a selected item drops out when only isDisabled changes, with the same items", async () => {
-  await render(<InlineItems />);
+  await render(<DisablingScreen items={() => STABLE_ITEMS} />);
   await act(async () => current().enter());
   await act(async () => current().selectAll());
   await act(async () => disable?.([2]));
@@ -76,15 +72,6 @@ test("SL-26 a paged list's selected item drops out when only isDisabled changes"
   await act(async () => selection?.selectAll());
   await act(async () => setDisabled?.([1]));
   expect(selection?.selectedKeys).toEqual(["2"]);
-});
-
-test("SL-07 a single selection has no Select All button", async () => {
-  function Single() {
-    const selection = useSelection<Row>({ keyExtractor: keyOf, kind: "single", items: [{ id: 1 }] });
-    return <SelectAllButton selection={selection} />;
-  }
-  await render(<Single />);
-  expect(screen.queryByRole("button")).toBeNull();
 });
 
 test("SL-25 Select on a paged list's empty view stays in the mode", async () => {

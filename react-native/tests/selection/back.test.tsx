@@ -2,11 +2,6 @@ import { act } from "@testing-library/react-native";
 import { BackHandler } from "react-native";
 import { renderSelection, rows } from "./helpers/selection";
 
-afterEach(() => {
-  jest.restoreAllMocks();
-  jest.clearAllMocks();
-});
-
 type BackListener = Parameters<typeof BackHandler.addEventListener>[1];
 
 const backPress = { type: "hardwareBackPress", timeStamp: 0 };

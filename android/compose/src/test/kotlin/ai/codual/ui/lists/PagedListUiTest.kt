@@ -2,9 +2,8 @@
 
 package ai.codual.ui.lists
 
+import ai.codual.ui.declareComponentActivity
 import ai.codual.ui.screenstates.TestError
-import android.content.ComponentName
-import androidx.activity.ComponentActivity
 import ai.codual.ui.screenstates.ScreenState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -36,28 +35,15 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.ExternalResource
 import org.junit.rules.RuleChain
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.RuntimeEnvironment
-import org.robolectric.Shadows.shadowOf
 
 @RunWith(RobolectricTestRunner::class)
 class PagedListUiTest {
   private val compose = createComposeRule()
 
-  // The compose rule launches a ComponentActivity, which a library's test manifest doesn't declare.
-  private val declareActivity =
-    object : ExternalResource() {
-      override fun before() {
-        val application = RuntimeEnvironment.getApplication()
-        val activity = ComponentName(application, ComponentActivity::class.java)
-        shadowOf(application.packageManager).addActivityIfNotPresent(activity)
-      }
-    }
-
-  @get:Rule val rules: RuleChain = RuleChain.outerRule(declareActivity).around(compose)
+  @get:Rule val rules: RuleChain = RuleChain.outerRule(declareComponentActivity()).around(compose)
 
   private val test = TestScope(StandardTestDispatcher())
   private val loader = FakePageLoader()
@@ -132,9 +118,9 @@ class PagedListUiTest {
     compose.onNodeWithContentDescription("Couldn't load more items.").assertExists()
     compose.onNodeWithText("Try Again").performClick()
     settle()
-    val failureAnnouncement = list.announcement
+    val failureAnnouncement = list.announcements.latest
     answer(page(listOf(1), next = 3))
-    assertEquals(failureAnnouncement, list.announcement)
+    assertEquals(failureAnnouncement, list.announcements.latest)
     answer(page(listOf(2), next = null))
     compose.onNodeWithContentDescription("Loaded 1 more item. End of list.").assertExists()
   }

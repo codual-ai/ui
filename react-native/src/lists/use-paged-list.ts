@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { AccessibilityInfo } from "react-native";
+import { announcePolitely } from "../accessibility";
 import { isOfflineError } from "../screen-states/errors";
 import { type LoadPage, PagedListMachine, type PagedListSnapshot, type PagedListSource } from "./machine";
 import type { Page } from "./paged-content";
@@ -41,11 +41,7 @@ export function usePagedList<Item, Token>(
     loadPage,
     keyExtractor: options.keyExtractor,
     isOffline: options.isOffline ?? isOfflineError,
-    // Queued on iOS, after whatever VoiceOver is saying; Android's TalkBack queues announcements anyway.
-    announce: (announcement) =>
-      AccessibilityInfo.announceForAccessibilityWithOptions(announcementText(announcement, labels), {
-        queue: true,
-      }),
+    announce: (announcement) => announcePolitely(announcementText(announcement, labels)),
   };
   const latest = useRef(source);
   useLayoutEffect(() => {

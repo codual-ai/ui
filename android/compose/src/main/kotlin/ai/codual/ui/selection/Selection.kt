@@ -1,31 +1,19 @@
 package ai.codual.ui.selection
 
+import ai.codual.ui.LiveRegionAnnouncements
 import ai.codual.ui.R
 import ai.codual.ui.screenstates.ScreenState
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.NonSkippableComposable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
-import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.liveRegion
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.dp
 
 /**
  * A [SelectionState] that is saved with the screen, so the mode and the selected keys come back after rotation and
@@ -74,10 +62,9 @@ public fun SelectionBackHandler(selection: SelectionState<*, *>) {
 }
 
 /**
- * Keeps [selection] to [items] after every composition, so a change to `isDisabled` reaches it too. Items edited in
- * place aren't seen until the next composition: keep them immutable, and give a new list when one changes.
+ * Keeps [selection] to [items] after every composition. It is never skipped, as `isDisabled` can change while the
+ * selection and the list stay the same. Items edited in place aren't seen: keep them immutable, and give a new list.
  */
-// Never skipped: `isDisabled` can change while the selection and the list stay the same.
 @NonSkippableComposable
 @Composable
 public fun <Item> SyncSelection(selection: SelectionState<Item, *>, items: List<Item>) {
@@ -85,8 +72,8 @@ public fun <Item> SyncSelection(selection: SelectionState<Item, *>, items: List<
 }
 
 /**
- * Keeps [selection] to [items], the data, and [visibleItems], what a filter or search shows now: selected items
- * that aren't visible stay selected, hidden; null clears the filter. Never skipped, like the overload without visible items.
+ * Keeps [selection] to [items], the data, and [visibleItems], what a filter or search shows now (null for no
+ * filter), after every composition: selected items that aren't visible stay selected, hidden.
  */
 @NonSkippableComposable
 @Composable
@@ -94,6 +81,18 @@ public fun <Item> SyncSelection(selection: SelectionState<Item, *>, items: List<
   SideEffect {
     selection.updateItems(items)
     selection.updateVisibleItems(visibleItems)
+  }
+}
+
+/** The items of a screen state: its content, or none when empty. Any other state leaves them unknown. */
+public fun <Item> SelectionState<Item, *>.updateItems(state: ScreenState<List<Item>>) {
+  when (state) {
+    is ScreenState.Content -> updateItems(state.value)
+    ScreenState.Empty -> updateItems(emptyList())
+    ScreenState.Idle,
+    ScreenState.Loading,
+    ScreenState.Offline,
+    is ScreenState.Failed -> Unit
   }
 }
 
@@ -122,31 +121,11 @@ public fun selectionTitle(selection: SelectionState<*, *>): String {
  */
 @Composable
 public fun SelectionAnnouncements(selection: SelectionState<*, *>, modifier: Modifier = Modifier) {
-  val announcement = selection.announcement
-  val text = announcement?.let { announcementText(it.value) }
-  val latestText by rememberUpdatedState(text)
-  var spoken by remember(selection) { mutableStateOf<String?>(null) }
-  // TalkBack speaks a live region when its text changes, so each announcement clears it for a frame first: the same
-  // words twice in a row are spoken twice.
-  LaunchedEffect(selection, announcement?.number) {
-    val number = announcement?.number ?: return@LaunchedEffect
-    if (number == selection.spokenAnnouncement) return@LaunchedEffect
-    spoken = null
-    withFrameNanos {}
-    spoken = latestText
-    selection.spokenAnnouncement = number
-  }
-  // One pixel high, as TalkBack skips nodes with no size.
-  Box(
-    modifier.fillMaxWidth().height(1.dp).semantics {
-      liveRegion = LiveRegionMode.Polite
-      spoken?.let { contentDescription = it }
-    }
-  )
+  LiveRegionAnnouncements(selection.announcements, modifier) { announcementText(it) }
 }
 
 @Composable
-internal fun announcementText(announcement: SelectionAnnouncement): String =
+private fun announcementText(announcement: SelectionAnnouncement): String =
   when (announcement) {
     is SelectionAnnouncement.Count ->
       pluralStringResource(

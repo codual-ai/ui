@@ -1,11 +1,6 @@
 import { offlineError, TestError } from "../screen-states/helpers/fake-loader";
 import { page, renderPagedList } from "./helpers/paged-list";
 
-afterEach(() => {
-  jest.restoreAllMocks();
-  jest.clearAllMocks();
-});
-
 test("LS-01 the first page shows loading until it arrives, then the list with its footer", async () => {
   const { loader, list, ids } = await renderPagedList();
   expect(list().state).toEqual({ status: "loading" });

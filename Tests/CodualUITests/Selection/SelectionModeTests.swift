@@ -165,4 +165,13 @@ struct SelectionModeTests {
     #expect(!fixture.selection.isConfirming)
     #expect(fixture.ids.isEmpty)
   }
+
+  @Test("SL-25 the same empty list again keeps the mode Select entered")
+  func theSameEmptyListKeepsTheMode() {
+    let fixture = SelectionFixture()
+    fixture.show([])
+    fixture.selection.enter()
+    fixture.show([])
+    #expect(fixture.selection.isActive)
+  }
 }

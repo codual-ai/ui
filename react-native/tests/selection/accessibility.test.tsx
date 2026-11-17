@@ -7,11 +7,6 @@ import { keyOf, type Row, renderSelection, rows } from "./helpers/selection";
 
 const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
 
-afterEach(() => {
-  jest.restoreAllMocks();
-  jest.clearAllMocks();
-});
-
 function Screen(props: {
   readonly items: readonly Row[];
   readonly labels?: Partial<SelectionLabels>;
@@ -115,4 +110,13 @@ test("SL-24 the default limit announcement has English plurals", async () => {
   await one.run(() => one.selection().longPress({ id: 1 }));
   await one.run(() => one.selection().toggle({ id: 2 }));
   expect(one.announcements().at(-1)).toBe("You can select up to 1 item.");
+});
+
+test("SL-07 a single selection has no Select All button", async () => {
+  function Single() {
+    const selection = useSelection<Row>({ keyExtractor: keyOf, kind: "single", items: [{ id: 1 }] });
+    return <SelectAllButton selection={selection} />;
+  }
+  await render(<Single />);
+  expect(screen.queryByRole("button")).toBeNull();
 });

@@ -12,11 +12,6 @@ beforeEach(() => {
   jest.spyOn(AccessibilityInfo, "announceForAccessibilityWithOptions").mockImplementation(() => {});
 });
 
-afterEach(() => {
-  jest.restoreAllMocks();
-  jest.clearAllMocks();
-});
-
 /**
  * A paged list of selectable rows. `renderItem` never changes and reads the selection when called, as a memoised
  * row does, so a row redraws only if the list hands its cells new props.

@@ -1,5 +1,6 @@
 package ai.codual.ui.lists
 
+import ai.codual.ui.LiveRegionAnnouncements
 import ai.codual.ui.R
 import ai.codual.ui.screenstates.ScreenStatesLayout
 import ai.codual.ui.screenstates.SystemEmptyView
@@ -13,8 +14,6 @@ import ai.codual.ui.selection.SyncSelection
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -22,20 +21,10 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.liveRegion
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
@@ -145,27 +134,7 @@ private class PagedListItemScopeImpl(scope: LazyItemScope, override val index: I
  */
 @Composable
 public fun PagedListAnnouncements(state: PagedListState<*, *>, modifier: Modifier = Modifier) {
-  val announcement = state.announcement
-  val text = announcement?.let { announcementText(it.value) }
-  val latestText by rememberUpdatedState(text)
-  var spoken by remember(state) { mutableStateOf<String?>(null) }
-  // TalkBack speaks a live region when its text changes, so each new announcement clears it for a frame first:
-  // the same words twice in a row are spoken twice.
-  LaunchedEffect(state, announcement?.number) {
-    val number = announcement?.number ?: return@LaunchedEffect
-    if (number == state.spokenAnnouncement) return@LaunchedEffect
-    spoken = null
-    withFrameNanos {}
-    spoken = latestText
-    state.spokenAnnouncement = number
-  }
-  // One pixel high, as TalkBack skips nodes with no size.
-  Box(
-    modifier.fillMaxWidth().height(1.dp).semantics {
-      liveRegion = LiveRegionMode.Polite
-      spoken?.let { contentDescription = it }
-    }
-  )
+  LiveRegionAnnouncements(state.announcements, modifier) { announcementText(it) }
 }
 
 @Composable

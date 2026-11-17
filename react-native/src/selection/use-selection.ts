@@ -2,10 +2,10 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalS
 import {
   type AccessibilityActionEvent,
   type AccessibilityActionInfo,
-  AccessibilityInfo,
   type AccessibilityState,
   BackHandler,
 } from "react-native";
+import { announcePolitely } from "../accessibility";
 import type { SelectionAction, SelectionActivation, SelectionKind, SelectionSource } from "./config";
 import { announcementText, defaultSelectionLabels, type SelectionLabels } from "./labels";
 import { SelectionMachine } from "./machine";
@@ -89,11 +89,7 @@ export function useSelection<Item>(options: SelectionOptions<Item>): SelectionCo
     keyExtractor: options.keyExtractor,
     isDisabled: options.isDisabled ?? notDisabled,
     serverTotal: options.serverTotal,
-    // Queued on iOS, after whatever VoiceOver is saying; Android's TalkBack queues announcements anyway.
-    announce: (announcement) =>
-      AccessibilityInfo.announceForAccessibilityWithOptions(announcementText(announcement, labels), {
-        queue: true,
-      }),
+    announce: (announcement) => announcePolitely(announcementText(announcement, labels)),
   };
   const latest = useRef(source);
   useLayoutEffect(() => {

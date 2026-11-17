@@ -39,10 +39,10 @@ internal class SelectionFixture(
     get() = selection.selectedKeys
 
   val announcement: SelectionAnnouncement?
-    get() = selection.announcement?.value
+    get() = selection.announcements.latest?.value
 
   val announcementNumber: Int
-    get() = selection.announcement?.number ?: 0
+    get() = selection.announcements.latest?.number ?: 0
 
   /** Enters the mode over [ids] and selects [selected]. */
   fun activeWith(ids: List<Int>, selected: List<Int> = emptyList()) {

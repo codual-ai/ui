@@ -47,7 +47,7 @@ function isSameKeys(before: readonly string[], after: readonly string[]): boolea
 }
 
 /** What the machine knows, for `deriveSnapshot`. */
-export interface SnapshotInput {
+interface SnapshotInput {
   readonly config: SelectionConfig;
   readonly serverTotal: number | undefined;
   readonly selected: readonly string[];

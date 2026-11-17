@@ -1,41 +1,11 @@
 package ai.codual.ui.selection
 
-import ai.codual.ui.screenstates.ScreenState
+import ai.codual.ui.Announcements
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
-
-/** How many items a selection holds. */
-public enum class SelectionKind {
-  /** Any number, up to an optional maximum. */
-  Multiple,
-  /** At most one: selecting another deselects the first. */
-  Single,
-}
-
-/** When a selection is on. */
-public enum class SelectionActivation {
-  /** A selection mode that a Select button or a long press enters, and Done, Cancel or back leave. */
-  OnDemand,
-  /** Always on, with no mode to leave: a picker. */
-  Always,
-}
-
-/** A bulk action on the selected items' keys, in the order they were selected. */
-public typealias SelectionAction<Key> = suspend (keys: List<Key>, context: SelectionActionContext) -> Unit
-
-/**
- * What else a bulk action needs, taken when it starts running.
- *
- * @param isAllOnServer whether the selection stood for every item on the server, loaded or not: the action does it
- *   to all of them (one "delete everything matching" request, say), not only to the loaded keys.
- */
-public data class SelectionActionContext(val isAllOnServer: Boolean)
 
 /**
  * Which items of a list are selected, by key, and the selection mode around them, for the app's own rows: call
@@ -53,12 +23,12 @@ public data class SelectionActionContext(val isAllOnServer: Boolean)
  */
 @Stable
 public class SelectionState<Item, Key : Any>(
-  private val scope: CoroutineScope,
-  internal val key: (Item) -> Key,
+  scope: CoroutineScope,
+  private val key: (Item) -> Key,
   public val kind: SelectionKind = SelectionKind.Multiple,
   public val max: Int? = null,
   public val activation: SelectionActivation = SelectionActivation.OnDemand,
-  internal val isDisabled: (Item) -> Boolean = { false },
+  private val isDisabled: (Item) -> Boolean = { false },
 ) {
   init {
     require(max == null || (max >= 1 && kind == SelectionKind.Multiple)) {
@@ -70,34 +40,23 @@ public class SelectionState<Item, Key : Any>(
   public var isActive: Boolean by mutableStateOf(activation == SelectionActivation.Always)
     private set
 
+  private val actions = SelectionActionRunner<Key>(scope)
+
   /** A bulk action is running; the selection can't change until it ends. */
-  public var isPerforming: Boolean by mutableStateOf(false)
-    private set
+  public val isPerforming: Boolean
+    get() = actions.isPerforming
 
   /** The last bulk action failed; the selection stayed. Cleared by [dismissActionError] or the next action. */
-  public var actionError: Throwable? by mutableStateOf(null)
-    private set
+  public val actionError: Throwable?
+    get() = actions.error
 
   private var selected: Set<Key> by mutableStateOf(emptySet())
-  // The lists last given to [updateItems] and [updateVisibleItems], or null while not given. Not observed, and the
-  // sets below are only written when they change, so giving the same lists again recomposes nothing.
-  private var knownItems: List<Item>? = null
-  private var knownByKey: Map<Key, Item>? = null
-  private var visibleItems: List<Item>? = null
-  private var visibleByKey: Map<Key, Item>? = null
-  private var visibleKeys: Set<Key>? by mutableStateOf(null)
-  /** The keys select all reaches: the visible items (or all items) that aren't disabled; null while not known. */
-  private var selectableKeys: Set<Key>? by mutableStateOf(null)
-  /** The keys of the known items that are disabled now, observed, so a row reading [isDisabledNow] redraws. */
-  private var disabledKeys: Set<Key> by mutableStateOf(emptySet())
-  private var pendingAction: SelectionAction<Key>? by mutableStateOf(null)
+  private val list = SelectionItems(key, isDisabled)
+  /** The items became none while an action ran: the mode ends once it does. */
+  private var itemsBecameNoneDuringAction = false
 
-  /** What a screen reader should hear about the last change, numbered so two the same in a row are both spoken. */
-  internal var announcement: NumberedSelectionAnnouncement? by mutableStateOf(null)
-    private set
-
-  /** The last announcement a live region has spoken, so coming back to the screen doesn't speak it again. */
-  internal var spokenAnnouncement: Int = 0
+  /** What a screen reader should hear after each change the person makes. */
+  internal val announcements = Announcements<SelectionAnnouncement>()
 
   /** The selected items' keys, in the order they were selected. */
   public val selectedKeys: List<Key>
@@ -114,16 +73,13 @@ public class SelectionState<Item, Key : Any>(
   public val total: Int
     get() {
       if (isAllOnServerSelected) return count
-      val selectable = selectableKeys ?: return count
+      val selectable = list.selectableKeys ?: return count
       return selectable.size + hiddenCount
     }
 
   /** How many selected items a filter or search hides: selected, but not among the visible items. */
   public val hiddenCount: Int
-    get() {
-      val visible = visibleKeys ?: return 0
-      return selected.count { it !in visible }
-    }
+    get() = list.hiddenCount(selected)
 
   /** How many items the server has, for select all on the server; null when the app doesn't offer it. */
   public var serverTotal: Int? by mutableStateOf(null)
@@ -136,7 +92,7 @@ public class SelectionState<Item, Key : Any>(
   public val canSelectAllOnServer: Boolean
     get() {
       val serverTotal = serverTotal ?: return false
-      return canChange && kind == SelectionKind.Multiple && max == null && visibleKeys == null &&
+      return canChange && kind == SelectionKind.Multiple && max == null && !list.isFiltered &&
         isAllSelected && serverTotal > count && !isAllOnServerSelected
     }
 
@@ -150,7 +106,7 @@ public class SelectionState<Item, Key : Any>(
 
   /** A destructive action waits for [confirmPendingAction] or [cancelPendingAction]. */
   public val isConfirming: Boolean
-    get() = pendingAction != null
+    get() = actions.pending != null
 
   public fun isSelected(item: Item): Boolean = key(item) in selected
 
@@ -165,8 +121,8 @@ public class SelectionState<Item, Key : Any>(
     isActive = false
     selected = emptySet()
     isAllOnServerSelected = false
-    pendingAction = null
-    actionError = null
+    actions.pending = null
+    actions.error = null
   }
 
   /**
@@ -174,7 +130,7 @@ public class SelectionState<Item, Key : Any>(
    * longer among the known items (a stale row's callback), nothing.
    */
   public fun toggle(item: Item) {
-    if (!canChange || !isSelectable(item)) return
+    if (!canChange || !list.isSelectable(item)) return
     val itemKey = key(item)
     val limit = max
     selected =
@@ -185,7 +141,7 @@ public class SelectionState<Item, Key : Any>(
         }
         kind == SelectionKind.Single -> setOf(itemKey)
         limit != null && selected.size >= limit -> {
-          announce(SelectionAnnouncement.Limit(limit))
+          announcements.announce(SelectionAnnouncement.Limit(limit))
           return
         }
         else -> selected + itemKey
@@ -195,14 +151,14 @@ public class SelectionState<Item, Key : Any>(
 
   /** A long press on a row: enters the mode with the row selected, or toggles it in the mode. */
   public fun longPress(item: Item) {
-    if (!isSelectable(item)) return
+    if (!list.isSelectable(item)) return
     if (!isActive) enter()
     toggle(item)
   }
 
   /** Selects every visible item that isn't disabled, in list order, up to the maximum. Never loads more. */
   public fun selectAll() {
-    val loaded = reachableItems()
+    val loaded = list.reachable()
     if (!canChange || kind == SelectionKind.Single || loaded == null) return
     val next = LinkedHashSet(selected)
     for (item in loaded) {
@@ -236,7 +192,7 @@ public class SelectionState<Item, Key : Any>(
     if (!handlesBack) return false
     when {
       isPerforming -> Unit
-      pendingAction != null -> pendingAction = null
+      actions.pending != null -> actions.pending = null
       else -> exit()
     }
     return true
@@ -248,15 +204,12 @@ public class SelectionState<Item, Key : Any>(
    * every composition: Select on a list that is already empty stays in the mode.
    */
   public fun updateItems(items: List<Item>) {
-    val becameNone = items.isEmpty() && knownItems?.isEmpty() != true
-    knownItems = items
-    knownByKey = items.associateBy(key)
-    val selectable = items.filterNot(isDisabled).mapTo(LinkedHashSet(), key)
+    val becameNone = items.isEmpty() && !list.isNone
+    val selectable = list.update(items)
     var next = selected.filterTo(LinkedHashSet()) { it in selectable }
     // All on the server: items loaded since arrive selected.
     if (isAllOnServerSelected) next = (next + selectable).toCollection(LinkedHashSet())
     if (next != selected) selected = next
-    updateSelectableKeys()
     if (becameNone) {
       isAllOnServerSelected = false
       if (isPerforming) itemsBecameNoneDuringAction = true else endModeWithNothingToSelect()
@@ -269,24 +222,8 @@ public class SelectionState<Item, Key : Any>(
    * filter: every item is visible again. Never ends the mode, and giving the same items again changes nothing.
    */
   public fun updateVisibleItems(items: List<Item>?) {
-    visibleItems = items
-    visibleByKey = items?.associateBy(key)
-    visibleKeys = items?.mapTo(HashSet(), key)
-    val disabled = items.orEmpty().filter(isDisabled).mapTo(HashSet(), key)
+    val disabled = list.updateVisible(items)
     if (selected.any { it in disabled }) selected = selected.filterTo(LinkedHashSet()) { it !in disabled }
-    updateSelectableKeys()
-  }
-
-  /** The items of a screen state: its content, or none when empty. Any other state leaves them unknown. */
-  public fun updateItems(state: ScreenState<List<Item>>) {
-    when (state) {
-      is ScreenState.Content -> updateItems(state.value)
-      ScreenState.Empty -> updateItems(emptyList())
-      ScreenState.Idle,
-      ScreenState.Loading,
-      ScreenState.Offline,
-      is ScreenState.Failed -> Unit
-    }
   }
 
   /**
@@ -299,22 +236,22 @@ public class SelectionState<Item, Key : Any>(
 
   /** Waits for [confirmPendingAction] before running a destructive [action]; show the app's confirmation meanwhile. */
   public fun performAfterConfirmation(action: SelectionAction<Key>) {
-    if (canAct) pendingAction = action
+    if (canAct) actions.pending = action
   }
 
   /** Runs the action waiting for confirmation on the selection as it is now; with nothing selected, runs nothing. */
   public fun confirmPendingAction() {
-    val action = pendingAction ?: return
-    pendingAction = null
+    val action = actions.pending ?: return
+    actions.pending = null
     perform(action)
   }
 
   public fun cancelPendingAction() {
-    pendingAction = null
+    actions.pending = null
   }
 
   public fun dismissActionError() {
-    actionError = null
+    actions.error = null
   }
 
   /** Puts back a saved mode and keys. They stay until the items are known, then drop out like any other. */
@@ -326,108 +263,36 @@ public class SelectionState<Item, Key : Any>(
       isAllOnServerSelected && kind == SelectionKind.Multiple && max == null && selected.isNotEmpty()
   }
 
-  /**
-   * Not disabled, and among the items once they are known (the data decides), or else among the visible items once
-   * they are: a stale row's callback, or a stale visible list, selects nothing.
-   */
-  private fun isSelectable(item: Item): Boolean {
-    val itemKey = key(item)
-    val known = knownByKey ?: visibleByKey ?: return !isDisabled(item)
-    // The current copy decides: a row may still hold an older one that wasn't disabled.
-    val current = known[itemKey] ?: return false
-    return !isDisabled(current)
-  }
-
-  /** Whether the item with this one's key is disabled now, by its current copy once the items are known. */
-  internal fun isDisabledNow(item: Item): Boolean {
-    val itemKey = key(item)
-    // Read first, so a row is told when its item's current copy changes.
-    val disabled = disabledKeys
-    val isKnown = knownByKey?.containsKey(itemKey) == true || visibleByKey?.containsKey(itemKey) == true
-    return if (isKnown) itemKey in disabled else isDisabled(item)
-  }
-
-  /** What select all and the total reach: the visible items that are still in the data, or every item. */
-  private fun reachableItems(): List<Item>? {
-    val visible = visibleItems ?: return knownItems
-    val known = knownByKey ?: return visible
-    // The data's copy decides, not a stale copy in the visible list.
-    return visible.mapNotNull { known[key(it)] }
-  }
-
-  private fun updateSelectableKeys() {
-    val next = reachableItems()?.filterNot(isDisabled)?.mapTo(HashSet(), key)
-    if (next != selectableKeys) selectableKeys = next
-    val known = knownByKey.orEmpty()
-    val visibleOnly = visibleByKey.orEmpty().filterKeys { it !in known }
-    val disabled = (known + visibleOnly).filterValues(isDisabled).keys
-    if (disabled != disabledKeys) disabledKeys = disabled
-  }
+  /** Whether the item with this one's key is disabled now, by its current copy once it is known. */
+  internal fun isDisabledNow(item: Item): Boolean = list.isDisabledNow(item)
 
   private fun endModeWithNothingToSelect() {
     if (activation != SelectionActivation.OnDemand || !isActive) return
     isActive = false
-    pendingAction = null
+    actions.pending = null
   }
-
-  /** The items became none while an action ran: the mode ends once it does. */
-  private var itemsBecameNoneDuringAction = false
 
   private val canChange: Boolean
     get() = isActive && !isPerforming
 
   private val canAct: Boolean
-    get() = canChange && pendingAction == null && selected.isNotEmpty()
+    get() = canChange && actions.pending == null && selected.isNotEmpty()
 
   private fun start(action: SelectionAction<Key>) {
-    val keys = selectedKeys
-    val context = SelectionActionContext(isAllOnServer = isAllOnServerSelected)
-    isPerforming = true
-    actionError = null
     itemsBecameNoneDuringAction = false
-    scope.launch {
-      val error =
-        try {
-          action(keys, context)
-          null
-        } catch (error: Throwable) {
-          // The end of the scope propagates; any other cancellation is the action failing.
-          if (error is CancellationException && !scope.isActive) {
-            isPerforming = false
-            throw error
-          }
-          error
-        }
-      finish(error)
-    }
-  }
-
-  private fun finish(error: Throwable?) {
-    isPerforming = false
-    if (error != null) {
-      actionError = error
-      if (itemsBecameNoneDuringAction) endModeWithNothingToSelect()
-    } else {
-      selected = emptySet()
-      isAllOnServerSelected = false
-      if (activation == SelectionActivation.OnDemand) isActive = false
+    val context = SelectionActionContext(isAllOnServer = isAllOnServerSelected)
+    actions.run(action, selectedKeys, context) { error ->
+      if (error != null) {
+        if (itemsBecameNoneDuringAction) endModeWithNothingToSelect()
+      } else {
+        selected = emptySet()
+        isAllOnServerSelected = false
+        if (activation == SelectionActivation.OnDemand) isActive = false
+      }
     }
   }
 
   private fun announceCount() {
-    announce(SelectionAnnouncement.Count(count, total))
-  }
-
-  private fun announce(value: SelectionAnnouncement) {
-    announcement = NumberedSelectionAnnouncement((announcement?.number ?: 0) + 1, value)
+    announcements.announce(SelectionAnnouncement.Count(count, total))
   }
 }
-
-/** What a screen reader hears after a change the person made. */
-internal sealed interface SelectionAnnouncement {
-  data class Count(val selected: Int, val total: Int) : SelectionAnnouncement
-
-  data class Limit(val max: Int) : SelectionAnnouncement
-}
-
-internal data class NumberedSelectionAnnouncement(val number: Int, val value: SelectionAnnouncement)

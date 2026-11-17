@@ -27,7 +27,7 @@ export const defaultSelectionLabels: SelectionLabels = {
   limit: (max) => (max === 1 ? "You can select up to 1 item." : `You can select up to ${max} items.`),
 };
 
-/** What a screen reader hears after a change the person makes. */
+/** The words of an announcement, in the app's labels. */
 export function announcementText(announcement: SelectionAnnouncement, labels: SelectionLabels): string {
   switch (announcement.kind) {
     case "count":

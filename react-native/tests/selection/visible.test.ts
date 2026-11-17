@@ -1,10 +1,5 @@
 import { renderSelection, rows } from "./helpers/selection";
 
-afterEach(() => {
-  jest.restoreAllMocks();
-  jest.clearAllMocks();
-});
-
 test("SL-30 a filter hides selected items without dropping them, and the title says how many are hidden", async () => {
   const items = rows(1, 2, 3, 4);
   const { selection, selectedIds, run, setItems } = await renderSelection(items);

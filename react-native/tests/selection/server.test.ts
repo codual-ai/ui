@@ -1,10 +1,5 @@
 import { FakeAction, renderSelection, rows } from "./helpers/selection";
 
-afterEach(() => {
-  jest.restoreAllMocks();
-  jest.clearAllMocks();
-});
-
 async function allLoadedSelected(options: Parameters<typeof renderSelection>[1] = { serverTotal: 50 }) {
   const rendered = await renderSelection(rows(1, 2), options);
   await rendered.run(rendered.selection().enter);

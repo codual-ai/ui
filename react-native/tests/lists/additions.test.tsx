@@ -3,11 +3,6 @@ import { Text } from "react-native";
 import { PagedList } from "../../src/lists/PagedList";
 import { FakePageLoader, keyExtractor, page, renderPagedList } from "./helpers/paged-list";
 
-afterEach(() => {
-  jest.restoreAllMocks();
-  jest.clearAllMocks();
-});
-
 test("LS-25 the hook alone, with no PagedList component, announces each page", async () => {
   const { loader, list, run, announcements } = await renderPagedList();
   await loader.pages.succeed(page([1], 2));

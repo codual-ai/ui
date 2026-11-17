@@ -1,10 +1,5 @@
 import { renderSelection, rows } from "./helpers/selection";
 
-afterEach(() => {
-  jest.restoreAllMocks();
-  jest.clearAllMocks();
-});
-
 test("SL-06 select all selects every loaded item that isn't disabled; a later page arrives unselected", async () => {
   const items = [...rows(1, 2), { id: 3, disabled: true }];
   const { selection, selectedIds, run, setItems } = await renderSelection(items);

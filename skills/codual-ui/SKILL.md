@@ -179,7 +179,7 @@ PagedList(selection: selection, loadPage: { token in try await api.photos(after:
 
 ```kotlin
 // Jetpack Compose
-val selection = rememberSelection<Photo>(key = { it.id })
+val selection = rememberSelection<Photo, String>(key = { it.id })
 PagedList(rememberPagedList(key = { it.id }) { token -> api.photos(after = token) }, selection = selection) { photo ->
   PhotoRow(photo, selection.isSelected(photo), Modifier.selectionRow(selection, photo) { open(photo) })
 }

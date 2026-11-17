@@ -1,10 +1,5 @@
 import { renderSelection, rows } from "./helpers/selection";
 
-afterEach(() => {
-  jest.restoreAllMocks();
-  jest.clearAllMocks();
-});
-
 test("SL-08 a selected item stays selected, by key, when new copies of it arrive at any place", async () => {
   const { selection, selectedIds, run, setItems } = await renderSelection(rows(1, 2, 3));
   await run(() => selection().longPress({ id: 2 }));

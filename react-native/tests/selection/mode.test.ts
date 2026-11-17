@@ -1,10 +1,5 @@
 import { renderSelection, rows } from "./helpers/selection";
 
-afterEach(() => {
-  jest.restoreAllMocks();
-  jest.clearAllMocks();
-});
-
 test("SL-01 in the mode a tap toggles a row; outside it the row's own action runs and nothing is selected", async () => {
   const { selection, selectedIds, run } = await renderSelection(rows(1, 2, 3));
   const opened: number[] = [];

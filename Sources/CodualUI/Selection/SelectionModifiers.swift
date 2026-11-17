@@ -19,6 +19,28 @@ extension SelectionModel {
       set: { mode in if mode.isEditing { self.enter() } else { self.exit() } })
   }
 
+  /// A `List`'s selection binding changing: removals and additions, through the same rules as taps.
+  func setListSelection(_ ids: Set<Item.ID>) {
+    guard isActive, !isPerforming else { return }
+    let current = selectedSet
+    let added = (shownItems ?? []).filter { ids.contains($0.id) && isSelectable($0) && !current.contains($0.id) }
+    let isRemoving = !current.isSubset(of: ids)
+    if isRemoving { isAllOnServerSelected = false }
+    if added.isEmpty {
+      guard isRemoving else { return }
+      selectedIDs.removeAll { !ids.contains($0) }
+      announceCount()
+      return
+    }
+    if kind == .multiple && isRemoving { selectedIDs.removeAll { !ids.contains($0) } }
+    select(added)
+  }
+
+  /// A tap on a row: toggles it in the selection mode, or runs the row's own action outside it.
+  func tap(_ item: Item, otherwise action: () -> Void) {
+    if isActive { toggle(item) } else { action() }
+  }
+
   /// What a row tells screen readers: its selected and disabled state in the mode (nil outside it), and whether it
   /// offers the Select action, which does what a long press does.
   func rowAccessibility(_ item: Item) -> SelectionRowAccessibility {
@@ -110,6 +132,13 @@ struct SelectionModeModifier<Item: Identifiable>: ViewModifier {
 struct SelectionItemKey<ID: Hashable>: Hashable {
   let id: ID
   let isDisabled: Bool
+
+  /// The keys of `items`, or nil while they aren't known.
+  @MainActor
+  static func keys<Item: Identifiable>(of items: [Item]?, in selection: SelectionModel<Item>) -> [Self]?
+  where Item.ID == ID {
+    items?.map { SelectionItemKey(id: $0.id, isDisabled: selection.isDisabled($0)) }
+  }
 }
 
 struct SyncSelectionModifier<Item: Identifiable>: ViewModifier {
@@ -124,8 +153,8 @@ struct SyncSelectionModifier<Item: Identifiable>: ViewModifier {
   }
 
   private var keys: [SelectionItemKey<Item.ID>]? {
-    guard let selection, let items else { return nil }
-    return items.map { SelectionItemKey(id: $0.id, isDisabled: selection.isDisabled($0)) }
+    guard let selection else { return nil }
+    return SelectionItemKey.keys(of: items, in: selection)
   }
 }
 
@@ -140,7 +169,7 @@ struct SyncVisibleItemsModifier<Item: Identifiable>: ViewModifier {
   }
 
   private var keys: [SelectionItemKey<Item.ID>]? {
-    visibleItems?.map { SelectionItemKey(id: $0.id, isDisabled: selection.isDisabled($0)) }
+    SelectionItemKey.keys(of: visibleItems, in: selection)
   }
 }
 

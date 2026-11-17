@@ -112,4 +112,28 @@ struct SelectAllTests {
     #expect((fixture.selection.count, fixture.selection.total) == (1, 2))
     #expect(fixture.selection.title == "1 Selected")
   }
+
+  @Test("SL-12 a row holding an old copy can't select an item whose current copy is disabled")
+  func theCurrentCopyDecidesWhetherItIsDisabled() {
+    let selection = SelectionModel<TestItem>(isDisabled: { $0.title == "archived" })
+    selection.announce = { _ in }
+    selection.update(items: [TestItem(id: 1, title: "archived")])
+    selection.enter()
+    selection.toggle(TestItem(id: 1))
+    #expect(selection.selectedIDs.isEmpty)
+    selection.longPress(TestItem(id: 1))
+    #expect(selection.selectedIDs.isEmpty)
+  }
+
+  @Test("SL-12 select all takes the current copy: a stale enabled copy in the visible list isn't picked")
+  func selectAllUsesTheCurrentCopy() {
+    let selection = SelectionModel<TestItem>(isDisabled: { $0.title == "archived" })
+    selection.announce = { _ in }
+    selection.update(visibleItems: [TestItem(id: 1), TestItem(id: 2)])
+    selection.update(items: [TestItem(id: 1, title: "archived"), TestItem(id: 2)])
+    selection.enter()
+    selection.selectAll()
+    #expect(selection.selectedIDs == [2])
+    #expect(selection.total == 1)
+  }
 }

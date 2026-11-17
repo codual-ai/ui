@@ -1,10 +1,5 @@
 import { FakeAction, renderSelection, rows } from "./helpers/selection";
 
-afterEach(() => {
-  jest.restoreAllMocks();
-  jest.clearAllMocks();
-});
-
 async function selecting(ids: readonly number[]) {
   const rendered = await renderSelection(rows(1, 2, 3));
   await rendered.run(rendered.selection().enter);

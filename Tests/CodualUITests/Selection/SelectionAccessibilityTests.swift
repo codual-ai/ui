@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 import SwiftUI
 import Testing
 
@@ -161,5 +162,38 @@ struct SelectionAccessibilityTests {
         .selectionMode(selection)
     }
     _ = Text("row").selectionRow(TestItem(id: 1), in: selection) {}
+  }
+
+  @Test("SL-20 restoresSelection's storage saves the selection and brings it back into a new model on appear")
+  func theStorageRestoresIntoANewModel() async {
+    let storage = StoredData()
+    let first = SelectionFixture()
+    let window = show(StoredSelectionHost(selection: first.selection, storage: storage))
+    first.show([1, 2])
+    first.select([2])
+    await waitUntil { storage.data != nil }
+    window.isHidden = true
+
+    let second = SelectionFixture()
+    let restoredWindow = show(StoredSelectionHost(selection: second.selection, storage: storage))
+    defer { restoredWindow.isHidden = true }
+    await waitUntil { second.ids == [2] }
+    #expect(second.selection.isActive)
+    #expect(second.ids == [2])
+  }
+
+  @Test("SL-21 a row that reads isSelected hears it change")
+  func isSelectedIsObserved() {
+    let fixture = SelectionFixture()
+    fixture.show([1])
+    fixture.selection.enter()
+    let changed = ChangeFlag()
+    withObservationTracking {
+      _ = fixture.selection.isSelected(TestItem(id: 1))
+    } onChange: {
+      changed.set()
+    }
+    fixture.selection.toggle(TestItem(id: 1))
+    #expect(changed.isSet)
   }
 }
