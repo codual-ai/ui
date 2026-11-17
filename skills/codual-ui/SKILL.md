@@ -1,6 +1,6 @@
 ---
 name: codual-ui
-description: Use Codual UI's headless behaviours instead of writing their logic by hand, on SwiftUI, Jetpack Compose and React Native. Load before writing any screen that loads data (a list, a detail page, a feed, a profile) — anything with a spinner, an empty state, an error with retry, an offline message, pull to refresh, or paging (load more, infinite scroll) — a form (sign up, sign in, edit profile, validation, submit), before any in-app purchase, subscription, paywall, tip jar or restore button (StoreKit, Google Play Billing, react-native-iap), before any sheet, bottom sheet, modal or full-screen cover that edits something and closes with Cancel or Save, any search field (search as you type, recent searches, filtering a list), and before asking for any permission (notifications, camera, photos, location, microphone, contacts; a pre-permission explanation, "open Settings", requestPermissions, react-native-permissions).
+description: Use Codual UI's headless behaviours instead of writing their logic by hand, on SwiftUI, Jetpack Compose and React Native. Load before writing any screen that loads data (a list, a detail page, a feed, a profile) — anything with a spinner, an empty state, an error with retry, an offline message, pull to refresh, or paging (load more, infinite scroll) — a form (sign up, sign in, edit profile, validation, submit), before any in-app purchase, subscription, paywall, tip jar or restore button (StoreKit, Google Play Billing, react-native-iap), before any sheet, bottom sheet, modal or full-screen cover that edits something and closes with Cancel or Save, any search field (search as you type, recent searches, filtering a list), and before asking for any permission (notifications, camera, photos, location, microphone, contacts; a pre-permission explanation, "open Settings", requestPermissions, react-native-permissions), and before any chart with a range picker or touch to inspect (Swift Charts, Vico, Victory Native).
 ---
 
 # Codual UI
@@ -607,3 +607,92 @@ Don't write code for these ([spec](../../spec/permissions.md)):
 - Missing usage strings and manifest entries, failing adapters (PM-18, PM-25); Android's denied, blocked, two-denials,
   one-time and auto-reset permissions, notifications before Android 13 and turned off in Settings, and the right
   manifest permissions per version (PM-19 to PM-23, PM-26); any other permission (PM-24).
+
+## Chart interactions
+
+**Use it for** any chart of loaded data with a range picker or touch to inspect: a share price, steps, spending,
+a weight log. **Don't use it for** drawing: the app keeps its chart library (Swift Charts, Vico, Victory Native)
+and its marks, colours and axes. A static chart with no range, touch or loading needs nothing from it.
+
+```swift
+// SwiftUI (iOS 17+), with Swift Charts
+@State private var chart = ChartInteraction<String, Date>(title: "Price", range: "1D", formatY: formatPrice) {
+  query in try await api.prices(query.range)  // ChartData(series: [ChartSeries(id:name:points:)])
+}
+// In the body: switch on chart.state; on .content(let data), draw data.series with
+//   .chartXSelection(value: chart.xSelection).chartAccessibility(chart)
+// Range picker: Picker(selection: Binding(get: { chart.range }, set: chart.select)) { … }
+// Lifecycle: .task { chart.appear() } and .onDisappear { chart.disappear() }
+```
+
+```kotlin
+// Jetpack Compose, with Vico or any chart drawn across its width
+val chart = rememberChartInteraction(title = "Price", range = "1D") { query -> api.prices(query.range) }
+// On ScreenState.Content: CartesianChartHost(…, modifier = Modifier.chartScrub(chart).chartSemantics(chart))
+```
+
+```tsx
+// React Native, with Victory Native or any chart
+const chart = useChartInteraction({
+  title: "Price",
+  initialRange: "1D",
+  load: ({ range }, signal) => api.prices(range, { signal }),
+  haptic: () => Haptics.selectionAsync(),
+});
+// Victory Native: import { useVictoryScrub } from "@codual-ai/react-native-ui/victory-native";
+// Reanimated 4: { useAnimatedReaction } from reanimated, { scheduleOnRN } from react-native-worklets;
+// Reanimated 3: pass runOnJS instead of scheduleOnRN.
+const { state: press } = useChartPressState({ x: 0, y: { y: 0 } });
+useVictoryScrub(chart, press, { useAnimatedReaction, scheduleOnRN });
+// <CartesianChart chartPressState={press} chartPressConfig={{ pan: { activateAfterLongPress: 300 } }} …>
+// Wrap the chart: <View {...chart.accessibilityProps}>…</View>
+```
+
+**How to wire it right:**
+
+- **The load takes a query** (`range`, `comparesToPreviousPeriod`) and returns series of points; x is a `Date`,
+  `Double` or `Int` on SwiftUI and a number elsewhere (epoch milliseconds or seconds for times). Points can come in
+  any order; non-finite values are gaps and are skipped.
+- **Range buttons call `select(range)`.** Don't keep your own range state, `isLoading` flag or request ID: the old
+  series stay on screen with `isStale` true (dim them), and a late answer for an old range is dropped. A failed
+  switch shows the failed view for the new range; `retry()` loads it.
+- **Draw from `state`**: loading, content (the series), empty ("no data in this range") and failed or offline,
+  like screen states. Never show a spinner over content just because `isStale` is true.
+- **The selected point is `selection`** (its `x` and each series' point). Draw your rule mark and callout from it;
+  never search the data for the touched value yourself (matching by y picks the wrong point when two are equal).
+- **Touch**: SwiftUI `chartXSelection(value: chart.xSelection)`, or
+  `.chartOverlay { proxy in chart.scrubOverlay { proxy.value(atX: $0.x) } }` for a press and hold inside a
+  `ScrollView`; Compose `Modifier.chartScrub(chart)` (press and hold by default, so the
+  page still scrolls; `ChartScrubActivation.Immediate` outside scrolling containers); React Native: `useVictoryScrub` for
+  Victory Native, or call `scrub(x)` and `endScrub()` from any other gesture library, with
+  `activateAfterLongPress` inside a `ScrollView` (Victory: `chartPressConfig.pan.activateAfterLongPress`). Don't write
+  your own `useAnimatedReaction` bridge.
+- **Haptics are built in** on SwiftUI and Compose; on React Native pass `haptic` (expo-haptics or
+  react-native-haptic-feedback). Don't add your own `sensoryFeedback` or tick on top.
+- **Screen readers**: add `.chartAccessibility(chart)` / `Modifier.chartSemantics(chart)` /
+  `{...chart.accessibilityProps}` to the chart, once. It reads `spokenSummary` and steps through the points.
+- **Formatting is yours**: pass `formatX` and `formatY` (currency, dates); the summary uses them too. Without
+  `formatX`, a SwiftUI `Date` reads as a date; on Compose and React Native, say `xKind` time for epoch
+  milliseconds, or times read as raw numbers.
+- **Previous period**: `compareToPreviousPeriod(true)` loads again with the flag; return `previousPeriod` series
+  with the same IDs, aligned to this period's x values. Pick `comparisonMeasure` total for sums like steps.
+
+### Edge cases it already handles
+
+Don't write code for these ([spec](../../spec/charts.md)):
+
+- The first load is a screen state; no data in range is the empty view, never an error, and an error never looks
+  empty (CH-01, CH-02).
+- Switching range keeps the old series on screen, stale, with no flash of loading; with nothing shown it shows
+  loading; the old load is cancelled and its late answer dropped; the same range loads nothing (CH-03 to CH-06).
+- A failed switch shows the failed view for the new range; refresh keeps the series; leaving and coming back mid
+  switch loads the selected range; the compare toggle reloads like a switch (CH-07 to CH-10).
+- Snapping to the nearest point across series, ties to the earlier one, each series' own nearest point, points in
+  any order (CH-11 to CH-13).
+- One haptic tick per point change, none on release or screen-reader steps; release clears or keeps the selection;
+  new series clear it; nothing happens without series (CH-14 to CH-17).
+- Press and hold inside scrolling containers on Compose (CH-18); the Swift Charts binding snaps (CH-19).
+- Summary figures, a spoken summary in the person's locale, previous-period comparison, adjustable point
+  navigation, the iOS audio graph, "Updating." while stale, and gaps skipped everywhere (CH-20 to CH-26).
+- Going back to the range still shown refreshes it instead of failing it away (CH-27); a hold selects the held
+  point at once (CH-28).

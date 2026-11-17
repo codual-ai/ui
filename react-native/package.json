@@ -21,6 +21,9 @@
       ],
       "react-native-permissions": [
         "dist/react-native-permissions/index.d.ts"
+      ],
+      "victory-native": [
+        "dist/victory-native/index.d.ts"
       ]
     }
   },
@@ -36,12 +39,17 @@
     "./react-native-permissions": {
       "types": "./dist/react-native-permissions/index.d.ts",
       "default": "./dist/react-native-permissions/index.js"
+    },
+    "./victory-native": {
+      "types": "./dist/victory-native/index.d.ts",
+      "default": "./dist/victory-native/index.js"
     }
   },
   "files": [
     "dist",
     "react-native-iap",
-    "react-native-permissions"
+    "react-native-permissions",
+    "victory-native"
   ],
   "scripts": {
     "build": "node -e \"fs.rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.build.json",

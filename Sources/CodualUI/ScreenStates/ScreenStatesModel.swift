@@ -37,6 +37,8 @@ public final class ScreenStatesModel<Value> {
   /// for a behaviour built on this one, such as search announcing its results. Not called for a refresh.
   @ObservationIgnored var loadingFinished: ((ScreenState<Value>) -> Void)?
   @ObservationIgnored private var generation = 0
+  /// Set by `reload()`: the running load is for a new input, so its failure replaces the content.
+  @ObservationIgnored private var failureReplacesContent = false
 
   /// - Parameters:
   ///   - isEmpty: Whether a loaded value shows the empty view. By default, a collection with no items.
@@ -82,10 +84,15 @@ public final class ScreenStatesModel<Value> {
   /// Loads again while the current view stays on screen, and returns when the load finishes, as `.refreshable`
   /// expects. While the first load or a retry runs, it waits for that load instead of starting another.
   public func refresh() async {
+    startRefresh()
+    await running?.value
+  }
+
+  /// Starts a refresh without waiting for it, for a behaviour built on this one.
+  func startRefresh() {
     if case .idle = state { return }
     isRefreshing = true
     if running == nil { start() }
-    await running?.value
   }
 
   /// Clears the refresh error, once the app has shown it.
@@ -116,7 +123,23 @@ public final class ScreenStatesModel<Value> {
     state = .content(value)
   }
 
+  /// Cancels the running load, drops its result and loads again for a new input, for a behaviour built on this one
+  /// (a chart's range). Content stays on screen meanwhile and anything else shows loading. Unlike a refresh's, its
+  /// failure replaces the content, which belongs to the old input.
+  func reload() {
+    running?.cancel()
+    isRefreshing = false
+    if !isShowingContent { state = .loading }
+    failureReplacesContent = true
+    launch()
+  }
+
   private func start() {
+    failureReplacesContent = false
+    launch()
+  }
+
+  private func launch() {
     generation += 1
     let id = generation
     running = Task { [weak self, load] in
@@ -159,10 +182,18 @@ public final class ScreenStatesModel<Value> {
       // Even a load that cancelled itself lands here, so a spinner is never left running.
       show(error)
     case .content:
-      if !isCancellation(error) { refreshError = error }
+      if failureReplacesContent {
+        show(error)
+      } else if !isCancellation(error) {
+        refreshError = error
+      }
     case .empty, .failed, .offline:
       if !isCancellation(error) { show(error) }
     }
+  }
+
+  private var isShowingContent: Bool {
+    if case .content = state { true } else { false }
   }
 
   private func show(_ error: any Error) {

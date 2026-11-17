@@ -54,4 +54,19 @@
   <string name="codual_ui_remove_recent_search">Remove “%s”</string>
   <string name="codual_ui_no_results_title">No Results for “%s”</string>
   <string name="codual_ui_no_results_message">Check the spelling or try a new search.</string>
+  <string name="codual_ui_chart_title">%1$s.</string>
+  <string name="codual_ui_chart_up">%1$s: from %2$s (%3$s) to %4$s (%5$s), up %6$s.</string>
+  <string name="codual_ui_chart_down">%1$s: from %2$s (%3$s) to %4$s (%5$s), down %6$s.</string>
+  <string name="codual_ui_chart_unchanged">%1$s: from %2$s (%3$s) to %4$s (%5$s), unchanged.</string>
+  <string name="codual_ui_chart_low_high">Low %1$s (%2$s), high %3$s (%4$s).</string>
+  <string name="codual_ui_chart_higher">%1$s higher than the previous period.</string>
+  <string name="codual_ui_chart_lower">%1$s lower than the previous period.</string>
+  <string name="codual_ui_chart_same">The same as the previous period.</string>
+  <string name="codual_ui_chart_updating">Updating.</string>
+  <string name="codual_ui_chart_point">%1$s, %2$s</string>
+  <string name="codual_ui_chart_series_value">%1$s %2$s</string>
+  <string name="codual_ui_chart_points">%1$s: %2$s</string>
+  <string name="codual_ui_chart_next_point">Next point</string>
+  <string name="codual_ui_chart_previous_point">Previous point</string>
+  <string name="codual_ui_chart_no_selection">No point selected</string>
 </resources>
