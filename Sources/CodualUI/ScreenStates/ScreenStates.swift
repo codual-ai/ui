@@ -81,6 +81,9 @@ struct ScreenStatesView<
   let failed: (any Error, @escaping () -> Void) -> Failed
   let offline: (@escaping () -> Void) -> Offline
   let refreshError: (any Error, @escaping () -> Void) -> RefreshError
+  /// Off for search, whose field keeps VoiceOver while results arrive.
+  var movesFocusWhenLoaded = true
+  @Environment(\.moveFocusToNewView) private var moveFocusToNewView
 
   var body: some View {
     // One container for every state, so swapping the view inside it never reads as the screen going away.
@@ -90,9 +93,9 @@ struct ScreenStatesView<
       }
       .task { appear() }
       .onDisappear { disappear() }
-      .onChange(of: isShowingLoading) { wasLoading, isLoading in
+      .onChange(of: model.isShowingLoading) { wasLoading, isLoading in
         // Moves VoiceOver to the view that replaced the spinner.
-        if wasLoading && !isLoading { AccessibilityNotification.LayoutChanged().post() }
+        if movesFocusWhenLoaded && wasLoading && !isLoading { moveFocusToNewView() }
       }
   }
 
@@ -106,13 +109,6 @@ struct ScreenStatesView<
     }
   }
 
-  private var isShowingLoading: Bool {
-    switch model.state {
-    case .idle, .loading: true
-    case .content, .empty, .failed, .offline: false
-    }
-  }
-
   /// Puts a view that may not scroll into a full-size scroll view, so it can be pulled to refresh.
   private func pullToRefresh(_ view: some View) -> some View {
     ScrollView {
@@ -120,4 +116,9 @@ struct ScreenStatesView<
     }
     .refreshable { await refresh() }
   }
+}
+
+extension EnvironmentValues {
+  /// Moves VoiceOver to the view that replaced the spinner; tests replace it.
+  @Entry var moveFocusToNewView: @MainActor () -> Void = { AccessibilityNotification.LayoutChanged().post() }
 }

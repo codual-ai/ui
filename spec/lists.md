@@ -14,6 +14,10 @@ token at the end, and its own row and footer views. Lists loads the first page t
 the list, shows a footer while a page loads, when one fails and at the end, and starts again from the first page on
 pull to refresh. A failed page never replaces the list, and two pages never load at once.
 
+A list can also run the other way, for a chat or a message history: a **reversed** list starts at its newest item
+at the bottom, loads older pages as its top comes near, keeps what the user is reading still while they arrive,
+and takes new items (a message just received) at the bottom through its "append newer" call.
+
 ## States
 
 The first page is a screen state: until it loads, the list is idle, loading, empty, failed or offline, exactly as
@@ -28,6 +32,16 @@ list shows them, first page first, and a footer after the last row in one of the
 | end | the end footer | The last page has loaded. No page is requested again. |
 
 The first page's own result picks the first footer: more when it gave a next token, end when it gave none.
+
+A reversed list has the same states and footers, drawn the other way up: the first page is the newest, each page
+after it is older, its items come newest first, and the footer sits above the oldest row. It also has:
+
+| State | The app shows | What is true |
+|---|---|---|
+| at the bottom | nothing extra | The newest row is on screen. New items scroll into view as they arrive. |
+| scrolled away | the app's "new items" indicator, when its count is above 0 | The newest row is off screen. New items are added below without moving the rows on screen, and counted. |
+
+The list starts at the bottom, with a count of 0.
 
 ## Transitions
 
@@ -48,6 +62,16 @@ Screen states' transitions apply to the first page, except that pull to refresh 
 | any footer | the refresh succeeds with no items | (the empty view) | |
 | any footer | the refresh fails | (same) | Keeps every item, the footer and the token; reports a refresh error. |
 | loading | the screen goes away | more | Cancels the page and drops its result. |
+
+A reversed list also does what this table says.
+
+| From | Event | To | Also |
+|---|---|---|---|
+| at the bottom | new items arrive | at the bottom | Adds them below the newest row and scrolls them into view; announces them. |
+| scrolled away | new items arrive | scrolled away | Adds them below the newest row, adds them to the count; announces them. Nothing on screen moves. |
+| scrolled away | the newest row comes on screen, or the app scrolls to the bottom | at the bottom | The count goes back to 0. |
+| any | an older page arrives | (same) | Adds it above the oldest row. Nothing on screen moves. |
+| any | the refresh succeeds with items | at the bottom | Shows the new newest page at the bottom; the count goes back to 0. |
 
 ## Edge cases
 
@@ -112,6 +136,37 @@ Screen states' transitions apply to the first page, except that pull to refresh 
   the next page uses its token. One with no items counts as none: the first page loads as usual.
 - **LS-27** Each row knows its index and whether it is the last item loaded so far, and a row that stops being the
   last when a page arrives is told so.
+- **LS-28** A reversed list starts at its newest item, at the bottom of the screen, with older items above it and
+  the footer above the oldest row. Opening it loads no older page while the rows near the top are off screen.
+- **LS-29** In a reversed list, a row near the top (one of the oldest 5 by default) appearing loads the older page,
+  with every rule of LS-02 to LS-05 and LS-16, and its items go above the oldest row.
+- **LS-30** Older items added above never move what is on screen: the row the user is reading stays in the same
+  place, in a list scrolled anywhere. New items added below while the list is scrolled away don't move it either.
+- **LS-31** New items that arrive while the newest row is on screen (or the list has just opened) are added below
+  it and scrolled into view; the count of new items stays 0.
+- **LS-32** New items that arrive while the list is scrolled away are added below the newest row without scrolling,
+  and the count of new items goes up by how many were added. It goes back to 0 when the newest row comes on screen,
+  or when the app scrolls to the bottom, which shows the newest row.
+- **LS-33** A new item already in the list (by the app's identity for items, from a page or an earlier arrival) is
+  not added again and isn't counted; the copy shown keeps its place. Two copies in one arrival become one, and an
+  older page that brings an item that arrived as new doesn't add it again.
+- **LS-34** A refresh of a reversed list loads its newest page again and, when it succeeds, replaces the list with
+  it (LS-10), shows its newest item at the bottom and sets the count back to 0. One that fails keeps every item, the
+  count and the place the user was reading (LS-13).
+- **LS-35** In a reversed list, a failed older page shows the failed footer, with its retry, above the oldest row;
+  every item stays, and its retry asks for the same token (LS-08, LS-09).
+- **LS-36** In a reversed list, the end of history is the end footer above the oldest row ("No Earlier Items" in the
+  system footer) and announces "Start of list."; no older page is requested again.
+- **LS-37** New items that arrive while the first page, a retry or a refresh loads are added to the page it brings,
+  unless the page has them already. On the empty view, they show the list with them and the end footer. Items that
+  arrive on the failed or offline view, or before the first page starts loading, are dropped: the next load brings
+  them.
+- **LS-38** Adding newer items to a list that isn't reversed is a programming error (a `precondition`, a `require`,
+  an `Error`), not something that silently does nothing.
+- **LS-39** (only: SwiftUI, Compose) The rows are in the order they're drawn, oldest at the top and newest at the
+  bottom, for screen readers as for the eye, and the footer comes before the oldest row.
+- **LS-40** Screen readers hear one polite announcement for each arrival that adds items ("1 new item.", "3 new
+  items."), whether or not the list scrolls; one that adds nothing announces nothing.
 
 The cap of 3 in LS-16 (a named constant on each platform) stops a server that returns empty pages with tokens, or
 the same token again, from making requests for ever while the end of the list is on screen; 3 is enough to step
@@ -126,6 +181,12 @@ over the odd filtered-out page. It is not configurable: an app that needs more c
 - Announcements (LS-20) are polite: they wait for what the screen reader is saying, there is at most one per page,
   and their text ("Loaded 20 more items.", "End of list.", "Couldn't load more items.") is localisable, with plurals.
 - New rows go after the last row, so the item a screen reader is on never moves.
+- In a reversed list, the order screen readers move through matches the order on screen: oldest at the top, newest
+  at the bottom (LS-39). Older pages arriving above, and new items arriving below, never move the row a screen
+  reader is on (LS-30).
+- New items in a reversed list are announced politely, once per arrival, with plurals ("1 new item.", "3 new
+  items."), and the end of history as "Start of list." (LS-36, LS-40). The text is localisable.
+- The "new items" indicator is the app's own view; it should be a real button with a label that says the count.
 - Everything about the first page, the empty, failed and offline views and the refresh error follows
   [screen states](screen-states.md).
 
@@ -139,6 +200,9 @@ over the odd filtered-out page. It is not configurable: an app that needs more c
   `LazyColumn` modifiers and content padding; React Native `FlatList` props).
 - How close to the end the next page starts loading.
 - When to load again for a new input, such as a search query: give the list a new identity, as with screen states.
+- Where new items in a reversed list come from (a socket, a push, the user's own sent message) and when to call
+  "append newer" with them; which items a reversed page holds (newest first: an API that returns a page oldest
+  first reverses it in the page loader); the "new items" indicator and its look.
 - Editing the loaded items (deleting a row, say). A list the app edits locally, or one kept in an app-wide store,
   belongs in the app's own state.
 
@@ -169,3 +233,34 @@ over the odd filtered-out page. It is not configurable: an app that needs more c
 - **LS-23**: only React Native's `onEndReached` fires on mount and repeatedly during a scroll. **LS-24**: SwiftUI
   and Compose tear down a view's tasks and coroutines when it leaves, so only they need the test; React Native's
   machine never belongs to a row.
+- **Reversed lists.** SwiftUI: `direction: .reversed`. The rows come oldest first, the footer above them, and the
+  app puts them in a `LazyVStack` with `.scrollTargetLayout()` in a `ScrollView`; the list adds
+  `.defaultScrollAnchor(.bottom)` and `.scrollPosition(id:anchor:)` (iOS 17), bound to the model's
+  `scrollPosition`, which keeps the row at the bottom in place as older rows arrive above and scrolls to the newest.
+  "At the bottom" is the newest row's `onAppear` and `onDisappear`. The system footer of a reversed list keeps one height
+  (scaled with the text size) in every state, as a footer whose height changes would move rows scrolled into history
+  by that change; an app's own footer should too. The rows go in a `Section` with the footer as its header:
+  `LazyVStack` estimates the rows it hasn't drawn from the ones it has, and a footer drawn as their sibling, of
+  another height, skews that and moves rows scrolled into history when an older page arrives.
+  Compose: `reverseLayout = true` on the state,
+  and `PagedList` draws a `LazyColumn` with `reverseLayout`, whose item keys keep the rows still; "at the bottom" is
+  `firstVisibleItemIndex == 0`, and the scroll is `animateScrollToItem(0)`, held through a burst of new items until
+  it lands or the user drags (a `DragInteraction` on the list's `interactionSource`). React Native: `inverted`, which
+  `PagedList` passes to the `FlatList` with `maintainVisibleContentPosition={{ minIndexForVisible: 0 }}`; "at the
+  bottom" is `onViewableItemsChanged` with the newest row (index 0) viewable, and the scroll is
+  `scrollToOffset({ offset: 0 })`, held through a burst of new items until it lands or the user drags
+  (`onScrollBeginDrag`). An inverted `FlatList` is flipped with a transform (`scaleY: -1` on iOS, `scale: -1` on
+  Android), so its native order is the data's, newest first: older pages go after the last row and never move the
+  ones on screen, and `maintainVisibleContentPosition`, which iOS and Android both implement in every React Native
+  the package supports (Android since 0.72), keeps the first rendered row on screen where it was as new items go
+  in before it. It anchors only rendered rows (none while the list is empty), counts a `ListHeaderComponent` as
+  the list's first row, and is the list's own prop: an app can't set its own. Jest has no layout, so React Native
+  tests that these props reach the `FlatList`, not the native anchoring.
+- **Append newer.** SwiftUI `model.appendNewer(_:)`, Compose `state.appendNewer(items)`, React Native
+  `list.appendNewer(items)`, with the items oldest first, as they arrived. The count is `newItemCount`, and
+  `scrollToBottom()` shows the newest row. An app drawing the list itself reports the bottom (SwiftUI: rows'
+  `onAppear` and `onDisappear`, as for paging; Compose `bottomChanged(isAtBottom)`; React Native
+  `bottomChanged(isAtBottom)`, and `userScrolled()` when a drag starts) and follows the scroll requests (SwiftUI `scrollPosition`; Compose and React Native
+  `scrollToBottomRequest`, a number that goes up for each).
+- **LS-39**: React Native draws an inverted `FlatList` by flipping it, and which order VoiceOver and TalkBack then
+  read its rows in depends on React Native and the platform, so no test there claims it.

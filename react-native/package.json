@@ -18,6 +18,12 @@
     "*": {
       "react-native-iap": [
         "dist/react-native-iap/index.d.ts"
+      ],
+      "react-native-permissions": [
+        "dist/react-native-permissions/index.d.ts"
+      ],
+      "victory-native": [
+        "dist/victory-native/index.d.ts"
       ]
     }
   },
@@ -29,11 +35,21 @@
     "./react-native-iap": {
       "types": "./dist/react-native-iap/index.d.ts",
       "default": "./dist/react-native-iap/index.js"
+    },
+    "./react-native-permissions": {
+      "types": "./dist/react-native-permissions/index.d.ts",
+      "default": "./dist/react-native-permissions/index.js"
+    },
+    "./victory-native": {
+      "types": "./dist/victory-native/index.d.ts",
+      "default": "./dist/victory-native/index.js"
     }
   },
   "files": [
     "dist",
-    "react-native-iap"
+    "react-native-iap",
+    "react-native-permissions",
+    "victory-native"
   ],
   "scripts": {
     "build": "node -e \"fs.rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.build.json",
@@ -49,10 +65,14 @@
   "peerDependencies": {
     "react": ">=19",
     "react-native": ">=0.78",
-    "react-native-iap": ">=17.4"
+    "react-native-iap": ">=17.4",
+    "react-native-permissions": ">=5"
   },
   "peerDependenciesMeta": {
     "react-native-iap": {
+      "optional": true
+    },
+    "react-native-permissions": {
       "optional": true
     }
   },
@@ -67,6 +87,7 @@
     "react": "19.3.1",
     "react-native": "0.88.1",
     "react-native-iap": "17.4.0",
+    "react-native-permissions": "5.6.3",
     "test-renderer": "1.3.1",
     "typescript": "5.9.3"
   },

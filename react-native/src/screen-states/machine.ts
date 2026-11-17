@@ -7,6 +7,11 @@ export type ScreenState<T> =
   | { readonly status: "failed"; readonly error: unknown }
   | { readonly status: "offline" };
 
+/** Whether the state shows the loading view: nothing loaded yet, or the first load or a retry running. */
+export function isShowingLoading(state: ScreenState<unknown>): boolean {
+  return state.status === "idle" || state.status === "loading";
+}
+
 /** A refresh that failed while content was shown. The content stays; the next successful load clears it. */
 export interface RefreshError {
   readonly error: unknown;
@@ -49,6 +54,8 @@ export class ScreenStatesMachine<T> {
   private readonly listeners = new Set<() => void>();
   private running: RunningLoad | undefined;
   private generation = 0;
+  /** Set by `reload()`: the running load is for a new input, so its failure replaces the content. */
+  private failureReplacesContent = false;
 
   constructor(private readonly source: () => ScreenStatesSource<T>) {}
 
@@ -119,7 +126,42 @@ export class ScreenStatesMachine<T> {
     if (this.snapshot.state.status === "content") this.update({ state: { status: "content", value } });
   }
 
+  /**
+   * Replaces what is shown with another value the app already has, as content or the empty view: for a behaviour
+   * built on this one, such as search filtering changed items in memory. Does nothing while the loading view shows.
+   */
+  replaceLoaded(value: T): void {
+    if (isShowingLoading(this.snapshot.state)) return;
+    const state: ScreenState<T> = this.source().isEmpty(value)
+      ? { status: "empty" }
+      : { status: "content", value };
+    this.update({ state });
+  }
+
+  /** Whether a load is running, for a behaviour built on this one. */
+  get isLoadRunning(): boolean {
+    return this.running !== undefined;
+  }
+
+  /**
+   * Aborts the running load, drops its result and loads again for a new input, for a behaviour built on this one
+   * (a chart's range). Content stays on screen meanwhile and anything else shows loading. Unlike a refresh's, its
+   * failure replaces the content, which belongs to the old input.
+   */
+  reload(): void {
+    this.running?.controller.abort();
+    const isShowingContent = this.snapshot.state.status === "content";
+    this.update({ isRefreshing: false, ...(isShowingContent ? {} : { state: { status: "loading" } }) });
+    this.failureReplacesContent = true;
+    this.launch();
+  }
+
   private start(): RunningLoad {
+    this.failureReplacesContent = false;
+    return this.launch();
+  }
+
+  private launch(): RunningLoad {
     this.generation += 1;
     const id = this.generation;
     const controller = new AbortController();
@@ -156,7 +198,8 @@ export class ScreenStatesMachine<T> {
   private failure(error: unknown): Partial<ScreenStatesSnapshot<T>> {
     // Only this load's own signal cancels it, and the screen going away drops that result before it gets here, so
     // every failure is shown, an abort the app's own load makes included.
-    if (this.snapshot.state.status === "content") return { refreshError: { error } };
+    if (this.snapshot.state.status === "content" && !this.failureReplacesContent)
+      return { refreshError: { error } };
     return { state: this.failedState(error) };
   }
 

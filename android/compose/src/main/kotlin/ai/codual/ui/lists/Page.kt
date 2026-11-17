@@ -25,6 +25,9 @@ internal sealed interface PagedListAnnouncement {
 
   data object Failed : PagedListAnnouncement
 
+  /** Newer items arrived in a reversed list. */
+  data class NewItems(val count: Int) : PagedListAnnouncement
+
   companion object {
     /** Once a page, never for a page that adds nothing and isn't the last. */
     fun of(added: Int, isEnd: Boolean): PagedListAnnouncement? =
@@ -35,8 +38,6 @@ internal sealed interface PagedListAnnouncement {
       }
   }
 }
-
-internal data class NumberedAnnouncement(val number: Int, val value: PagedListAnnouncement)
 
 internal sealed interface Paging {
   data object Ready : Paging
@@ -73,6 +74,19 @@ private constructor(
       newItems += item
     }
     return Added(PagedContent(items + newItems, newKeys, page.next, paging), newItems.size)
+  }
+
+  /**
+   * Puts the items whose key isn't in the list yet before its first, the newest first; [arrived] runs oldest first,
+   * as the items arrived.
+   */
+  fun addingNewer(arrived: List<Item>, key: (Item) -> Any): Added<Item, Token> {
+    val newKeys = keys.toMutableSet()
+    val newer = mutableListOf<Item>()
+    for (item in arrived) {
+      if (newKeys.add(key(item))) newer += item
+    }
+    return Added(PagedContent(newer.asReversed() + items, newKeys, next, paging), newer.size)
   }
 
   class Added<Item, Token : Any>(val content: PagedContent<Item, Token>, val count: Int)

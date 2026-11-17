@@ -118,9 +118,9 @@ class PagedListUiTest {
     compose.onNodeWithContentDescription("Couldn't load more items.").assertExists()
     compose.onNodeWithText("Try Again").performClick()
     settle()
-    val failureAnnouncement = list.announcement
+    val failureAnnouncement = list.announcer.latest
     answer(page(listOf(1), next = 3))
-    assertEquals(failureAnnouncement, list.announcement)
+    assertEquals(failureAnnouncement, list.announcer.latest)
     answer(page(listOf(2), next = null))
     compose.onNodeWithContentDescription("Loaded 1 more item. End of list.").assertExists()
   }

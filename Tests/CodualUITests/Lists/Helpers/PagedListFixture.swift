@@ -35,10 +35,14 @@ final class PagedListFixture {
   let model: PagedListModel<TestItem, Int>
   private(set) var announcements: [PagedListAnnouncement] = []
 
-  init(threshold: Int = 5, throwsOnCancel: Bool = true, initialPage: Page<TestItem, Int>? = nil) {
+  init(
+    threshold: Int = 5, throwsOnCancel: Bool = true, initialPage: Page<TestItem, Int>? = nil,
+    direction: PagedListDirection = .standard
+  ) {
     let loader = FakePageLoader(throwsOnCancel: throwsOnCancel)
     self.loader = loader
-    model = PagedListModel(threshold: threshold, initialPage: initialPage, loadPage: loader.load)
+    model = PagedListModel(
+      threshold: threshold, initialPage: initialPage, direction: direction, loadPage: loader.load)
     model.announce = { [weak self] in self?.announcements.append($0) }
   }
 
@@ -70,6 +74,11 @@ final class PagedListFixture {
     await firstPage?.value
     await laterPage?.value
   }
+}
+
+/// Items with these IDs, for `appendNewer(_:)`.
+func items(_ ids: [Int]) -> [TestItem] {
+  ids.map { TestItem(id: $0) }
 }
 
 extension PagedListModel {

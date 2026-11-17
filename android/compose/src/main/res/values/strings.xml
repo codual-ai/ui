@@ -18,7 +18,16 @@
     <item quantity="other">Loaded %d more items.</item>
   </plurals>
   <string name="codual_ui_end_of_list">End of list.</string>
+  <string name="codual_ui_no_earlier_items">No Earlier Items</string>
+  <string name="codual_ui_start_of_list">Start of list.</string>
+  <plurals name="codual_ui_new_items">
+    <item quantity="one">%d new item.</item>
+    <item quantity="other">%d new items.</item>
+  </plurals>
   <string name="codual_ui_load_more_failed">Couldn\'t load more items.</string>
+  <string name="codual_ui_discard_changes_title">Discard Changes?</string>
+  <string name="codual_ui_discard_changes">Discard Changes</string>
+  <string name="codual_ui_keep_editing">Keep Editing</string>
   <string name="codual_ui_buy">Buy</string>
   <string name="codual_ui_buy_for">Buy for %1$s</string>
   <string name="codual_ui_buy_label">Buy %1$s, %2$s</string>
@@ -33,4 +42,31 @@
   <string name="codual_ui_nothing_to_restore">Nothing to Restore</string>
   <string name="codual_ui_nothing_to_restore_message">There are no purchases to restore for this account.</string>
   <string name="codual_ui_restore_failed">Couldn\'t Restore</string>
+  <plurals name="codual_ui_search_results">
+    <item quantity="one">Showing %d result.</item>
+    <item quantity="other">Showing %d results.</item>
+  </plurals>
+  <string name="codual_ui_search_no_results">No results for “%s”.</string>
+  <string name="codual_ui_search_failed">Couldn\'t load results.</string>
+  <string name="codual_ui_search_offline">No internet connection.</string>
+  <string name="codual_ui_recent_searches">Recent Searches</string>
+  <string name="codual_ui_clear">Clear</string>
+  <string name="codual_ui_remove_recent_search">Remove “%s”</string>
+  <string name="codual_ui_no_results_title">No Results for “%s”</string>
+  <string name="codual_ui_no_results_message">Check the spelling or try a new search.</string>
+  <string name="codual_ui_chart_title">%1$s.</string>
+  <string name="codual_ui_chart_up">%1$s: from %2$s (%3$s) to %4$s (%5$s), up %6$s.</string>
+  <string name="codual_ui_chart_down">%1$s: from %2$s (%3$s) to %4$s (%5$s), down %6$s.</string>
+  <string name="codual_ui_chart_unchanged">%1$s: from %2$s (%3$s) to %4$s (%5$s), unchanged.</string>
+  <string name="codual_ui_chart_low_high">Low %1$s (%2$s), high %3$s (%4$s).</string>
+  <string name="codual_ui_chart_higher">%1$s higher than the previous period.</string>
+  <string name="codual_ui_chart_lower">%1$s lower than the previous period.</string>
+  <string name="codual_ui_chart_same">The same as the previous period.</string>
+  <string name="codual_ui_chart_updating">Updating.</string>
+  <string name="codual_ui_chart_point">%1$s, %2$s</string>
+  <string name="codual_ui_chart_series_value">%1$s %2$s</string>
+  <string name="codual_ui_chart_points">%1$s: %2$s</string>
+  <string name="codual_ui_chart_next_point">Next point</string>
+  <string name="codual_ui_chart_previous_point">Previous point</string>
+  <string name="codual_ui_chart_no_selection">No point selected</string>
 </resources>

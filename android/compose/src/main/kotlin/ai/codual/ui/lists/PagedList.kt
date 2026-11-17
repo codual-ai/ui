@@ -1,38 +1,34 @@
 package ai.codual.ui.lists
 
+import ai.codual.ui.LiveRegionAnnouncements
 import ai.codual.ui.R
+import ai.codual.ui.screenstates.LoadedFocus
 import ai.codual.ui.screenstates.ScreenStatesLayout
 import ai.codual.ui.screenstates.SystemEmptyView
 import ai.codual.ui.screenstates.SystemFailedView
 import ai.codual.ui.screenstates.SystemLoadingView
 import ai.codual.ui.screenstates.SystemOfflineView
 import ai.codual.ui.screenstates.SystemRefreshErrorDialog
+import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.liveRegion
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
@@ -42,6 +38,10 @@ import kotlinx.coroutines.flow.filter
  * screen state, the next page as the list nears its end, and a footer after the last row while a page loads, when
  * one fails, and at the end. Pull to refresh starts again from the first page. Items with a key already in the list
  * are dropped. Views the app leaves out are Material 3 ones, in the app's `MaterialTheme`.
+ *
+ * A state with `reverseLayout` draws a chat: the newest row at the bottom, older pages loading above as the top
+ * comes near, under the footer, and newer items from [PagedListState.appendNewer] scrolling into view only when the
+ * newest row is on screen.
  *
  * ```
  * PagedList(rememberPagedList(key = { it.id }) { token -> api.items(after = token) }) { item -> ItemRow(item) }
@@ -70,6 +70,44 @@ public fun <Item, Token : Any> PagedList(
   },
   row: @Composable PagedListItemScope.(Item) -> Unit,
 ) {
+  PagedListLayout(
+    state = state,
+    modifier = modifier,
+    scrollModifier = Modifier,
+    listState = listState,
+    contentPadding = contentPadding,
+    threshold = threshold,
+    footer = footer,
+    loading = loading,
+    empty = empty,
+    failed = failed,
+    offline = offline,
+    refreshError = refreshError,
+    row = row,
+  )
+}
+
+/**
+ * The views of a [PagedListState], for [PagedList] and the behaviours built on it, such as search. [scrollModifier] goes
+ * on every scrolling container: the rows' `LazyColumn`, and the first page's empty, failed and offline views.
+ */
+@Composable
+internal fun <Item, Token : Any> PagedListLayout(
+  state: PagedListState<Item, Token>,
+  modifier: Modifier,
+  scrollModifier: Modifier,
+  listState: LazyListState,
+  contentPadding: PaddingValues,
+  threshold: Int,
+  footer: @Composable (PagedListFooter) -> Unit,
+  loading: @Composable () -> Unit,
+  empty: @Composable () -> Unit,
+  failed: @Composable (error: Throwable, retry: () -> Unit) -> Unit,
+  offline: @Composable (retry: () -> Unit) -> Unit,
+  refreshError: @Composable (error: Throwable, dismiss: () -> Unit) -> Unit,
+  focus: LoadedFocus = LoadedFocus.MoveToNewView,
+  row: @Composable PagedListItemScope.(Item) -> Unit,
+) {
   requireValidThreshold(threshold)
   ScreenStatesLayout(
     state = state.screen,
@@ -82,16 +120,23 @@ public fun <Item, Token : Any> PagedList(
     failed = failed,
     offline = offline,
     refreshError = refreshError,
+    focus = focus,
+    scrollModifier = scrollModifier,
   ) { content ->
     LoadMoreNearTheEnd(state, listState, threshold)
+    if (state.reverseLayout) FollowTheBottom(state, listState)
     // The live region sits outside the lazy items, so it is there however far the list scrolls.
     Box {
-      LazyColumn(Modifier.fillMaxSize(), listState, contentPadding) {
+      LazyColumn(scrollModifier.fillMaxSize(), listState, contentPadding, reverseLayout = state.reverseLayout) {
         val lastIndex = content.items.lastIndex
         itemsIndexed(content.items, key = { _, item -> state.key(item) }) { index, item ->
           PagedListItemScopeImpl(this, index, isLast = index == lastIndex).row(item)
         }
-        item { footer(state.footer(content)) }
+        item {
+          CompositionLocalProvider(LocalPagedListReversed provides state.reverseLayout) {
+            footer(state.footer(content))
+          }
+        }
       }
       PagedListAnnouncements(state)
     }
@@ -119,6 +164,27 @@ private fun LoadMoreNearTheEnd(state: PagedListState<*, *>, listState: LazyListS
   }
 }
 
+/**
+ * Tells a reversed list's state whether its newest row (index 0, at the bottom) is on screen, and scrolls to it when
+ * the state asks. Item keys keep the rows on screen still as rows arrive above or below them.
+ */
+@Composable
+private fun FollowTheBottom(state: PagedListState<*, *>, listState: LazyListState) {
+  LaunchedEffect(state, listState) {
+    snapshotFlow { listState.firstVisibleItemIndex == 0 }.distinctUntilChanged().collect(state::bottomChanged)
+  }
+  LaunchedEffect(state, listState) {
+    listState.interactionSource.interactions.collect { if (it is DragInteraction.Start) state.userScrolled() }
+  }
+  // Only requests made while this view is on screen: a view drawn again for a kept state doesn't jump to the bottom.
+  var handledRequest by remember(state) { mutableIntStateOf(state.scrollToBottomRequest) }
+  LaunchedEffect(state, listState, state.scrollToBottomRequest) {
+    if (state.scrollToBottomRequest == handledRequest) return@LaunchedEffect
+    handledRequest = state.scrollToBottomRequest
+    listState.animateScrollToItem(0)
+  }
+}
+
 /** The scope of a [PagedList] row: a `LazyItemScope` that also knows where the row sits among the items loaded. */
 public interface PagedListItemScope : LazyItemScope {
   public val index: Int
@@ -136,36 +202,21 @@ private class PagedListItemScopeImpl(scope: LazyItemScope, override val index: I
  */
 @Composable
 public fun PagedListAnnouncements(state: PagedListState<*, *>, modifier: Modifier = Modifier) {
-  val announcement = state.announcement
-  val text = announcement?.let { announcementText(it.value) }
-  val latestText by rememberUpdatedState(text)
-  var spoken by remember(state) { mutableStateOf<String?>(null) }
-  // TalkBack speaks a live region when its text changes, so each new announcement clears it for a frame first:
-  // the same words twice in a row are spoken twice.
-  LaunchedEffect(state, announcement?.number) {
-    val number = announcement?.number ?: return@LaunchedEffect
-    if (number == state.spokenAnnouncement) return@LaunchedEffect
-    spoken = null
-    withFrameNanos {}
-    spoken = latestText
-    state.spokenAnnouncement = number
-  }
-  // One pixel high, as TalkBack skips nodes with no size.
-  Box(
-    modifier.fillMaxWidth().height(1.dp).semantics {
-      liveRegion = LiveRegionMode.Polite
-      spoken?.let { contentDescription = it }
-    }
-  )
+  LiveRegionAnnouncements(state.announcer, modifier) { announcementText(it, state.reverseLayout) }
 }
 
+/** The end of a reversed list is its start, the oldest item. */
 @Composable
-internal fun announcementText(announcement: PagedListAnnouncement): String =
-  when (announcement) {
+internal fun announcementText(announcement: PagedListAnnouncement, reversed: Boolean = false): String {
+  val end = stringResource(if (reversed) R.string.codual_ui_start_of_list else R.string.codual_ui_end_of_list)
+  return when (announcement) {
     is PagedListAnnouncement.Loaded -> {
       val loaded = pluralStringResource(R.plurals.codual_ui_loaded_more, announcement.count, announcement.count)
-      if (announcement.isEnd) "$loaded ${stringResource(R.string.codual_ui_end_of_list)}" else loaded
+      if (announcement.isEnd) "$loaded $end" else loaded
     }
-    PagedListAnnouncement.End -> stringResource(R.string.codual_ui_end_of_list)
+    PagedListAnnouncement.End -> end
     PagedListAnnouncement.Failed -> stringResource(R.string.codual_ui_load_more_failed)
+    is PagedListAnnouncement.NewItems ->
+      pluralStringResource(R.plurals.codual_ui_new_items, announcement.count, announcement.count)
   }
+}

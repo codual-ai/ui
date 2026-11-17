@@ -5,13 +5,16 @@
 
 **Headless behaviours for mobile apps, the same on SwiftUI, Jetpack Compose and React Native, built for coding
 agents.** We handle the logic; your app keeps its design. A behaviour is the state, timing and edge cases behind a
-common screen: loading and retry, paging, form checks, purchases. It has no look of its own and shows your app's own
-views, so the code your agent writes shrinks to the part that is really yours.
+common screen: loading and retry, paging, form checks, purchases, sheets that ask before discarding changes, search
+as you type. It has no look of its own and shows your app's own views, so the code your agent writes shrinks to the
+part that is really yours.
 
 > [!NOTE]
 > Not published yet: use the packages from source. [Screen states](spec/screen-states.md),
-> [lists](spec/lists.md), [forms](spec/forms.md) and [purchases](spec/purchases.md) are done on all three platforms,
-> with a skill that teaches coding agents to use them ([`skills/codual-ui`](skills/codual-ui/SKILL.md)).
+> [lists](spec/lists.md), [forms](spec/forms.md), [purchases](spec/purchases.md), [sheets](spec/sheets.md),
+> [search](spec/search.md), [permissions](spec/permissions.md) and [chart interactions](spec/charts.md) are done on
+> all three platforms, with a skill that teaches coding agents to use them
+> ([`skills/codual-ui`](skills/codual-ui/SKILL.md)).
 
 ## Screen states
 
@@ -64,6 +67,11 @@ once, and a page still loading when the screen goes away or a refresh starts is 
 a page loader, which takes a token (none for the first page) and returns the page's items and the next token, or
 none at the end, and your row.
 
+A chat runs the other way: a reversed list starts at the newest item at the bottom, loads older pages as the top
+comes near without moving what's on screen (React Native: `FlatList`'s `maintainVisibleContentPosition`, on iOS
+and Android), and takes new messages through `appendNewer`, scrolling to them only
+when the newest row is showing and counting them otherwise.
+
 ```swift
 // SwiftUI: rows in your List or LazyVStack
 PagedList(loadPage: { token in try await api.items(after: token) }) { item in
@@ -101,6 +109,7 @@ PagedList(rememberPagedList(key = { it.id }) { token -> api.items(after = token)
 | Cancelling | the page's task is cancelled | the page's coroutine is cancelled | the page's `AbortSignal` aborts |
 | New items announced | `AccessibilityNotification.Announcement`, from the model too | a polite live region; drawing it yourself, add `PagedListAnnouncements(state)` | `AccessibilityInfo.announceForAccessibilityWithOptions`, queued |
 | Built-in text | your app's string catalog | string resources named `codual_ui_*` | the `labels` prop |
+| A chat (reversed) | `PagedListModel(direction: .reversed)`, `PagedList(model:)`; `appendNewer`, `newItemCount`, `scrollToBottom()` | `rememberPagedList(reverseLayout = true)`; the same three | `usePagedList(…, { inverted: true })`, `<PagedListView list keyExtractor />`; the same three |
 
 ## Forms
 
@@ -238,6 +247,220 @@ const purchases = createPurchases(createReactNativeIapStore(iap));
 | Status | `status`: `.purchasing`, `.pending`, `.purchased`, `.cancelled`, `.failed`, `.restoring`, `.restored`, `.nothingToRestore`, `.restoreFailed` | `status`: the same, as `PurchaseStatus` | `status.status`: the same names, kebab-case |
 | Server verification | `deliver: { transaction in … transaction.proof … }`; throw to leave it unfinished | the same | the same; reject to leave it unfinished |
 | Built-in text | your app's string catalog | string resources named `codual_ui_*` | the `labels` and `paywallLabels` props |
+
+## Sheets
+
+A sheet, bottom sheet or full-screen cover that edits an item hands a result back to the screen that presented it:
+saved, with a value, or cancelled. Every way of closing it (Cancel, a swipe down, a tap outside, the Android back
+button, Escape) goes through the same rules: a sheet with unsaved changes asks before it throws them away, a sheet
+that is saving can't close, a successful save closes it, and a second request while one is open waits its turn. You
+pass the sheet's content and say when it has unsaved changes.
+
+```swift
+// SwiftUI
+@State private var editing = SheetPresenter<Note, Note>()
+
+List(notes) { note in Button(note.title) { editing.present(note) } }
+  .sheet(editing, onResult: { if case .saved(_, let note) = $0 { store.update(note) } }) { note in
+    NoteEditor(note: note, sheet: editing)  // Cancel: sheet.requestDismiss(), Save: sheet.save { try await api.save(draft) }
+  }
+```
+
+```kotlin
+// Jetpack Compose
+val editing = rememberSheetPresenter<Note, Note> { result -> if (result is SheetResult.Saved) store.update(result.value) }
+PresentedBottomSheet(editing) { note -> NoteEditor(note, editing) }
+```
+
+```tsx
+// React Native
+const editing = useSheet<Note, Note>({ onResult: (result) => result.status === "saved" && store.update(result.value) });
+<Modal presentationStyle="pageSheet" {...editing.bind(modalSheet)}>
+  {editing.item && <NoteEditor note={editing.item} sheet={editing} />}
+</Modal>
+```
+
+| | SwiftUI | Jetpack Compose | React Native |
+|---|---|---|---|
+| The state | `SheetPresenter<Item, Value>` | `SheetPresenter<Item, Value>`: `rememberSheetPresenter { }`, or in a ViewModel with `viewModelScope` | `useSheet<Item, Value>({ onResult })` |
+| Showing it | `.sheet(presenter)`, `.fullScreenCover(presenter)` | `PresentedBottomSheet(presenter)`, `PresentedDialog(presenter)` | `bind(modalSheet)` for `Modal`, or `bind(adapter)` for a bottom-sheet library |
+| Open, close, save | `present(_:)`, `requestDismiss()`, `save { }` | `present(item, opener)`, `requestDismiss()`, `save { }` | `present(item, { opener })`, `requestDismiss()`, `save((signal) => …)` |
+| Unsaved changes | `hasUnsavedChanges = …` | `hasUnsavedChanges = …` | `setHasUnsavedChanges(…)` |
+| The result | `SheetResult`: `.saved(item, value)`, `.cancelled(item)` | `SheetResult`: `Saved(item, value)`, `Cancelled(item)` | `{ status: "saved", item, value }`, `{ status: "cancelled", item }` |
+| Blocking the swipe | `interactiveDismissDisabled`, and the blocked swipe asks | the `SheetState`'s `confirmValueChange` | `Modal`'s `allowSwipeDismissal`; `isDismissDisabled` for a library |
+| Back and Escape | Escape and the VoiceOver escape gesture | `BackHandler`, and the dialog's back | `Modal`'s `onRequestClose`, or `BackHandler` |
+| The discard confirmation | a system confirmation dialog, from your string catalog | a Material 3 `AlertDialog`, string resources named `codual_ui_*` | `Alert.alert`, with the `labels` option |
+
+## Search
+
+A screen that searches as the person types waits for the typing to stop (300 ms) before it searches, searches at
+once on the keyboard's search button, cancels the running search when the query changes, and only ever shows the
+latest query's results. The results are a paged list, with loading, failed and offline views from screen states and
+a "no results for X" view of their own. Submitted queries become recent searches (no duplicates, capped, removable,
+in a store you choose), which show while the field is empty. Data already in memory is filtered at once instead.
+
+```swift
+// SwiftUI: inside a NavigationStack; the field is the system's .searchable one
+@State private var search = SearchModel { query, token in try await api.search(query, after: token) }
+
+SearchResults(search) { item in ItemRow(item: item) } content: { rows in List { rows } }
+```
+
+```kotlin
+// Jetpack Compose: your SearchBar or TextField gets state.query and submit()
+val search = rememberSearch(key = { it.id }) { query, token -> api.search(query, after = token) }
+SearchResults(search) { item -> ItemRow(item) }
+```
+
+```tsx
+// React Native
+const search = useSearch({
+  search: (query, { token, signal }) => api.search(query, { after: token, signal }),
+  keyExtractor: (item) => item.id,
+});
+<TextInput {...search.inputProps} placeholder="Search" />
+<SearchResults search={search} renderItem={({ item }) => <ItemRow item={item} />} />
+```
+
+| | SwiftUI | Jetpack Compose | React Native |
+|---|---|---|---|
+| The screen | `SearchResults(model) { row } content: { rows }` | `SearchResults(state) { row }` | `<SearchResults search renderItem />` |
+| The state machine, to draw it yourself | `SearchModel` | `SearchState`: `rememberSearch { }`, or `SearchState(viewModelScope, …)` in a ViewModel | `useSearch(options)` |
+| The field | `.searchable`, `.searchSuggestions` and `.onSubmit(of: .search)`, applied for you | `query`, `isExpanded` and `KeyboardActions(onSearch = { state.submit() })` on your `SearchBar` or `TextField` | `inputProps` for a `TextInput` |
+| The search | `search: { query, token in … }` (or `query, scope, token`) returning a `Page` | `search = { query, token -> … }` returning a `Page` | `search: (query, { token, scope, signal }) => …` returning a page |
+| Local mode | `SearchModel(items:matches:)` | `rememberLocalSearch(items, key) { item, query -> … }` | `useSearch({ items, matches, keyExtractor })` |
+| Scopes | `.searchScopes($model.scope)` | `rememberScopedSearch(initialScope = …)`, `state.scope = …` | `initialScope`, `setScope` |
+| Recent searches | `RecentSearchStore`: `InMemoryRecentSearches`, `UserDefaultsRecentSearches` | `RecentSearchStore`: `InMemoryRecentSearches`, `SharedPreferencesRecentSearches` | `RecentSearchStore` (sync or async), `createInMemoryRecentSearches()` |
+| Your views | `initial` (under the field), `suggestions(recent)`, `noResults(query)`, and the list's and screen states' | `suggestions(recent)`, `noResults(query)`, and the list's and screen states' | the same props as Compose |
+| Keyboard on scroll | `.scrollDismissesKeyboard(.immediately)` | `Modifier.dismissKeyboardOnScroll()` | `listProps` |
+| Results announced | `AccessibilityNotification.Announcement`, once the typing settles | a polite live region, `SearchAnnouncements(state)` | `AccessibilityInfo.announceForAccessibilityWithOptions`, queued |
+| Restoring the query | `initialQuery:`, from `@SceneStorage` | `rememberSaveable`, built in | `initialQuery` |
+
+## Permissions
+
+Asking for a permission at the right moment: notifications, the camera, photos, location while in use, the
+microphone and contacts, or any other through a small adapter. Creating a permission reads its status and never
+prompts. When the user taps something that needs it, `ask` shows your explanation first and the system prompt only
+once they go on; after a "no" the system won't repeat, it shows your Settings guidance instead, and the status is read
+again when the app comes back from Settings. Limited photos and an approximate location count as usable, a double tap
+never prompts twice, and on SwiftUI and Compose a missing Info.plist usage string or manifest entry reads as
+unavailable instead of crashing (React Native can't read Info.plist, so there the usage strings are yours to add).
+The explanation, the guidance and every word in them are yours.
+
+```swift
+// SwiftUI (NSCameraUsageDescription in Info.plist)
+@State private var camera = PermissionModel(.camera)
+
+Button("Scan") { Task { if await camera.ask().isUsable { scanning = true } } }
+  .sheet(isPresented: camera.isExplaining) { CameraExplanation(onContinue: camera.accept) }  // a swipe declines
+  .alert("Turn On the Camera", isPresented: camera.isShowingSettingsGuidance) {
+    Button("Open Settings", action: camera.openSettings)
+    Button("Not Now", role: .cancel) {}
+  }
+```
+
+```kotlin
+// Jetpack Compose (<uses-permission android:name="android.permission.CAMERA" /> in the manifest)
+val camera = rememberPermission(AndroidPermission.Camera)
+
+Button(onClick = { scope.launch { if (camera.ask().isUsable) scanning = true } }) { Text("Scan") }
+if (camera.phase == PermissionPhase.Explaining) CameraExplanation(onContinue = camera::accept, onDismiss = camera::decline)
+if (camera.phase == PermissionPhase.SettingsGuidance) SettingsDialog(onOpen = camera::openSettings, onDismiss = camera::decline)
+```
+
+```tsx
+// React Native: PermissionsAndroid on Android, react-native-permissions (an optional peer dependency) on iOS
+import * as permissions from "react-native-permissions";
+import { createReactNativePermissionsAccess } from "@codual-ai/react-native-ui/react-native-permissions";
+import { configurePermissions, isUsable, permissionMemory, usePermission } from "@codual-ai/react-native-ui";
+import { createMMKV } from "react-native-mmkv";
+configurePermissions({ memory: permissionMemory(createMMKV()) });  // once, at launch: declines last across launches
+const cameraAccess = createReactNativePermissionsAccess(permissions, "camera");
+
+const camera = usePermission(cameraAccess);
+<Button title="Scan" onPress={async () => setScanning(isUsable(await camera.ask()))} />
+<CameraExplanation visible={camera.phase === "explaining"} onContinue={camera.accept} onDismiss={camera.decline} />
+```
+
+| | SwiftUI | Jetpack Compose | React Native |
+|---|---|---|---|
+| The permission | `PermissionModel(.camera)`, in `@State` | `rememberPermission(AndroidPermission.Camera)` | `usePermission(access)`, or `createPermission(access)` to share one |
+| Built in | `.notifications`, `.camera`, `.photos`, `.locationWhenInUse`, `.microphone`, `.contacts` | `AndroidPermission.Notifications`, `Camera`, `Photos`, `LocationWhenInUse`, `Microphone`, `Contacts` | `androidPermission("camera")` (Android), `createReactNativePermissionsAccess(permissions, "camera")` (both) |
+| Another permission | `PermissionAccess` | `AndroidPermission("bluetooth", BLUETOOTH_CONNECT)`, or `PermissionAccess` | `androidPermission({ id, permissions })`, or `PermissionAccess` |
+| Status | `status` (nil until read): `.notDetermined`, `.granted`, `.limited`, `.provisional`, `.denied`, `.blocked`, `.restricted`, `.unavailable(reason:)`; `isUsable` | `status` (null until read): the same, as `PermissionStatus` | `status` (undefined until read): `status.status`, the same names, kebab-case; `isUsable` |
+| Asking | `ask()` on a tap, `suggest()` at a moment you choose, `askForFullAccess()` for more than limited; each answers with the status | the same, as suspend functions | the same, as promises |
+| Your views | by `phase`: `.explaining` (`accept()`, `decline()`), `.settingsGuidance` (`openSettings()`, `decline()`) | by `phase`: `Explaining`, `SettingsGuidance` | by `phase`: `"explaining"`, `"settings-guidance"` |
+| Reading again | when the app returns to the foreground | when the activity resumes | when the app becomes active |
+| Your views' bindings | `isExplaining`, `isShowingSettingsGuidance`: dismissing either declines | call `decline()` in `onDismissRequest` | call `decline()` when your modal closes |
+| Remembered across launches | `UserDefaults` | SharedPreferences | `configurePermissions({ memory: permissionMemory(mmkv) })`, once at launch |
+
+## Chart interactions
+
+A chart of data over a range the person picks: a share price, steps, revenue. Your app draws it with its own
+library (Swift Charts, Vico, Victory Native or any other); chart interactions does everything around the drawing.
+It loads the selected range as a screen state, keeps the old range's series on screen, marked stale, while a new
+range loads (never a flash of loading), drops a late answer for a range no longer selected, snaps a touch to the
+nearest point with one haptic tick per point, and gives screen readers a summary (first, last, low, high, change),
+a way to step through the points and, on iOS, an audio graph. Every number and date goes through your formatters.
+
+```swift
+// SwiftUI, with Swift Charts
+@State private var chart = ChartInteraction<String, Date>(title: "Price", range: "1D", formatY: formatPrice) {
+  query in try await api.prices(query.range)  // returns ChartData(series: [ChartSeries(id:name:points:)])
+}
+
+if case .content(let data) = chart.state {
+  Chart(data.series[0].points, id: \.x) { LineMark(x: .value("Time", $0.x), y: .value("Price", $0.y)) }
+    .chartXSelection(value: chart.xSelection)
+    .chartAccessibility(chart)
+    .opacity(chart.isStale ? 0.5 : 1)
+}
+Picker("Range", selection: Binding(get: { chart.range }, set: chart.select)) { … }
+```
+
+```kotlin
+// Jetpack Compose, with Vico or any chart
+val chart = rememberChartInteraction(title = "Price", range = "1D") { query -> api.prices(query.range) }
+
+CartesianChartHost(…, modifier = Modifier.chartScrub(chart).chartSemantics(chart))
+```
+
+```tsx
+// React Native, with Victory Native or any chart
+const chart = useChartInteraction({
+  title: "Price",
+  initialRange: "1D",
+  load: ({ range }, signal) => api.prices(range, { signal }),
+  haptic: () => Haptics.selectionAsync(),
+});
+
+// Victory Native's press state, through the adapter, which imports nothing: pass Reanimated's useAnimatedReaction and
+// react-native-worklets' scheduleOnRN (on Reanimated 3, runOnJS instead)
+const { state: press } = useChartPressState({ x: 0, y: { y: 0 } });
+useVictoryScrub(chart, press, { useAnimatedReaction, scheduleOnRN });
+
+<View {...chart.accessibilityProps}>
+  <CartesianChart
+    data={points} xKey="x" yKeys={["y"]} chartPressState={press}
+    chartPressConfig={{ pan: { activateAfterLongPress: 300 } }}  // inside a ScrollView
+  />
+</View>
+```
+
+| | SwiftUI | Jetpack Compose | React Native |
+|---|---|---|---|
+| The state | `ChartInteraction(title:range:load:)`, in `@State` | `ChartInteractionState`: `rememberChartInteraction(title, range) { }`, or in a ViewModel with `viewModelScope` | `useChartInteraction({ title, initialRange, load })` |
+| What a load returns | `ChartData(series:previousPeriod:)` of `ChartSeries(id:name:points:)`, x a `Date`, `Double` or `Int` | `ChartData(series, previousPeriod)` of `ChartSeries(id, name, points)`, x a number | `{ series, previousPeriod }` of `{ id, name, points }`, x a number |
+| The series as a screen state | `state`: `.loading`, `.content(data)`, `.empty` (no data in range), `.failed`, `.offline`; `retry()`, `refresh()` | the same, as `ScreenState` | `state.status`: the same names |
+| Ranges | `select(_:)`, `range`, `isStale` while the old series show | `select(range)`, `range`, `isStale` | `select(range)`, `range`, `isStale` |
+| Previous period | `compareToPreviousPeriod(true)`, `comparisonMeasure: .last` or `.total` | `compareToPreviousPeriod(true)`, `ChartComparisonMeasure` | `compareToPreviousPeriod(true)`, `comparisonMeasure: "last"` or `"total"` |
+| Touch | `xSelection` for `chartXSelection`, or `.chartOverlay { proxy in chart.scrubOverlay { proxy.value(atX: $0.x) } }` for press and hold | `Modifier.chartScrub(chart)`, press and hold by default | `useVictoryScrub(chart, press, { useAnimatedReaction, scheduleOnRN })` from `@codual-ai/react-native-ui/victory-native`, or `scrub(x)` and `endScrub()` from any gesture library |
+| The selected point | `selection` (`x`, each series' `points`), `keepsSelectionOnRelease` | the same | the same |
+| Haptic tick | `UISelectionFeedbackGenerator` | `LocalHapticFeedback` | the `haptic` option (expo-haptics, say) |
+| Screen readers | `.chartAccessibility(chart)`: an adjustable element and an audio graph | `Modifier.chartSemantics(chart)`: adjustable with TalkBack | `{...chart.accessibilityProps}`: `accessibilityRole="adjustable"` |
+| Summary | `summaries` (first, last, low, high, change), `spokenSummary`, `selectionDescription` | the same | the same |
+| Formatting | `formatX:`, `formatY:`, `locale:`; a `Date` x reads as a date | `formatX`, `formatY`, `xKind = ChartXKind.Time` for epoch milliseconds, the resources' locale | `formatX`, `formatY`, `xKind: "time"` for epoch milliseconds, `locale` |
+| Built-in text | your app's string catalog | string resources named `codual_ui_chart_*` | the `labels` option |
 
 ## How it works
 

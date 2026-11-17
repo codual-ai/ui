@@ -61,8 +61,21 @@ public class ScreenStatesState<T>(
   public var refreshError: Throwable? by mutableStateOf(null)
     private set
 
+  /**
+   * Called when a load that showed the loading view (the first one, or a retry) finishes, with what it shows now: for
+   * a behaviour built on this one, such as search announcing its results. Not called for a refresh.
+   */
+  internal var loadingFinished: ((ScreenState<T>) -> Unit)? = null
+
   private var running: Job? = null
   private var generation = 0
+
+  /** Set by [reload]: the running load is for a new input, so its failure replaces the content. */
+  private var failureReplacesContent = false
+
+  /** Whether a load is running, for a behaviour built on this one. */
+  internal val isLoadRunning: Boolean
+    get() = running != null
 
   /** Starts the first load. Safe to call on every appear: once a load has started or finished, it does nothing. */
   public fun appear() {
@@ -121,7 +134,37 @@ public class ScreenStatesState<T>(
     if (state is ScreenState.Content) state = ScreenState.Content(value)
   }
 
+  /**
+   * Replaces a loaded value with another, which may be empty, for a behaviour built on this one, such as a local search
+   * whose items changed. Does nothing unless content or the empty view is shown.
+   */
+  internal fun replaceLoaded(value: T) {
+    if (state is ScreenState.Content || state == ScreenState.Empty) {
+      state = if (isEmpty(value)) ScreenState.Empty else ScreenState.Content(value)
+    }
+  }
+
+  /**
+   * Cancels the running load, drops its result and loads again for a new input, for a behaviour built on this one
+   * (a chart's range). Content stays on screen meanwhile and anything else shows loading. Unlike a refresh's, its
+   * failure replaces the content, which belongs to the old input.
+   */
+  internal fun reload() {
+    val load = running
+    isRefreshing = false
+    if (state !is ScreenState.Content) state = ScreenState.Loading
+    failureReplacesContent = true
+    launch()
+    // Last, as an immediate dispatcher can resume the cancelled load inside cancel().
+    load?.cancel()
+  }
+
   private fun start() {
+    failureReplacesContent = false
+    launch()
+  }
+
+  private fun launch() {
     generation += 1
     val id = generation
     // Started lazily, so `running` is set before a load that never suspends can finish.
@@ -146,6 +189,7 @@ public class ScreenStatesState<T>(
     if (id != generation) return
     running = null
     isRefreshing = false
+    val wasLoading = state == ScreenState.Idle || state == ScreenState.Loading
     result.fold(
       onSuccess = { value ->
         state = if (isEmpty(value)) ScreenState.Empty else ScreenState.Content(value)
@@ -153,13 +197,15 @@ public class ScreenStatesState<T>(
       },
       onFailure = ::fail,
     )
+    if (wasLoading) loadingFinished?.invoke(state)
   }
 
   private fun fail(error: Throwable) {
     when (state) {
       // Even a load that cancelled itself lands here when nothing else is on screen, never a spinner.
       ScreenState.Idle, ScreenState.Loading -> show(error)
-      is ScreenState.Content -> if (!isCancellation(error)) refreshError = error
+      is ScreenState.Content ->
+        if (failureReplacesContent) show(error) else if (!isCancellation(error)) refreshError = error
       ScreenState.Empty, is ScreenState.Failed, ScreenState.Offline -> if (!isCancellation(error)) show(error)
     }
   }
