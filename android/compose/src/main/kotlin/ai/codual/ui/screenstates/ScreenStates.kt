@@ -58,7 +58,8 @@ public fun <T> ScreenStates(
 
 /**
  * The views of a [ScreenStatesState], for [ScreenStates] and the behaviours built on it, which pass their own
- * [appear], [disappear] and [refresh] so they can do more around the state's.
+ * [appear], [disappear] and [refresh] so they can do more around the state's. [scrollModifier] goes on the scrolling
+ * containers of the empty, failed and offline views.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,6 +74,8 @@ internal fun <T> ScreenStatesLayout(
   failed: @Composable (error: Throwable, retry: () -> Unit) -> Unit,
   offline: @Composable (retry: () -> Unit) -> Unit,
   refreshError: @Composable (error: Throwable, dismiss: () -> Unit) -> Unit,
+  focus: LoadedFocus = LoadedFocus.MoveToNewView,
+  scrollModifier: Modifier = Modifier,
   content: @Composable (T) -> Unit,
 ) {
   DisposableEffect(state) {
@@ -84,7 +87,11 @@ internal fun <T> ScreenStatesLayout(
   val hasShownLoading = remember { BooleanArray(1) }
   // Moves focus, and with it TalkBack, to the first focusable part of the view that replaced the spinner.
   LaunchedEffect(isLoading) {
-    if (isLoading) hasShownLoading[0] = true else if (hasShownLoading[0]) newView.requestFocus()
+    if (isLoading) {
+      hasShownLoading[0] = true
+    } else if (hasShownLoading[0] && focus == LoadedFocus.MoveToNewView) {
+      newView.requestFocus()
+    }
   }
   // One container for every state, with the load in the state's scope, so swapping the view inside it never
   // cancels a load.
@@ -96,16 +103,24 @@ internal fun <T> ScreenStatesLayout(
     when (val current = state.state) {
       ScreenState.Idle, ScreenState.Loading -> loading()
       is ScreenState.Content -> content(current.value)
-      ScreenState.Empty -> Pullable { empty() }
-      is ScreenState.Failed -> Pullable { failed(current.error, state::retry) }
-      ScreenState.Offline -> Pullable { offline(state::retry) }
+      ScreenState.Empty -> Pullable(scrollModifier) { empty() }
+      is ScreenState.Failed -> Pullable(scrollModifier) { failed(current.error, state::retry) }
+      ScreenState.Offline -> Pullable(scrollModifier) { offline(state::retry) }
     }
     state.refreshError?.let { error -> refreshError(error, state::dismissRefreshError) }
   }
 }
 
+/** Where focus goes when the loading view is replaced. */
+internal enum class LoadedFocus {
+  /** To the new view, and with it TalkBack: a screen of its own. */
+  MoveToNewView,
+  /** Where it was: results under a search field, which keeps focus while they arrive. */
+  Stay,
+}
+
 /** Puts a view that may not scroll into a full-size scrollable list, so it can be pulled to refresh. */
 @Composable
-private fun Pullable(view: @Composable () -> Unit) {
-  LazyColumn(Modifier.fillMaxSize()) { item { Box(Modifier.fillParentMaxSize()) { view() } } }
+private fun Pullable(modifier: Modifier, view: @Composable () -> Unit) {
+  LazyColumn(modifier.fillMaxSize()) { item { Box(Modifier.fillParentMaxSize()) { view() } } }
 }

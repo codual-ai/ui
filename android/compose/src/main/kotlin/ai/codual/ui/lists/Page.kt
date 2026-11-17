@@ -36,8 +36,6 @@ internal sealed interface PagedListAnnouncement {
   }
 }
 
-internal data class NumberedAnnouncement(val number: Int, val value: PagedListAnnouncement)
-
 internal sealed interface Paging {
   data object Ready : Paging
 

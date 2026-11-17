@@ -19,6 +19,9 @@
   </plurals>
   <string name="codual_ui_end_of_list">End of list.</string>
   <string name="codual_ui_load_more_failed">Couldn\'t load more items.</string>
+  <string name="codual_ui_discard_changes_title">Discard Changes?</string>
+  <string name="codual_ui_discard_changes">Discard Changes</string>
+  <string name="codual_ui_keep_editing">Keep Editing</string>
   <string name="codual_ui_buy">Buy</string>
   <string name="codual_ui_buy_for">Buy for %1$s</string>
   <string name="codual_ui_buy_label">Buy %1$s, %2$s</string>
@@ -33,4 +36,16 @@
   <string name="codual_ui_nothing_to_restore">Nothing to Restore</string>
   <string name="codual_ui_nothing_to_restore_message">There are no purchases to restore for this account.</string>
   <string name="codual_ui_restore_failed">Couldn\'t Restore</string>
+  <plurals name="codual_ui_search_results">
+    <item quantity="one">Showing %d result.</item>
+    <item quantity="other">Showing %d results.</item>
+  </plurals>
+  <string name="codual_ui_search_no_results">No results for “%s”.</string>
+  <string name="codual_ui_search_failed">Couldn\'t load results.</string>
+  <string name="codual_ui_search_offline">No internet connection.</string>
+  <string name="codual_ui_recent_searches">Recent Searches</string>
+  <string name="codual_ui_clear">Clear</string>
+  <string name="codual_ui_remove_recent_search">Remove “%s”</string>
+  <string name="codual_ui_no_results_title">No Results for “%s”</string>
+  <string name="codual_ui_no_results_message">Check the spelling or try a new search.</string>
 </resources>

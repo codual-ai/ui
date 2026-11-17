@@ -1,8 +1,9 @@
 import { act, render, renderHook } from "@testing-library/react-native";
 import { Activity } from "react";
 import { AccessibilityInfo } from "react-native";
+import type { PagedListController } from "../../../src/lists/controller";
 import type { Page } from "../../../src/lists/paged-content";
-import { type PagedListController, usePagedList } from "../../../src/lists/use-paged-list";
+import { usePagedList } from "../../../src/lists/use-paged-list";
 import { FakeLoader } from "../../screen-states/helpers/fake-loader";
 
 export interface TestItem {

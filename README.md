@@ -5,13 +5,15 @@
 
 **Headless behaviours for mobile apps, the same on SwiftUI, Jetpack Compose and React Native, built for coding
 agents.** We handle the logic; your app keeps its design. A behaviour is the state, timing and edge cases behind a
-common screen: loading and retry, paging, form checks, purchases. It has no look of its own and shows your app's own
-views, so the code your agent writes shrinks to the part that is really yours.
+common screen: loading and retry, paging, form checks, purchases, sheets that ask before discarding changes, search
+as you type. It has no look of its own and shows your app's own views, so the code your agent writes shrinks to the
+part that is really yours.
 
 > [!NOTE]
 > Not published yet: use the packages from source. [Screen states](spec/screen-states.md),
-> [lists](spec/lists.md), [forms](spec/forms.md) and [purchases](spec/purchases.md) are done on all three platforms,
-> with a skill that teaches coding agents to use them ([`skills/codual-ui`](skills/codual-ui/SKILL.md)).
+> [lists](spec/lists.md), [forms](spec/forms.md), [purchases](spec/purchases.md), [sheets](spec/sheets.md),
+> [search](spec/search.md) and [permissions](spec/permissions.md) are done on all three platforms, with a skill that
+> teaches coding agents to use them ([`skills/codual-ui`](skills/codual-ui/SKILL.md)).
 
 ## Screen states
 
@@ -238,6 +240,94 @@ const purchases = createPurchases(createReactNativeIapStore(iap));
 | Status | `status`: `.purchasing`, `.pending`, `.purchased`, `.cancelled`, `.failed`, `.restoring`, `.restored`, `.nothingToRestore`, `.restoreFailed` | `status`: the same, as `PurchaseStatus` | `status.status`: the same names, kebab-case |
 | Server verification | `deliver: { transaction in … transaction.proof … }`; throw to leave it unfinished | the same | the same; reject to leave it unfinished |
 | Built-in text | your app's string catalog | string resources named `codual_ui_*` | the `labels` and `paywallLabels` props |
+
+## Sheets
+
+A sheet, bottom sheet or full-screen cover that edits an item hands a result back to the screen that presented it:
+saved, with a value, or cancelled. Every way of closing it (Cancel, a swipe down, a tap outside, the Android back
+button, Escape) goes through the same rules: a sheet with unsaved changes asks before it throws them away, a sheet
+that is saving can't close, a successful save closes it, and a second request while one is open waits its turn. You
+pass the sheet's content and say when it has unsaved changes.
+
+```swift
+// SwiftUI
+@State private var editing = SheetPresenter<Note, Note>()
+
+List(notes) { note in Button(note.title) { editing.present(note) } }
+  .sheet(editing, onResult: { if case .saved(_, let note) = $0 { store.update(note) } }) { note in
+    NoteEditor(note: note, sheet: editing)  // Cancel: sheet.requestDismiss(), Save: sheet.save { try await api.save(draft) }
+  }
+```
+
+```kotlin
+// Jetpack Compose
+val editing = rememberSheetPresenter<Note, Note> { result -> if (result is SheetResult.Saved) store.update(result.value) }
+PresentedBottomSheet(editing) { note -> NoteEditor(note, editing) }
+```
+
+```tsx
+// React Native
+const editing = useSheet<Note, Note>({ onResult: (result) => result.status === "saved" && store.update(result.value) });
+<Modal presentationStyle="pageSheet" {...editing.bind(modalSheet)}>
+  {editing.item && <NoteEditor note={editing.item} sheet={editing} />}
+</Modal>
+```
+
+| | SwiftUI | Jetpack Compose | React Native |
+|---|---|---|---|
+| The state | `SheetPresenter<Item, Value>` | `SheetPresenter<Item, Value>`: `rememberSheetPresenter { }`, or in a ViewModel with `viewModelScope` | `useSheet<Item, Value>({ onResult })` |
+| Showing it | `.sheet(presenter)`, `.fullScreenCover(presenter)` | `PresentedBottomSheet(presenter)`, `PresentedDialog(presenter)` | `bind(modalSheet)` for `Modal`, or `bind(adapter)` for a bottom-sheet library |
+| Open, close, save | `present(_:)`, `requestDismiss()`, `save { }` | `present(item, opener)`, `requestDismiss()`, `save { }` | `present(item, { opener })`, `requestDismiss()`, `save((signal) => …)` |
+| Unsaved changes | `hasUnsavedChanges = …` | `hasUnsavedChanges = …` | `setHasUnsavedChanges(…)` |
+| The result | `SheetResult`: `.saved(item, value)`, `.cancelled(item)` | `SheetResult`: `Saved(item, value)`, `Cancelled(item)` | `{ status: "saved", item, value }`, `{ status: "cancelled", item }` |
+| Blocking the swipe | `interactiveDismissDisabled`, and the blocked swipe asks | the `SheetState`'s `confirmValueChange` | `Modal`'s `allowSwipeDismissal`; `isDismissDisabled` for a library |
+| Back and Escape | Escape and the VoiceOver escape gesture | `BackHandler`, and the dialog's back | `Modal`'s `onRequestClose`, or `BackHandler` |
+| The discard confirmation | a system confirmation dialog, from your string catalog | a Material 3 `AlertDialog`, string resources named `codual_ui_*` | `Alert.alert`, with the `labels` option |
+
+## Search
+
+A screen that searches as the person types waits for the typing to stop (300 ms) before it searches, searches at
+once on the keyboard's search button, cancels the running search when the query changes, and only ever shows the
+latest query's results. The results are a paged list, with loading, failed and offline views from screen states and
+a "no results for X" view of their own. Submitted queries become recent searches (no duplicates, capped, removable,
+in a store you choose), which show while the field is empty. Data already in memory is filtered at once instead.
+
+```swift
+// SwiftUI: inside a NavigationStack; the field is the system's .searchable one
+@State private var search = SearchModel { query, token in try await api.search(query, after: token) }
+
+SearchResults(search) { item in ItemRow(item: item) } content: { rows in List { rows } }
+```
+
+```kotlin
+// Jetpack Compose: your SearchBar or TextField gets state.query and submit()
+val search = rememberSearch(key = { it.id }) { query, token -> api.search(query, after = token) }
+SearchResults(search) { item -> ItemRow(item) }
+```
+
+```tsx
+// React Native
+const search = useSearch({
+  search: (query, { token, signal }) => api.search(query, { after: token, signal }),
+  keyExtractor: (item) => item.id,
+});
+<TextInput {...search.inputProps} placeholder="Search" />
+<SearchResults search={search} renderItem={({ item }) => <ItemRow item={item} />} />
+```
+
+| | SwiftUI | Jetpack Compose | React Native |
+|---|---|---|---|
+| The screen | `SearchResults(model) { row } content: { rows }` | `SearchResults(state) { row }` | `<SearchResults search renderItem />` |
+| The state machine, to draw it yourself | `SearchModel` | `SearchState`: `rememberSearch { }`, or `SearchState(viewModelScope, …)` in a ViewModel | `useSearch(options)` |
+| The field | `.searchable`, `.searchSuggestions` and `.onSubmit(of: .search)`, applied for you | `query`, `isExpanded` and `KeyboardActions(onSearch = { state.submit() })` on your `SearchBar` or `TextField` | `inputProps` for a `TextInput` |
+| The search | `search: { query, token in … }` (or `query, scope, token`) returning a `Page` | `search = { query, token -> … }` returning a `Page` | `search: (query, { token, scope, signal }) => …` returning a page |
+| Local mode | `SearchModel(items:matches:)` | `rememberLocalSearch(items, key) { item, query -> … }` | `useSearch({ items, matches, keyExtractor })` |
+| Scopes | `.searchScopes($model.scope)` | `rememberScopedSearch(initialScope = …)`, `state.scope = …` | `initialScope`, `setScope` |
+| Recent searches | `RecentSearchStore`: `InMemoryRecentSearches`, `UserDefaultsRecentSearches` | `RecentSearchStore`: `InMemoryRecentSearches`, `SharedPreferencesRecentSearches` | `RecentSearchStore` (sync or async), `createInMemoryRecentSearches()` |
+| Your views | `initial` (under the field), `suggestions(recent)`, `noResults(query)`, and the list's and screen states' | `suggestions(recent)`, `noResults(query)`, and the list's and screen states' | the same props as Compose |
+| Keyboard on scroll | `.scrollDismissesKeyboard(.immediately)` | `Modifier.dismissKeyboardOnScroll()` | `listProps` |
+| Results announced | `AccessibilityNotification.Announcement`, once the typing settles | a polite live region, `SearchAnnouncements(state)` | `AccessibilityInfo.announceForAccessibilityWithOptions`, queued |
+| Restoring the query | `initialQuery:`, from `@SceneStorage` | `rememberSaveable`, built in | `initialQuery` |
 
 ## Permissions
 

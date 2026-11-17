@@ -61,7 +61,7 @@ dependencies {
   // Forms' field bindings return its KeyboardOptions and KeyboardActions.
   api(libs.compose.foundation)
   implementation(libs.compose.material3)
-  // Permissions: the result launcher, the lifecycle to refresh on resume, and permission checks.
+  // Sheets' BackHandler and permissions' result launcher; the lifecycle to refresh on resume, and permission checks.
   implementation(libs.activity.compose)
   implementation(libs.lifecycle.runtime.compose)
   implementation(libs.core.ktx)
