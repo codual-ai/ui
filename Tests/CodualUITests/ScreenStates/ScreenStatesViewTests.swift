@@ -5,7 +5,7 @@ import UIKit
 @testable import CodualUI
 
 @MainActor
-@Suite(.timeLimit(.minutes(2)))
+@Suite(.timeLimit(.minutes(2)), .drawsViews)
 struct ScreenStatesViewTests {
   @Test("SS-10 a retry is not cancelled by the failed view being replaced with the loading view")
   func aRetryIsNotCancelledBySwappingViews() async {

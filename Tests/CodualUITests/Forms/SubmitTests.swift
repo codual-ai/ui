@@ -5,7 +5,7 @@ import Testing
 @testable import CodualUI
 
 @MainActor
-@Suite(.timeLimit(.minutes(1)))
+@Suite(.timeLimit(.minutes(1)), .drawsViews)
 struct SubmitTests {
   let fixture = FormFixture([
     FormField(.name, rules: [.required("Enter your name")]),

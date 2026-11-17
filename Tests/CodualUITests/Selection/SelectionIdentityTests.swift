@@ -4,7 +4,7 @@ import Testing
 @testable import CodualUI
 
 @MainActor
-@Suite(.timeLimit(.minutes(2)))
+@Suite(.timeLimit(.minutes(2)), .drawsViews)
 struct SelectionIdentityTests {
   @Test("SL-08 a selected item stays selected when the list gets a new copy of it, at any place")
   func identitySurvivesNewCopies() {

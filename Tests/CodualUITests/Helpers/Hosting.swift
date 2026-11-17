@@ -3,6 +3,31 @@ import Testing
 import UIKit
 import Vision
 
+/// For suites that draw views. UIKit's first use blocks the main thread on SpringBoard, for over a minute on a freshly
+/// booted CI simulator, stalling every main-actor test; this trait does that wait on a dispatch queue beforehand.
+struct DrawsViews: SuiteTrait, TestScoping {
+  func provideScope(
+    for test: Test, testCase: Test.Case?, performing function: @Sendable () async throws -> Void
+  ) async throws {
+    await uiKitSetUp.value
+    try await function()
+  }
+}
+
+extension Trait where Self == DrawsViews {
+  static var drawsViews: Self { Self() }
+}
+
+private let uiKitSetUp = Task<Void, Never>.detached {
+  await withCheckedContinuation { continuation in
+    DispatchQueue.global(qos: .userInitiated).async {
+      // Any message to the class runs `+[UIScreen initialize]`, which waits for SpringBoard's answer.
+      _ = UIScreen.responds(to: #selector(getter: UIScreen.main))
+      continuation.resume()
+    }
+  }
+}
+
 /// Shows `view` in a phone-sized window; hide the window at the end of the test.
 @MainActor
 func show(_ view: some View) -> UIWindow {

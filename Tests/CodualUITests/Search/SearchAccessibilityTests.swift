@@ -4,7 +4,7 @@ import Testing
 @testable import CodualUI
 
 @MainActor
-@Suite(.timeLimit(.minutes(1)))
+@Suite(.timeLimit(.minutes(1)), .drawsViews)
 struct SearchAccessibilityTests {
   @Test("SR-28 the results are announced once, after the typing settles, never per keystroke")
   func theResultsAreAnnouncedOnce() async {
