@@ -49,7 +49,7 @@ export type StoreUpdate =
   | { readonly type: "entitlements-may-have-changed" };
 
 /**
- * The store behind `createPurchases`: `createReactNativeIapStore` from `@codual-ai/react-native-ui/react-native-iap`,
+ * The store behind `createPurchases`: `createReactNativeIapStore` from `@codual/react-native-ui/react-native-iap`,
  * any other store, or a fake in tests. Failures reject; a cancellation by the user is a result, never an error.
  */
 export interface PurchaseStore {

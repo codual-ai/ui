@@ -36,7 +36,7 @@ export type Reanimated = {
  * ```tsx
  * import { useAnimatedReaction } from "react-native-reanimated";
  * import { scheduleOnRN } from "react-native-worklets"; // Reanimated 4; on Reanimated 3, pass `runOnJS`
- * import { useVictoryScrub } from "@codual-ai/react-native-ui/victory-native";
+ * import { useVictoryScrub } from "@codual/react-native-ui/victory-native";
  * const { state } = useChartPressState({ x: 0, y: { y: 0 } });
  * useVictoryScrub(chart, state, { useAnimatedReaction, scheduleOnRN });
  * ```

@@ -25,7 +25,7 @@ export interface ReactNativeIapStoreOptions {
  *
  * ```ts
  * import * as iap from "react-native-iap";
- * import { createReactNativeIapStore } from "@codual-ai/react-native-ui/react-native-iap";
+ * import { createReactNativeIapStore } from "@codual/react-native-ui/react-native-iap";
  * const purchases = createPurchases(createReactNativeIapStore(iap, { consumableProductIds: ["tip"] }));
  * ```
  *

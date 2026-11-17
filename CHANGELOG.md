@@ -35,7 +35,7 @@ and versions follow [Semantic Versioning](https://semver.org/).
 - The `codual-ui` skill covers forms.
 - Purchases on SwiftUI (`PurchasesModel`, `StoreKitStore`, `Paywall`), Jetpack Compose (`Purchases`, `Paywall`, and
   `PlayBillingStore` in the new `codual-ui-play-billing` library) and React Native (`createPurchases`,
-  `usePurchases`, `<Paywall>`, and `createReactNativeIapStore` from `@codual-ai/react-native-ui/react-native-iap`,
+  `usePurchases`, `<Paywall>`, and `createReactNativeIapStore` from `@codual/react-native-ui/react-native-iap`,
   with react-native-iap as an optional peer dependency): products as a screen state, buy, pending, cancelled (not an
   error), failed, restore and nothing to restore, entitlements known from launch, transactions from outside the buy
   flow, delivering and finishing each transaction once, refunds, expiry, and system parts for the paywall. The store
@@ -64,7 +64,7 @@ and versions follow [Semantic Versioning](https://semver.org/).
 - Permissions on SwiftUI (`PermissionModel`, with `.notifications`, `.camera`, `.photos`, `.locationWhenInUse`,
   `.microphone` and `.contacts`), Jetpack Compose (`PermissionState`, `rememberPermission`, `AndroidPermission`) and
   React Native (`usePermission`, `createPermission`, `configurePermissions`, `androidPermission`, and `createReactNativePermissionsAccess` from
-  `@codual-ai/react-native-ui/react-native-permissions`, with react-native-permissions as an optional peer dependency):
+  `@codual/react-native-ui/react-native-permissions`, with react-native-permissions as an optional peer dependency):
   the status read without prompting, the app's explanation before the system prompt, never asking on launch or twice
   in a row, Settings guidance once the system won't ask again, Android's "don't ask again" and two-denials rules, a
   fresh read when the app returns from Settings, limited and approximate grants, no double prompts, and (on SwiftUI
@@ -76,7 +76,7 @@ and versions follow [Semantic Versioning](https://semver.org/).
 - Chart interactions on SwiftUI (`ChartInteraction`, `.chartAccessibility`, `xSelection` for Swift Charts'
   `chartXSelection`, `scrubOverlay`), Jetpack Compose (`ChartInteractionState`, `rememberChartInteraction`,
   `Modifier.chartScrub`, `Modifier.chartSemantics`) and React Native (`useChartInteraction`, `selectionNearest`, and
-  `useVictoryScrub` from `@codual-ai/react-native-ui/victory-native`, which imports neither Victory Native nor
+  `useVictoryScrub` from `@codual/react-native-ui/victory-native`, which imports neither Victory Native nor
   Reanimated: the app passes its functions): headless, for charts the app draws with Swift Charts, Vico, Victory
   Native or any other library. The selected range's series as a screen state, range switching that keeps the old
   series on screen marked stale and drops late answers, previous-period comparison, nearest-point snapping across

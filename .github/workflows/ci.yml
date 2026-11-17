@@ -62,6 +62,11 @@ jobs:
             android/gradle/libs.versions.toml
             android/gradle/wrapper/gradle-wrapper.properties
             android/**/*.gradle.kts
+      # Robolectric downloads its Android jar from Maven on first use; keep it between runs.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.m2/repository/org/robolectric
+          key: robolectric-${{ hashFiles('android/gradle/libs.versions.toml') }}
       # Lint, unit tests and the library build, with the Android SDK the runner image has at $ANDROID_HOME.
       - run: ./gradlew build --no-daemon
 

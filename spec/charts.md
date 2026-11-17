@@ -148,7 +148,7 @@ Screen states' transitions apply to the selected range's load, with these additi
   Native: a number, as Vico and Victory Native take; `xKind` time says they are epoch milliseconds.
 - **Selection from a chart library.** SwiftUI: `chart.xSelection`, a `Binding` for Swift Charts' `chartXSelection`
   (iOS 17), or `chart.scrubOverlay` (a UIKit long press) in `chartOverlay` for a press and hold. Compose:
-  `Modifier.chartScrub(state)`. React Native: `useVictoryScrub` (`@codual-ai/react-native-ui/victory-native`) for
+  `Modifier.chartScrub(state)`. React Native: `useVictoryScrub` (`@codual/react-native-ui/victory-native`) for
   Victory Native's press state, with Reanimated 4's `scheduleOnRN` or Reanimated 3's `runOnJS`, and
   `chartPressConfig={{ pan: { activateAfterLongPress: 300 } }}` inside a `ScrollView`; or `scrub(x)` and
   `endScrub()` from the app's own gesture library (`react-native-gesture-handler`'s

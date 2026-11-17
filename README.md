@@ -219,7 +219,7 @@ Paywall(purchases, listOf("pro.monthly", "pro.yearly")) { paywall ->
 ```tsx
 // React Native: once, outside any component (react-native-iap is an optional peer dependency)
 import * as iap from "react-native-iap";
-import { createReactNativeIapStore } from "@codual-ai/react-native-ui/react-native-iap";
+import { createReactNativeIapStore } from "@codual/react-native-ui/react-native-iap";
 const purchases = createPurchases(createReactNativeIapStore(iap));
 
 <Paywall
@@ -371,8 +371,8 @@ if (camera.phase == PermissionPhase.SettingsGuidance) SettingsDialog(onOpen = ca
 ```tsx
 // React Native: PermissionsAndroid on Android, react-native-permissions (an optional peer dependency) on iOS
 import * as permissions from "react-native-permissions";
-import { createReactNativePermissionsAccess } from "@codual-ai/react-native-ui/react-native-permissions";
-import { configurePermissions, isUsable, permissionMemory, usePermission } from "@codual-ai/react-native-ui";
+import { createReactNativePermissionsAccess } from "@codual/react-native-ui/react-native-permissions";
+import { configurePermissions, isUsable, permissionMemory, usePermission } from "@codual/react-native-ui";
 import { createMMKV } from "react-native-mmkv";
 configurePermissions({ memory: permissionMemory(createMMKV()) });  // once, at launch: declines last across launches
 const cameraAccess = createReactNativePermissionsAccess(permissions, "camera");
@@ -454,7 +454,7 @@ useVictoryScrub(chart, press, { useAnimatedReaction, scheduleOnRN });
 | The series as a screen state | `state`: `.loading`, `.content(data)`, `.empty` (no data in range), `.failed`, `.offline`; `retry()`, `refresh()` | the same, as `ScreenState` | `state.status`: the same names |
 | Ranges | `select(_:)`, `range`, `isStale` while the old series show | `select(range)`, `range`, `isStale` | `select(range)`, `range`, `isStale` |
 | Previous period | `compareToPreviousPeriod(true)`, `comparisonMeasure: .last` or `.total` | `compareToPreviousPeriod(true)`, `ChartComparisonMeasure` | `compareToPreviousPeriod(true)`, `comparisonMeasure: "last"` or `"total"` |
-| Touch | `xSelection` for `chartXSelection`, or `.chartOverlay { proxy in chart.scrubOverlay { proxy.value(atX: $0.x) } }` for press and hold | `Modifier.chartScrub(chart)`, press and hold by default | `useVictoryScrub(chart, press, { useAnimatedReaction, scheduleOnRN })` from `@codual-ai/react-native-ui/victory-native`, or `scrub(x)` and `endScrub()` from any gesture library |
+| Touch | `xSelection` for `chartXSelection`, or `.chartOverlay { proxy in chart.scrubOverlay { proxy.value(atX: $0.x) } }` for press and hold | `Modifier.chartScrub(chart)`, press and hold by default | `useVictoryScrub(chart, press, { useAnimatedReaction, scheduleOnRN })` from `@codual/react-native-ui/victory-native`, or `scrub(x)` and `endScrub()` from any gesture library |
 | The selected point | `selection` (`x`, each series' `points`), `keepsSelectionOnRelease` | the same | the same |
 | Haptic tick | `UISelectionFeedbackGenerator` | `LocalHapticFeedback` | the `haptic` option (expo-haptics, say) |
 | Screen readers | `.chartAccessibility(chart)`: an adjustable element and an audio graph | `Modifier.chartSemantics(chart)`: adjustable with TalkBack | `{...chart.accessibilityProps}`: `accessibilityRole="adjustable"` |
