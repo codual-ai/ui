@@ -36,7 +36,7 @@ public final class PagedListModel<Item: Identifiable, Token> {
   /// The newer items that arrived while the first page loads, for the page it brings, and whether each was shown
   /// (and announced) then; nil while none loads.
   @ObservationIgnored var arrivedDuringFirstPage: [(item: Item, shown: Bool)]?
-  /// Which first-page load the arrivals belong to, so a cancelled one finishing late never clears the next one's.
+  /// Which first-page load the arrivals belong to, so a canceled one finishing late never clears the next one's.
   @ObservationIgnored private var firstPageLoad = 0
   @ObservationIgnored let screen: ScreenStatesModel<PagedContent<Item, Token>>
   @ObservationIgnored private(set) var pageLoad: Task<Void, Never>?
@@ -113,7 +113,7 @@ public final class PagedListModel<Item: Identifiable, Token> {
   }
 
   /// Loads the first page again while the list stays on screen, and replaces the whole list with it if it succeeds.
-  /// A page that is loading is cancelled first. Returns when the load finishes, as `.refreshable` expects.
+  /// A page that is loading is canceled first. Returns when the load finishes, as `.refreshable` expects.
   public func refresh() async {
     cancelPageLoad()
     await screen.refresh()
@@ -195,7 +195,7 @@ public final class PagedListModel<Item: Identifiable, Token> {
     let page = content
     let arrived = load == firstPageLoad ? arrivedDuringFirstPage ?? [] : []
     content.addNewer(arrived.map(\.item))
-    // A load the list cancelled is dropped: it mustn't move the list or announce anything.
+    // A load the list canceled is dropped: it mustn't move the list or announce anything.
     if direction == .reversed, !Task.isCancelled {
       // A list opening starts at the bottom by itself; a refresh scrolls there.
       if case .content = screen.state { showNewest(content.items.first?.id) } else { reachedBottom() }

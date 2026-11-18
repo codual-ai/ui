@@ -1,6 +1,6 @@
 import SwiftUI
 
-// The views `ScreenStates` shows for the ones an app leaves out: system components with no colours or fonts of their
+// The views `ScreenStates` shows for the ones an app leaves out: system components with no colors or fonts of their
 // own. Their text is looked up in the app's main bundle, so the app translates or replaces it in its string catalog.
 
 @MainActor

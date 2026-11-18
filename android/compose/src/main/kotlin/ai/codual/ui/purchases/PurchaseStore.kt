@@ -64,7 +64,7 @@ public sealed interface StorePurchaseResult {
 
 public enum class StoreSyncResult {
   Synced,
-  /** The user cancelled the store's sign-in. */
+  /** The user canceled the store's sign-in. */
   Cancelled,
 }
 

@@ -5,7 +5,7 @@ import kotlinx.coroutines.CoroutineScope
 
 internal data class Note(val id: Int, val title: String = "")
 
-/** The results a presenter reported, in order, as text that compares easily: "saved 1: Saved", "cancelled 2". */
+/** The results a presenter reported, in order, as text that compares easily: "saved 1: Saved", "canceled 2". */
 internal class ResultLog {
   val results = mutableListOf<String>()
 

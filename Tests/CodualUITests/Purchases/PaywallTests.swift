@@ -141,7 +141,7 @@ struct PaywallTests {
   }
 
   @Test("PU-28 the system buy button names the product and price for screen readers, and is enabled only when ready")
-  func theSystemBuyButtonIsLabelled() {
+  func theSystemBuyButtonIsLabeled() {
     #expect(PaywallText.buyLabel(monthly) == "Buy Pro Monthly, $2.99")
     #expect(PaywallText.buy(lifetime) == "Buy for 4,99 €")
     #expect(SystemBuyButton.isEnabled(.ready(monthly)))

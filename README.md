@@ -3,28 +3,158 @@
 [![CI](https://github.com/codual-ai/ui/actions/workflows/ci.yml/badge.svg)](https://github.com/codual-ai/ui/actions/workflows/ci.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 
-**Headless behaviours for mobile apps, the same on SwiftUI, Jetpack Compose and React Native, built for coding
-agents.** We handle the logic; your app keeps its design. A behaviour is the state, timing and edge cases behind a
-common screen: loading and retry, paging, form checks, purchases, picking items, sheets that ask before discarding
-changes, search as you type. It has no look of its own and shows your app's own views, so the code your agent writes
-shrinks to the part that is really yours.
+**Headless UI for mobile apps. Tested behaviors your agent can drop in, identical on iOS, Android and React
+Native.**
 
-> [!NOTE]
-> Not published yet: use the packages from source. [Screen states](spec/screen-states.md),
-> [lists](spec/lists.md), [forms](spec/forms.md), [purchases](spec/purchases.md), [selection](spec/selection.md),
-> [sheets](spec/sheets.md), [search](spec/search.md), [permissions](spec/permissions.md) and
-> [chart interactions](spec/charts.md) are done on all three platforms, with a skill that teaches coding agents to use
-> them ([`skills/codual-ui`](skills/codual-ui/SKILL.md)).
+Codual UI is the logic behind common screens (loading and retry, paging, forms, purchases, sheets, search and more)
+for iOS, Android and React Native, with no look of its own: it shows your app's views, so each app keeps
+its design. A [skill](skills/codual-ui/SKILL.md) teaches your coding agent when and how to use each behavior.
 
-## Screen states
+**[Read the docs](https://codual-ai.github.io/ui/)**
 
-A screen that loads data shows loading, then content, empty, failed (with retry) or offline. Screen states loads
-when the screen appears, cancels when it goes away, refreshes on pull while the current view stays, and never shows
-a cancelled load as an error. You pass the load and your content; any other view you leave out is a plain system
-one.
+<!-- demo film -->
+
+**Get started.** From your app's repository:
+
+```sh
+npx skills add codual-ai/ui@v0.1.0 --skill codual-ui   # teach your coding agent the behaviors
+npm install @codual/react-native-ui                    # or the Swift package or Android library, below
+```
+
+Then ask your agent for a screen as usual ("a paged list of orders with pull to refresh"): the skill tells it which
+behavior to use and how to wire it.
+
+Works with Claude Code, Codex, Cursor and other agents that read skills, on iOS, Android and React Native:
+[install for your agent and platform](#install).
+
+---
+
+## What it does
+
+| Behavior | What it handles | Spec |
+|---|---|---|
+| [Screen states](https://codual-ai.github.io/ui/behaviors/screen-states/) | Loading, content, empty, failed with retry, offline, pull to refresh, cancellation | [spec](spec/screen-states.md) |
+| [Lists](https://codual-ai.github.io/ui/behaviors/lists/) | Paging near the end, de-duplication, footers, refresh; chat-style reversed lists | [spec](spec/lists.md) |
+| [Forms](https://codual-ai.github.io/ui/behaviors/forms/) | Rules, when errors show, server checks, submit once, server errors per field, focus | [spec](spec/forms.md) |
+| [Purchases](https://codual-ai.github.io/ui/behaviors/purchases/) | Paywalls, buy and restore, entitlements, transactions from outside the buy flow | [spec](spec/purchases.md) |
+| [Selection](https://codual-ai.github.io/ui/behaviors/selection/) | Selection mode, select all, a maximum, identity across refresh, bulk actions | [spec](spec/selection.md) |
+| [Sheets](https://codual-ai.github.io/ui/behaviors/sheets/) | A result back to the presenter, "discard changes?", no closing while saving, a queue | [spec](spec/sheets.md) |
+| [Search](https://codual-ai.github.io/ui/behaviors/search/) | Debounce, cancellation, latest results only, recent searches, scopes, local filtering | [spec](spec/search.md) |
+| [Permissions](https://codual-ai.github.io/ui/behaviors/permissions/) | An explanation before the prompt, Settings guidance after a "no", limited grants | [spec](spec/permissions.md) |
+| [Chart interactions](https://codual-ai.github.io/ui/behaviors/chart-interactions/) | Range switching without a flash, touch snapping, haptics, screen-reader summaries | [spec](spec/charts.md) |
+
+## Why it exists
+
+- **Less code your app owns.** The agent writes the screen's views and passes the load; the loading flags, retry
+  paths, debounce timers, de-duplication and cancellation live here instead of in your app.
+- **One tested standard.** Every behavior starts as a written [spec](spec/) with a numbered list of the edge
+  cases apps get wrong, and every edge case has a test on every platform.
+- **Fixed once, for everyone.** A bug found in one app is fixed in the behavior, and every app that uses it gets
+  the fix.
+- **The same on every platform.** iOS, Android and React Native follow the same spec, so a screen behaves the same
+  wherever it runs.
+
+---
+
+## Install
+
+Two parts: the skill for your coding agent, and the package for your app's platform.
+
+### Your coding agent
+
+The skill in [`skills/codual-ui`](skills/codual-ui/SKILL.md) tells an agent which behavior fits a screen, the
+minimal correct code on each platform, and the mistakes to avoid. The [`skills`](https://github.com/vercel-labs/skills)
+CLI installs it into the current project (add `-g` for every project):
+
+| Agent | Command | Where it goes |
+|---|---|---|
+| Claude Code | `npx skills add codual-ai/ui@v0.1.0 --skill codual-ui -a claude-code` | `.claude/skills/codual-ui/` |
+| Codex | `npx skills add codual-ai/ui@v0.1.0 --skill codual-ui -a codex` | `.agents/skills/codual-ui/` |
+| Cursor | `npx skills add codual-ai/ui@v0.1.0 --skill codual-ui -a cursor` | `.agents/skills/codual-ui/` |
+| Others | `npx skills add codual-ai/ui@v0.1.0 --skill codual-ui` and pick your agent | your agent's skills folder |
+
+<details>
+<summary><b>Without the CLI</b></summary>
+
+The skill is one file. Copy it into your agent's skills folder:
+
+```sh
+mkdir -p .claude/skills/codual-ui   # Claude Code; .agents/skills/codual-ui for Codex and Cursor
+curl -fsSL https://raw.githubusercontent.com/codual-ai/ui/v0.1.0/skills/codual-ui/SKILL.md \
+  -o .claude/skills/codual-ui/SKILL.md
+```
+
+For an agent without skills, save `SKILL.md` in the repository and point its instructions file (`AGENTS.md`, say)
+at it.
+
+</details>
+
+### Your app
+
+#### SwiftUI (iOS 17 or later)
+
+Add the package in Xcode (File > Add Package Dependencies) or in `Package.swift`, and use the `CodualUI` product:
+
+```swift
+.package(url: "https://github.com/codual-ai/ui.git", from: "0.1.0")
+```
+
+```swift
+.target(name: "MyApp", dependencies: [.product(name: "CodualUI", package: "ui")])
+```
+
+#### Jetpack Compose (Android 7.0, API 24, or later)
+
+The Android libraries are built by [JitPack](https://jitpack.io/#codual-ai/ui) from the release tag. Add its
+repository in `settings.gradle.kts`:
+
+```kotlin
+dependencyResolutionManagement {
+  repositories {
+    google()
+    mavenCentral()
+    maven("https://jitpack.io")
+  }
+}
+```
+
+Then the libraries in your module's `build.gradle.kts`:
+
+```kotlin
+dependencies {
+  implementation("com.github.codual-ai.ui:codual-ui-compose:v0.1.0")
+  // Only for purchases, with Google Play Billing:
+  implementation("com.github.codual-ai.ui:codual-ui-play-billing:v0.1.0")
+}
+```
+
+The Play Billing store is a library of its own so that apps that sell nothing don't get the billing permission.
+
+#### React Native
+
+```sh
+npm install @codual/react-native-ui
+```
+
+It needs React 19 and React Native 0.78 or later. Three adapters are optional subpaths, each for a library you
+install yourself:
+
+| Import | For | Library |
+|---|---|---|
+| `@codual/react-native-ui/react-native-iap` | purchases | `react-native-iap` 17.4 or later |
+| `@codual/react-native-ui/react-native-permissions` | permission prompts on iOS | `react-native-permissions` 5 or later |
+| `@codual/react-native-ui/victory-native` | chart touch | Victory Native (the adapter imports nothing; you pass Reanimated's functions) |
+
+---
+
+## Quick start
+
+A screen that loads data, with loading, empty, failed, offline and pull to refresh, on each platform:
 
 ```swift
 // SwiftUI
+import CodualUI
+
 ScreenStates(load: { try await api.items() }) { items in
   List(items) { ItemRow(item: $0) }
 }
@@ -32,11 +162,16 @@ ScreenStates(load: { try await api.items() }) { items in
 
 ```kotlin
 // Jetpack Compose
+import ai.codual.ui.screenstates.ScreenStates
+import ai.codual.ui.screenstates.rememberScreenStates
+
 ScreenStates(rememberScreenStates { api.items() }) { items -> ItemList(items) }
 ```
 
 ```tsx
 // React Native
+import { ScreenStates } from "@codual/react-native-ui";
+
 <ScreenStates
   load={(signal) => api.items({ signal })}
   content={(items, refreshControl) => (
@@ -45,507 +180,34 @@ ScreenStates(rememberScreenStates { api.items() }) { items -> ItemList(items) }
 />
 ```
 
-The same pieces on each platform:
-
-| | SwiftUI | Jetpack Compose | React Native |
-|---|---|---|---|
-| The screen | `ScreenStates(load:content:)` | `ScreenStates(state) { content }` | `<ScreenStates load content />` |
-| The state machine, to draw it yourself | `ScreenStatesModel` | `ScreenStatesState`: `rememberScreenStates { }`, or in a ViewModel with `viewModelScope` | `useScreenStates(load)` |
-| Your views | `loading`, `empty`, `failed(error, retry)`, `offline(retry)`, `refreshError(error, dismiss)` | the same parameters | the same props |
-| Empty | a collection with no items, or `isEmpty:` | a collection or map with no items, or `isEmpty =` | an array, `Map` or `Set` with no items, or `isEmpty` |
-| Offline | `URLError` for no connection, or `isOffline:` | `UnknownHostException`, `ConnectException`, `NoRouteToHostException`, or `isOffline =` | `fetch`'s "Network request failed", or `isOffline` (a NetInfo check, say) |
-| Cancelling on leave | the load's task is cancelled | the load's coroutine is cancelled | the load's `AbortSignal` aborts; any other abort is a failure |
-| Pull to refresh | `.refreshable`, for your `List` or `ScrollView` | `PullToRefreshBox`, for your scrolling content | pass `refreshControl` to your list |
-| Built-in views' text | your app's string catalog | string resources named `codual_ui_*` | the `labels` prop |
-
-## Lists
-
-A list of data that comes in pages loads its first page as a screen state, then the next page as the end of the
-list comes near. It drops items already in the list, shows a footer while a page loads, when one fails (with retry,
-keeping the list) and at the end, and starts again from the first page on pull to refresh. Two pages never load at
-once, and a page still loading when the screen goes away or a refresh starts is cancelled and never added. You pass
-a page loader, which takes a token (none for the first page) and returns the page's items and the next token, or
-none at the end, and your row.
-
-A chat runs the other way: a reversed list starts at the newest item at the bottom, loads older pages as the top
-comes near without moving what's on screen (React Native: `FlatList`'s `maintainVisibleContentPosition`, on iOS
-and Android), and takes new messages through `appendNewer`, scrolling to them only
-when the newest row is showing and counting them otherwise.
-
-```swift
-// SwiftUI: rows in your List or LazyVStack
-PagedList(loadPage: { token in try await api.items(after: token) }) { item in
-  ItemRow(item: item)
-} content: { rows in
-  List { rows }
-}
-```
-
-```kotlin
-// Jetpack Compose: rows in a LazyColumn
-PagedList(rememberPagedList(key = { it.id }) { token -> api.items(after = token) }) { item -> ItemRow(item) }
-```
-
-```tsx
-// React Native: rows in a FlatList; any other prop goes to it
-<PagedList
-  loadPage={(token, signal) => api.items({ after: token, signal })}
-  keyExtractor={(item) => item.id}
-  renderItem={({ item }) => <ItemRow item={item} />}
-/>
-```
-
-| | SwiftUI | Jetpack Compose | React Native |
-|---|---|---|---|
-| The list | `PagedList(loadPage:row:content:)` | `PagedList(state) { row }` | `<PagedList loadPage keyExtractor renderItem />` |
-| The state machine, to draw it yourself | `PagedListModel` | `PagedListState`: `rememberPagedList { }`, or in a ViewModel with `viewModelScope` | `usePagedList(loadPage, { keyExtractor })` |
-| A page | `Page(items:next:)`, `next` nil at the end | `Page(items, next)`, `next` null at the end | `{ items, next }`, `next` null or left out at the end |
-| Item identity, for de-duplication | `Identifiable` | `key =`, also the `LazyColumn` key | `keyExtractor`, also `FlatList`'s |
-| Near the end | a row's `onAppear`, `threshold` rows from the end (5) | the `LazyListState`'s last visible item, `threshold` items from the end (5) | `onEndReached`, with `onEndReachedThreshold` |
-| The footer | `footer: { PagedListFooter in … }`: `.more(loadMore)`, `.loading`, `.failed(error, retry)`, `.end` | `footer = { … }`: `More(loadMore)`, `Loading`, `Failed(error, retry)`, `End` | `footer={(footer) => …}`: `status` `"more"` (`loadMore`), `"loading"`, `"failed"` (`error`, `retry`), `"end"` |
-| A row's position | `row: { item, position in … }`: `position.index`, `position.isLast` | the row's scope: `index`, `isLast` | `renderItem`'s info: `index`, `isLast` |
-| A first page the screen already has | `initialPage:` | `initialPage =` | `initialPage` |
-| The first page's views | screen states' `loading`, `empty`, `failed`, `offline`, `refreshError` | the same parameters | the same props |
-| Cancelling | the page's task is cancelled | the page's coroutine is cancelled | the page's `AbortSignal` aborts |
-| New items announced | `AccessibilityNotification.Announcement`, from the model too | a polite live region; drawing it yourself, add `PagedListAnnouncements(state)` | `AccessibilityInfo.announceForAccessibilityWithOptions`, queued |
-| Built-in text | your app's string catalog | string resources named `codual_ui_*` | the `labels` prop |
-| A chat (reversed) | `PagedListModel(direction: .reversed)`, `PagedList(model:)`; `appendNewer`, `newItemCount`, `scrollToBottom()` | `rememberPagedList(reverseLayout = true)`; the same three | `usePagedList(…, { inverted: true })`, `<PagedListView list keyExtractor />`; the same three |
-
-## Forms
-
-A form keeps what is typed, checks each field with its rules, and shows a field's error once the field is left or a
-submit is tried, never while it is first typed. A rule that asks the server (a username that's taken) waits for
-typing to pause and drops answers for old values. Submit runs once however often it is tapped, waits for those
-checks, moves focus to the first field with an error, puts errors the server sends back under their fields, and
-keeps everything typed when it fails. Next and Done move through the fields, and the form tells you when leaving
-would lose changes. Every message is your app's, and your own fields, labels and buttons draw it all.
-
-```swift
-// SwiftUI
-enum Field { case email, password }
-@State private var form = FormModel<Field>([
-  FormField(.email, rules: [.required("Enter your email"), .email("Enter a valid email")]),
-  FormField(.password, trim: false, rules: [.minLength(8, "Use 8 characters or more")]),
-])
-@FocusState private var focus: Field?
-
-TextField("Email", text: form.binding(.email)).formField(form, .email, focus: $focus)
-SecureField("Password", text: form.binding(.password)).formField(form, .password, focus: $focus, onDone: signUp)
-Button("Sign Up", action: signUp).disabled(form.isSubmitting)
-
-func signUp() { form.submit { values in try await api.signUp(values[.email], values[.password]) } }
-```
-
-```kotlin
-// Jetpack Compose
-val form = rememberForm(listOf(
-  FormField(Field.Email, rules = listOf(required("Enter your email"), email("Enter a valid email"))),
-  FormField(Field.Password, trim = false, rules = listOf(minLength(8, "Use 8 characters or more"))),
-))
-val email = form.field(Field.Email)
-OutlinedTextField(email.value, email.onValueChange, email.modifier, isError = email.error != null,
-  supportingText = email.error?.let { { Text(it) } }, keyboardOptions = email.keyboardOptions,
-  keyboardActions = email.keyboardActions)
-Button(onClick = { form.submit { values -> api.signUp(values[Field.Email], values[Field.Password]) } },
-  enabled = !form.isSubmitting) { Text("Sign Up") }
-```
-
-```tsx
-// React Native
-const form = useForm({
-  fields: {
-    email: { rules: [required("Enter your email"), email("Enter a valid email")] },
-    password: { trim: false, rules: [minLength(8, "Use 8 characters or more")] },
-  },
-});
-const signUp = () => form.submit((values) => api.signUp(values.email, values.password));
-
-<TextInput {...form.field("email")} accessibilityLabel="Email" keyboardType="email-address" />
-{form.error("email") && <Text>{form.error("email")}</Text>}
-<TextInput {...form.field("password", { onDone: signUp })} accessibilityLabel="Password" secureTextEntry />
-<Button title="Sign Up" onPress={signUp} disabled={form.isSubmitting} />
-```
-
-| | SwiftUI | Jetpack Compose | React Native |
-|---|---|---|---|
-| The form | `FormModel(fields, initialValues:)`, in `@State` | `FormState`: `rememberForm(fields)`, or in a ViewModel with `viewModelScope` | `useForm({ fields, initialValues })` |
-| A field | `FormField(.email, trim:, rules:, asyncRule:)` | `FormField(Field.Email, trim, rules, asyncRule)` | `email: { trim, rules, asyncRule }`, in key order |
-| Rules | `.required`, `.minLength`, `.maxLength`, `.pattern`, `.email`, `.number`, `.matches`, `FormRule(message) { value, values in … }` | `required`, `minLength`, `maxLength`, `pattern`, `email`, `number`, `matches`, `rule(message) { value, values -> … }` | `required`, `minLength`, `maxLength`, `pattern`, `email`, `number`, `matches`, `rule(message, (value, values) => …)` |
-| A server check | `AsyncFormRule { value in … }`, cancelled with its task | `AsyncFormRule { value -> … }`, cancelled with its coroutine | `asyncRule((value, signal) => …)`, aborted with its signal |
-| Wiring a field | `TextField(…, text: form.binding(.email)).formField(form, .email, focus: $focus)` | `form.field(Field.Email)`: `value`, `onValueChange`, `modifier`, `keyboardOptions`, `keyboardActions` | `<TextInput {...form.field("email")} />` |
-| The error to show | `form.error(.email)` | `form.error(Field.Email)`, or the binding's `error` | `form.error("email")` |
-| Submit | `form.submit { values in … }`, `isSubmitting`, `submitError` | `form.submit { values -> … }`, `isSubmitting`, `submitError` | `form.submit(async (values) => …)`, `isSubmitting`, `submitError` |
-| Server errors for fields | `throw FormFieldErrors([.email: "…"])` | `throw FormFieldErrors(mapOf(Field.Email to "…"))` | `throw new FormFieldErrors({ email: "…" })` |
-| Numbers in the person's locale | `.number("…", min: 0)`, `parseNumber(_:)` | `number("…", min = 0.0)`, `parseNumber(text)` | `number("…", { min: 0 })`, `parseNumber(text)` |
-| A field that's hidden for now | `FormField(…, isActive: false)`, `form.setActive(.password, false)` | `FormField(…, isActive = false)`, `form.setActive(Field.Password, false)` | `password: { active: !usePasskey }` |
-| "Discard changes?" | `shouldConfirmDiscard`, `reset()` | `shouldConfirmDiscard`, `reset()` | `shouldConfirmDiscard`, `reset()` |
-| Errors for screen readers | an accessibility hint on the field; submit errors announced | the field's error semantics; focus moves to it, and `FormAnnouncements(form)` speaks it when it has focus already | `accessibilityHint` on the field; submit errors announced |
-
-## Purchases
-
-In-app purchases and subscriptions, with the store behind a small adapter: StoreKit 2 on SwiftUI, Google Play
-Billing on Compose, react-native-iap (or your own) on React Native. Create one purchases object when the app launches:
-it listens for transactions for as long as the app runs (renewals, Ask to Buy approvals, purchases on another device,
-refunds), finishes each one once, after your `deliver` step, and says what the user owns. A paywall loads the
-products as a screen state and shows your rows and buttons; a second tap never buys twice, and a cancelled purchase
-is never an error. Receipts are not checked on a server: `deliver` gets the store's signed proof to send to yours.
-
-```swift
-// SwiftUI: once, for the app's lifetime, in the App struct (not a view's @State, which SwiftUI builds again)
-private let purchases = PurchasesModel(store: StoreKitStore())  // then .environment(purchases)
-
-Paywall(purchases, productIds: ["pro.monthly", "pro.yearly"]) { paywall in
-  VStack {
-    ForEach(paywall.products) { SystemProductRow($0, paywall: paywall) }
-    SystemBuyButton(paywall)
-    SystemRestoreButton(paywall)
-  }
-}
-```
-
-```kotlin
-// Jetpack Compose: once, for the app's lifetime (ai.codual.ui:codual-ui-play-billing)
-val purchases = Purchases(PlayBillingStore(application), MainScope())
-
-Paywall(purchases, listOf("pro.monthly", "pro.yearly")) { paywall ->
-  Column {
-    paywall.products.forEach { SystemProductRow(it, paywall) }
-    SystemBuyButton(paywall)
-    SystemRestoreButton(paywall)
-  }
-}
-```
-
-```tsx
-// React Native: once, outside any component (react-native-iap is an optional peer dependency)
-import * as iap from "react-native-iap";
-import { createReactNativeIapStore } from "@codual/react-native-ui/react-native-iap";
-const purchases = createPurchases(createReactNativeIapStore(iap));
-
-<Paywall
-  purchases={purchases}
-  productIds={["pro.monthly", "pro.yearly"]}
-  content={(paywall) => (
-    <View>
-      {paywall.products.map((product) => <SystemProductRow key={product.id} product={product} paywall={paywall} />)}
-      <SystemBuyButton paywall={paywall} />
-      <SystemRestoreButton paywall={paywall} />
-    </View>
-  )}
-/>
-```
-
-| | SwiftUI | Jetpack Compose | React Native |
-|---|---|---|---|
-| Purchases, for the app's lifetime | `PurchasesModel(store:deliver:)` | `Purchases(store, scope, deliver)` | `createPurchases(store, { deliver })`, read with `usePurchases` |
-| The store | `StoreKitStore()` | `PlayBillingStore(application, consumableProductIds)`, in `codual-ui-play-billing` | `createReactNativeIapStore(iap, { consumableProductIds })` |
-| Your own store | `PurchaseStore` | `PurchaseStore` | `PurchaseStore` |
-| What the user owns | `entitlements` (nil until known), `isEntitled(to:)` | `entitlements` (null until known), `isEntitled(id)` | `entitlements` (undefined until known), `isEntitled(id)` |
-| The paywall | `Paywall(purchases, productIds:) { paywall in … }` | `Paywall(purchases, productIds) { paywall -> … }` | `<Paywall purchases productIds content />` |
-| Your views | `content`, `message(message, dismiss)`, and screen states' `loading`, `empty`, `failed`, `offline` | the same parameters | the same props |
-| System parts | `SystemProductRow`, `SystemBuyButton`, `SystemRestoreButton`, `SystemPurchaseMessageAlert` | the same, with `SystemPurchaseMessageDialog` | the same |
-| Status | `status`: `.purchasing`, `.pending`, `.purchased`, `.cancelled`, `.failed`, `.restoring`, `.restored`, `.nothingToRestore`, `.restoreFailed` | `status`: the same, as `PurchaseStatus` | `status.status`: the same names, kebab-case |
-| Server verification | `deliver: { transaction in … transaction.proof … }`; throw to leave it unfinished | the same | the same; reject to leave it unfinished |
-| Built-in text | your app's string catalog | string resources named `codual_ui_*` | the `labels` and `paywallLabels` props |
-
-## Selection
-
-A list whose items the person picks (photos to share, messages to delete) has a selection mode that a Select button
-or a long press enters and Done, Cancel or back leave. Selection keeps the selected items by identity across
-refresh and paging, drops the ones that go away or become disabled, selects all the loaded items, keeps a maximum,
-and runs bulk actions: once, with a confirmation first for destructive ones, clearing the selection when they
-succeed and keeping it when they fail. Your rows draw the checkmarks.
-
-```swift
-// SwiftUI
-@State private var selection = SelectionModel<Photo>()
-
-PagedList(selection: selection, loadPage: { token in try await api.photos(after: token) }) { photo in
-  PhotoRow(photo: photo, isSelected: selection.isSelected(photo))
-    .selectionRow(photo, in: selection) { open(photo) }
-} content: { rows in
-  List { rows }
-}
-.selectionMode(selection)
-.toolbar { SelectionModeButton(selection) }
-```
-
-```kotlin
-// Jetpack Compose
-val selection = rememberSelection<Photo, String>(key = { it.id })
-PagedList(rememberPagedList(key = { it.id }) { token -> api.photos(after = token) }, selection = selection) { photo ->
-  PhotoRow(photo, selection.isSelected(photo), Modifier.selectionRow(selection, photo) { open(photo) })
-}
-```
-
-```tsx
-// React Native
-const selection = useSelection({ keyExtractor: (photo: Photo) => photo.id });
-<PagedList
-  selection={selection}
-  loadPage={(token, signal) => api.photos({ after: token, signal })}
-  keyExtractor={(photo) => photo.id}
-  renderItem={({ item }) => (
-    <Pressable {...selection.rowProps(item, { onPress: () => open(item) })}>
-      <PhotoRow photo={item} isSelected={selection.isSelected(item)} />
-    </Pressable>
-  )}
-/>
-```
-
-| | SwiftUI | Jetpack Compose | React Native |
-|---|---|---|---|
-| The state | `SelectionModel<Item>`, in `@State` | `SelectionState`: `rememberSelection(key = { })`, or in a ViewModel | `useSelection({ keyExtractor })` |
-| Options | `kind:` (`.multiple`, `.single`), `max:`, `activation:` (`.onDemand`, `.always`), `isDisabled:` | `kind =`, `max =`, `activation =`, `isDisabled =` | `kind`, `max`, `activation`, `isDisabled` |
-| The items | `PagedList(selection:)`, `.syncSelection(_:items:)` or `update(items:)` | `PagedList(selection =)`, `SyncSelection(selection, items)` or `updateItems` | `<PagedList selection>`, the `items` option or `updateItems` |
-| A row | `.selectionRow(item, in:) { open }`, or `List(selection: selection.listSelection)` | `Modifier.selectionRow(selection, item) { open }` | `selection.rowProps(item, { onPress })` on a `Pressable`; a plain `FlatList` with a memoized `renderItem` takes `extraData={selection.selectedKeys}` |
-| The mode | `enter()`, `longPress(_:)`, `exit()`, `isActive`; `.selectionMode(_:)` gives a `List` its `EditMode` | `enter()`, `longPress()`, `exit()`, `isActive` | `enter()`, `longPress()`, `exit()`, `isActive` |
-| Back leaves the mode | `.selectionMode(_:)` hides the back button and the swipe back | `BackHandler`, from `rememberSelection` (`SelectionBackHandler` for a ViewModel's) | Android's hardware back, from `useSelection` |
-| Filters and search | `update(visibleItems:)`, or `.syncSelection(_:items:visibleItems:)`: hidden items stay selected, `hiddenCount` | `updateVisibleItems`, `SyncSelection(selection, items, visibleItems)` | `updateVisibleItems`, the `visibleItems` option |
-| Select all | `selectAll()`, `deselectAll()`, `isAllSelected`: the visible loaded items only | the same | the same |
-| All on the server | `serverTotal`, `canSelectAllOnServer`, `selectAllOnServer()`, `isAllOnServerSelected` for the action | the same | the same, `serverTotal` an option |
-| Identity | `Identifiable`; a `List` row's tag is `item.id`, never the object | `key = { it.id }` | `keyExtractor` |
-| The count | `count`, `total` ("3 of 10"), `title` ("3 Selected") | `count`, `total`, `selectionTitle(selection)` | `count`, `total`, `title` |
-| Bulk actions | `perform { ids, context in }` (`context.isAllOnServer`), `performAfterConfirmation { }` then `confirmPendingAction()`; `isPerforming`, `actionError` | the same, with `suspend` actions | the same, with `async` actions |
-| System buttons | `SelectionModeButton`, `SelectAllButton` | the same, Material 3 | the same, React Native's `Button` |
-| Restoration | `.restoresSelection(_:key:)`, in `@SceneStorage` | `rememberSelection` saves it | not supported: no system restoration for JavaScript |
-| Announcements | "3 of 10 selected.", from the model | add `SelectionAnnouncements(selection)` (`PagedList` has one) | from the hook |
-| Built-in text | your app's string catalog | string resources named `codual_ui_*` | the `labels` option |
-
-## Sheets
-
-A sheet, bottom sheet or full-screen cover that edits an item hands a result back to the screen that presented it:
-saved, with a value, or cancelled. Every way of closing it (Cancel, a swipe down, a tap outside, the Android back
-button, Escape) goes through the same rules: a sheet with unsaved changes asks before it throws them away, a sheet
-that is saving can't close, a successful save closes it, and a second request while one is open waits its turn. You
-pass the sheet's content and say when it has unsaved changes.
-
-```swift
-// SwiftUI
-@State private var editing = SheetPresenter<Note, Note>()
-
-List(notes) { note in Button(note.title) { editing.present(note) } }
-  .sheet(editing, onResult: { if case .saved(_, let note) = $0 { store.update(note) } }) { note in
-    NoteEditor(note: note, sheet: editing)  // Cancel: sheet.requestDismiss(), Save: sheet.save { try await api.save(draft) }
-  }
-```
-
-```kotlin
-// Jetpack Compose
-val editing = rememberSheetPresenter<Note, Note> { result -> if (result is SheetResult.Saved) store.update(result.value) }
-PresentedBottomSheet(editing) { note -> NoteEditor(note, editing) }
-```
-
-```tsx
-// React Native
-const editing = useSheet<Note, Note>({ onResult: (result) => result.status === "saved" && store.update(result.value) });
-<Modal presentationStyle="pageSheet" {...editing.bind(modalSheet)}>
-  {editing.item && <NoteEditor note={editing.item} sheet={editing} />}
-</Modal>
-```
-
-| | SwiftUI | Jetpack Compose | React Native |
-|---|---|---|---|
-| The state | `SheetPresenter<Item, Value>` | `SheetPresenter<Item, Value>`: `rememberSheetPresenter { }`, or in a ViewModel with `viewModelScope` | `useSheet<Item, Value>({ onResult })` |
-| Showing it | `.sheet(presenter)`, `.fullScreenCover(presenter)` | `PresentedBottomSheet(presenter)`, `PresentedDialog(presenter)` | `bind(modalSheet)` for `Modal`, or `bind(adapter)` for a bottom-sheet library |
-| Open, close, save | `present(_:)`, `requestDismiss()`, `save { }` | `present(item, opener)`, `requestDismiss()`, `save { }` | `present(item, { opener })`, `requestDismiss()`, `save((signal) => …)` |
-| Unsaved changes | `hasUnsavedChanges = …` | `hasUnsavedChanges = …` | `setHasUnsavedChanges(…)` |
-| The result | `SheetResult`: `.saved(item, value)`, `.cancelled(item)` | `SheetResult`: `Saved(item, value)`, `Cancelled(item)` | `{ status: "saved", item, value }`, `{ status: "cancelled", item }` |
-| Blocking the swipe | `interactiveDismissDisabled`, and the blocked swipe asks | the `SheetState`'s `confirmValueChange` | `Modal`'s `allowSwipeDismissal`; `isDismissDisabled` for a library |
-| Back and Escape | Escape and the VoiceOver escape gesture | `BackHandler`, and the dialog's back | `Modal`'s `onRequestClose`, or `BackHandler` |
-| The discard confirmation | a system confirmation dialog, from your string catalog | a Material 3 `AlertDialog`, string resources named `codual_ui_*` | `Alert.alert`, with the `labels` option |
-
-## Search
-
-A screen that searches as the person types waits for the typing to stop (300 ms) before it searches, searches at
-once on the keyboard's search button, cancels the running search when the query changes, and only ever shows the
-latest query's results. The results are a paged list, with loading, failed and offline views from screen states and
-a "no results for X" view of their own. Submitted queries become recent searches (no duplicates, capped, removable,
-in a store you choose), which show while the field is empty. Data already in memory is filtered at once instead.
-
-```swift
-// SwiftUI: inside a NavigationStack; the field is the system's .searchable one
-@State private var search = SearchModel { query, token in try await api.search(query, after: token) }
-
-SearchResults(search) { item in ItemRow(item: item) } content: { rows in List { rows } }
-```
-
-```kotlin
-// Jetpack Compose: your SearchBar or TextField gets state.query and submit()
-val search = rememberSearch(key = { it.id }) { query, token -> api.search(query, after = token) }
-SearchResults(search) { item -> ItemRow(item) }
-```
-
-```tsx
-// React Native
-const search = useSearch({
-  search: (query, { token, signal }) => api.search(query, { after: token, signal }),
-  keyExtractor: (item) => item.id,
-});
-<TextInput {...search.inputProps} placeholder="Search" />
-<SearchResults search={search} renderItem={({ item }) => <ItemRow item={item} />} />
-```
-
-| | SwiftUI | Jetpack Compose | React Native |
-|---|---|---|---|
-| The screen | `SearchResults(model) { row } content: { rows }` | `SearchResults(state) { row }` | `<SearchResults search renderItem />` |
-| The state machine, to draw it yourself | `SearchModel` | `SearchState`: `rememberSearch { }`, or `SearchState(viewModelScope, …)` in a ViewModel | `useSearch(options)` |
-| The field | `.searchable`, `.searchSuggestions` and `.onSubmit(of: .search)`, applied for you | `query`, `isExpanded` and `KeyboardActions(onSearch = { state.submit() })` on your `SearchBar` or `TextField` | `inputProps` for a `TextInput` |
-| The search | `search: { query, token in … }` (or `query, scope, token`) returning a `Page` | `search = { query, token -> … }` returning a `Page` | `search: (query, { token, scope, signal }) => …` returning a page |
-| Local mode | `SearchModel(items:matches:)` | `rememberLocalSearch(items, key) { item, query -> … }` | `useSearch({ items, matches, keyExtractor })` |
-| Scopes | `.searchScopes($model.scope)` | `rememberScopedSearch(initialScope = …)`, `state.scope = …` | `initialScope`, `setScope` |
-| Recent searches | `RecentSearchStore`: `InMemoryRecentSearches`, `UserDefaultsRecentSearches` | `RecentSearchStore`: `InMemoryRecentSearches`, `SharedPreferencesRecentSearches` | `RecentSearchStore` (sync or async), `createInMemoryRecentSearches()` |
-| Your views | `initial` (under the field), `suggestions(recent)`, `noResults(query)`, and the list's and screen states' | `suggestions(recent)`, `noResults(query)`, and the list's and screen states' | the same props as Compose |
-| Keyboard on scroll | `.scrollDismissesKeyboard(.immediately)` | `Modifier.dismissKeyboardOnScroll()` | `listProps` |
-| Results announced | `AccessibilityNotification.Announcement`, once the typing settles | a polite live region, `SearchAnnouncements(state)` | `AccessibilityInfo.announceForAccessibilityWithOptions`, queued |
-| Restoring the query | `initialQuery:`, from `@SceneStorage` | `rememberSaveable`, built in | `initialQuery` |
-
-## Permissions
-
-Asking for a permission at the right moment: notifications, the camera, photos, location while in use, the
-microphone and contacts, or any other through a small adapter. Creating a permission reads its status and never
-prompts. When the user taps something that needs it, `ask` shows your explanation first and the system prompt only
-once they go on; after a "no" the system won't repeat, it shows your Settings guidance instead, and the status is read
-again when the app comes back from Settings. Limited photos and an approximate location count as usable, a double tap
-never prompts twice, and on SwiftUI and Compose a missing Info.plist usage string or manifest entry reads as
-unavailable instead of crashing (React Native can't read Info.plist, so there the usage strings are yours to add).
-The explanation, the guidance and every word in them are yours.
-
-```swift
-// SwiftUI (NSCameraUsageDescription in Info.plist)
-@State private var camera = PermissionModel(.camera)
-
-Button("Scan") { Task { if await camera.ask().isUsable { scanning = true } } }
-  .sheet(isPresented: camera.isExplaining) { CameraExplanation(onContinue: camera.accept) }  // a swipe declines
-  .alert("Turn On the Camera", isPresented: camera.isShowingSettingsGuidance) {
-    Button("Open Settings", action: camera.openSettings)
-    Button("Not Now", role: .cancel) {}
-  }
-```
-
-```kotlin
-// Jetpack Compose (<uses-permission android:name="android.permission.CAMERA" /> in the manifest)
-val camera = rememberPermission(AndroidPermission.Camera)
-
-Button(onClick = { scope.launch { if (camera.ask().isUsable) scanning = true } }) { Text("Scan") }
-if (camera.phase == PermissionPhase.Explaining) CameraExplanation(onContinue = camera::accept, onDismiss = camera::decline)
-if (camera.phase == PermissionPhase.SettingsGuidance) SettingsDialog(onOpen = camera::openSettings, onDismiss = camera::decline)
-```
-
-```tsx
-// React Native: PermissionsAndroid on Android, react-native-permissions (an optional peer dependency) on iOS
-import * as permissions from "react-native-permissions";
-import { createReactNativePermissionsAccess } from "@codual/react-native-ui/react-native-permissions";
-import { configurePermissions, isUsable, permissionMemory, usePermission } from "@codual/react-native-ui";
-import { createMMKV } from "react-native-mmkv";
-configurePermissions({ memory: permissionMemory(createMMKV()) });  // once, at launch: declines last across launches
-const cameraAccess = createReactNativePermissionsAccess(permissions, "camera");
-
-const camera = usePermission(cameraAccess);
-<Button title="Scan" onPress={async () => setScanning(isUsable(await camera.ask()))} />
-<CameraExplanation visible={camera.phase === "explaining"} onContinue={camera.accept} onDismiss={camera.decline} />
-```
-
-| | SwiftUI | Jetpack Compose | React Native |
-|---|---|---|---|
-| The permission | `PermissionModel(.camera)`, in `@State` | `rememberPermission(AndroidPermission.Camera)` | `usePermission(access)`, or `createPermission(access)` to share one |
-| Built in | `.notifications`, `.camera`, `.photos`, `.locationWhenInUse`, `.microphone`, `.contacts` | `AndroidPermission.Notifications`, `Camera`, `Photos`, `LocationWhenInUse`, `Microphone`, `Contacts` | `androidPermission("camera")` (Android), `createReactNativePermissionsAccess(permissions, "camera")` (both) |
-| Another permission | `PermissionAccess` | `AndroidPermission("bluetooth", BLUETOOTH_CONNECT)`, or `PermissionAccess` | `androidPermission({ id, permissions })`, or `PermissionAccess` |
-| Status | `status` (nil until read): `.notDetermined`, `.granted`, `.limited`, `.provisional`, `.denied`, `.blocked`, `.restricted`, `.unavailable(reason:)`; `isUsable` | `status` (null until read): the same, as `PermissionStatus` | `status` (undefined until read): `status.status`, the same names, kebab-case; `isUsable` |
-| Asking | `ask()` on a tap, `suggest()` at a moment you choose, `askForFullAccess()` for more than limited; each answers with the status | the same, as suspend functions | the same, as promises |
-| Your views | by `phase`: `.explaining` (`accept()`, `decline()`), `.settingsGuidance` (`openSettings()`, `decline()`) | by `phase`: `Explaining`, `SettingsGuidance` | by `phase`: `"explaining"`, `"settings-guidance"` |
-| Reading again | when the app returns to the foreground | when the activity resumes | when the app becomes active |
-| Your views' bindings | `isExplaining`, `isShowingSettingsGuidance`: dismissing either declines | call `decline()` in `onDismissRequest` | call `decline()` when your modal closes |
-| Remembered across launches | `UserDefaults` | SharedPreferences | `configurePermissions({ memory: permissionMemory(mmkv) })`, once at launch |
-
-## Chart interactions
-
-A chart of data over a range the person picks: a share price, steps, revenue. Your app draws it with its own
-library (Swift Charts, Vico, Victory Native or any other); chart interactions does everything around the drawing.
-It loads the selected range as a screen state, keeps the old range's series on screen, marked stale, while a new
-range loads (never a flash of loading), drops a late answer for a range no longer selected, snaps a touch to the
-nearest point with one haptic tick per point, and gives screen readers a summary (first, last, low, high, change),
-a way to step through the points and, on iOS, an audio graph. Every number and date goes through your formatters.
-
-```swift
-// SwiftUI, with Swift Charts
-@State private var chart = ChartInteraction<String, Date>(title: "Price", range: "1D", formatY: formatPrice) {
-  query in try await api.prices(query.range)  // returns ChartData(series: [ChartSeries(id:name:points:)])
-}
-
-if case .content(let data) = chart.state {
-  Chart(data.series[0].points, id: \.x) { LineMark(x: .value("Time", $0.x), y: .value("Price", $0.y)) }
-    .chartXSelection(value: chart.xSelection)
-    .chartAccessibility(chart)
-    .opacity(chart.isStale ? 0.5 : 1)
-}
-Picker("Range", selection: Binding(get: { chart.range }, set: chart.select)) { … }
-```
-
-```kotlin
-// Jetpack Compose, with Vico or any chart
-val chart = rememberChartInteraction(title = "Price", range = "1D") { query -> api.prices(query.range) }
-
-CartesianChartHost(…, modifier = Modifier.chartScrub(chart).chartSemantics(chart))
-```
-
-```tsx
-// React Native, with Victory Native or any chart
-const chart = useChartInteraction({
-  title: "Price",
-  initialRange: "1D",
-  load: ({ range }, signal) => api.prices(range, { signal }),
-  haptic: () => Haptics.selectionAsync(),
-});
-
-// Victory Native's press state, through the adapter, which imports nothing: pass Reanimated's useAnimatedReaction and
-// react-native-worklets' scheduleOnRN (on Reanimated 3, runOnJS instead)
-const { state: press } = useChartPressState({ x: 0, y: { y: 0 } });
-useVictoryScrub(chart, press, { useAnimatedReaction, scheduleOnRN });
-
-<View {...chart.accessibilityProps}>
-  <CartesianChart
-    data={points} xKey="x" yKeys={["y"]} chartPressState={press}
-    chartPressConfig={{ pan: { activateAfterLongPress: 300 } }}  // inside a ScrollView
-  />
-</View>
-```
-
-| | SwiftUI | Jetpack Compose | React Native |
-|---|---|---|---|
-| The state | `ChartInteraction(title:range:load:)`, in `@State` | `ChartInteractionState`: `rememberChartInteraction(title, range) { }`, or in a ViewModel with `viewModelScope` | `useChartInteraction({ title, initialRange, load })` |
-| What a load returns | `ChartData(series:previousPeriod:)` of `ChartSeries(id:name:points:)`, x a `Date`, `Double` or `Int` | `ChartData(series, previousPeriod)` of `ChartSeries(id, name, points)`, x a number | `{ series, previousPeriod }` of `{ id, name, points }`, x a number |
-| The series as a screen state | `state`: `.loading`, `.content(data)`, `.empty` (no data in range), `.failed`, `.offline`; `retry()`, `refresh()` | the same, as `ScreenState` | `state.status`: the same names |
-| Ranges | `select(_:)`, `range`, `isStale` while the old series show | `select(range)`, `range`, `isStale` | `select(range)`, `range`, `isStale` |
-| Previous period | `compareToPreviousPeriod(true)`, `comparisonMeasure: .last` or `.total` | `compareToPreviousPeriod(true)`, `ChartComparisonMeasure` | `compareToPreviousPeriod(true)`, `comparisonMeasure: "last"` or `"total"` |
-| Touch | `xSelection` for `chartXSelection`, or `.chartOverlay { proxy in chart.scrubOverlay { proxy.value(atX: $0.x) } }` for press and hold | `Modifier.chartScrub(chart)`, press and hold by default | `useVictoryScrub(chart, press, { useAnimatedReaction, scheduleOnRN })` from `@codual/react-native-ui/victory-native`, or `scrub(x)` and `endScrub()` from any gesture library |
-| The selected point | `selection` (`x`, each series' `points`), `keepsSelectionOnRelease` | the same | the same |
-| Haptic tick | `UISelectionFeedbackGenerator` | `LocalHapticFeedback` | the `haptic` option (expo-haptics, say) |
-| Screen readers | `.chartAccessibility(chart)`: an adjustable element and an audio graph | `Modifier.chartSemantics(chart)`: adjustable with TalkBack | `{...chart.accessibilityProps}`: `accessibilityRole="adjustable"` |
-| Summary | `summaries` (first, last, low, high, change), `spokenSummary`, `selectionDescription` | the same | the same |
-| Formatting | `formatX:`, `formatY:`, `locale:`; a `Date` x reads as a date | `formatX`, `formatY`, `xKind = ChartXKind.Time` for epoch milliseconds, the resources' locale | `formatX`, `formatY`, `xKind: "time"` for epoch milliseconds, `locale` |
-| Built-in text | your app's string catalog | string resources named `codual_ui_chart_*` | the `labels` option |
+Every view you leave out is a plain, accessible system one. Pass your own where the design needs it, by the same
+names on every platform: `loading`, `empty`, `failed`, `offline` and `refreshError`. The
+[docs](https://codual-ai.github.io/ui/) cover every behavior.
 
 ## How it works
 
-Every behaviour starts as a written spec in [`spec/`](spec/): its states, its transitions, and a numbered list of
+Every behavior starts as a written spec in [`spec/`](spec/): its states, its transitions, and a numbered list of
 the edge cases apps get wrong. Every platform implements the same spec, and each edge case has a test on each of
-them, named by its ID (`SS-07`), so the behaviour is identical on iOS and Android.
+them, named by its ID (`SS-07`). CI fails if an edge case loses its test on any platform.
 
 ```
-spec/            one spec per behaviour, shared by every platform
+spec/            one spec per behavior, shared by every platform
 Sources/         the Swift package (SwiftUI, iOS 17 or later)
 Tests/
 android/         the Jetpack Compose library (Android 7.0, API 24, or later) and its Play Billing store
 react-native/    the React Native package
 scripts/         the check that every edge case is tested on every platform
-skills/          the skill that teaches coding agents to use the behaviours
+skills/          the skill that teaches coding agents to use the behaviors
+site/            the docs site
 ```
 
-## Contributing
+## Status
 
-See [CONTRIBUTING.md](CONTRIBUTING.md): a new behaviour starts with its spec.
+0.1 is the first release, with the nine behaviors above on all three platforms. Next: onboarding, undo after
+delete, and drag to reorder. The API may still change before 1.0; the [changelog](CHANGELOG.md) lists every change.
 
-## License
+## Contributing, security and license
 
-[Apache License 2.0](LICENSE).
+- [CONTRIBUTING.md](CONTRIBUTING.md): a new behavior starts with its spec.
+- [SECURITY.md](SECURITY.md): report vulnerabilities privately, never in a public issue.
+- [Apache License 2.0](LICENSE). Copyright 2026 Hyperion Arc Inc.

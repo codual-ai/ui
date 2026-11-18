@@ -66,7 +66,7 @@ public struct ScreenStates<
   }
 }
 
-/// The views of a `ScreenStatesModel`, for `ScreenStates` and the behaviours built on it, which pass their own
+/// The views of a `ScreenStatesModel`, for `ScreenStates` and the behaviors built on it, which pass their own
 /// appear, disappear and refresh so they can do more around the model's.
 struct ScreenStatesView<
   Value, Content: View, Loading: View, Empty: View, Failed: View, Offline: View, RefreshError: View

@@ -1,6 +1,6 @@
 import SwiftUI
 
-// The paywall's system parts, for the ones an app doesn't draw itself: system controls with no colours or fonts of
+// The paywall's system parts, for the ones an app doesn't draw itself: system controls with no colors or fonts of
 // their own. Their text is looked up in the app's main bundle, so the app translates or replaces it.
 
 @MainActor
@@ -60,7 +60,7 @@ public struct SystemProductRow: View {
   }
 }
 
-/// Buys the selected product, labelled with its price; busy while a purchase or restore runs, and disabled when
+/// Buys the selected product, labeled with its price; busy while a purchase or restore runs, and disabled when
 /// nothing is selected or the user owns it.
 public struct SystemBuyButton: View {
   private let paywall: PaywallContent

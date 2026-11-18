@@ -73,7 +73,7 @@ public enum StorePurchaseResult: Sendable, Equatable {
 
 public enum StoreSyncResult: Sendable, Equatable {
   case synced
-  /// The user cancelled the store's sign-in.
+  /// The user canceled the store's sign-in.
   case cancelled
 }
 

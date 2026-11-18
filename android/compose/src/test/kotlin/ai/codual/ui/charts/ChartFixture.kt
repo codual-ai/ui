@@ -16,7 +16,7 @@ import org.robolectric.RuntimeEnvironment
 
 /**
  * A chart load whose calls wait until the test answers them, in any order. A call answered after its coroutine was
- * cancelled still returns, like work that ignores cancellation, so only the chart can drop it.
+ * canceled still returns, like work that ignores cancellation, so only the chart can drop it.
  */
 internal class ChartLoader {
   val queries = mutableListOf<ChartQuery<String>>()

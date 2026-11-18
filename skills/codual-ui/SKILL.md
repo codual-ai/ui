@@ -1,14 +1,45 @@
 ---
 name: codual-ui
-description: Use Codual UI's headless behaviours instead of writing their logic by hand, on SwiftUI, Jetpack Compose and React Native. Load before writing any screen that loads data (a list, a detail page, a feed, a profile) — anything with a spinner, an empty state, an error with retry, an offline message, pull to refresh, or paging (load more, infinite scroll) — a form (sign up, sign in, edit profile, validation, submit), before any in-app purchase, subscription, paywall, tip jar or restore button (StoreKit, Google Play Billing, react-native-iap), any list whose items the person selects (an edit mode, select all, bulk delete or share, a picker), before any sheet, bottom sheet, modal or full-screen cover that edits something and closes with Cancel or Save, any search field (search as you type, recent searches, filtering a list), and before asking for any permission (notifications, camera, photos, location, microphone, contacts; a pre-permission explanation, "open Settings", requestPermissions, react-native-permissions), and before any chart with a range picker or touch to inspect (Swift Charts, Vico, Victory Native).
+description: Use Codual UI's headless behaviors instead of writing their logic by hand, on SwiftUI, Jetpack Compose and React Native. Load before writing any screen that loads data (a list, a detail page, a feed, a profile) — anything with a spinner, an empty state, an error with retry, an offline message, pull to refresh, or paging (load more, infinite scroll) — a form (sign up, sign in, edit profile, validation, submit), before any in-app purchase, subscription, paywall, tip jar or restore button (StoreKit, Google Play Billing, react-native-iap), any list whose items the person selects (an edit mode, select all, bulk delete or share, a picker), before any sheet, bottom sheet, modal or full-screen cover that edits something and closes with Cancel or Save, any search field (search as you type, recent searches, filtering a list), and before asking for any permission (notifications, camera, photos, location, microphone, contacts; a pre-permission explanation, "open Settings", requestPermissions, react-native-permissions), and before any chart with a range picker or touch to inspect (Swift Charts, Vico, Victory Native).
 ---
 
 # Codual UI
 
 Codual UI handles the state, timing and edge cases of common screens; the app keeps its own views. Don't write
-that logic by hand: no `isLoading` or `isLoadingMore` flags, no `hasMore` or page counters, no `try`/`catch` around a fetch that sets an error, no "has it loaded
-yet" check on appear. Pass the load and the app's views, and leave out any view the app doesn't need to style: a
-plain system one takes its place.
+that logic by hand: no `isLoading` or `isLoadingMore` flags, no `hasMore` or page counters, no `try`/`catch` around
+a fetch that sets an error, no "has it loaded yet" check on appear. Pass the load and the app's views, and leave out
+any view the app doesn't need to style: a plain system one takes its place.
+
+## Install
+
+If the app doesn't have the package yet, add it (0.1.0):
+
+- **SwiftUI** (iOS 17+): Swift Package Manager, `https://github.com/codual-ai/ui.git` from `0.1.0`, product
+  `CodualUI`; `import CodualUI`.
+- **Jetpack Compose** (API 24+): `maven("https://jitpack.io")` in the settings' repositories, then
+  `com.github.codual-ai.ui:codual-ui-compose:v0.1.0`, and `com.github.codual-ai.ui:codual-ui-play-billing:v0.1.0`
+  only for purchases. Imports are by behavior: `ai.codual.ui.screenstates`, `.lists`, `.forms`, `.purchases`,
+  `.selection`, `.sheets`, `.search`, `.permissions`, `.charts`, and `ai.codual.ui.playbilling`.
+- **React Native**: `npm install @codual/react-native-ui`; everything imports from `@codual/react-native-ui` except
+  the optional adapters `@codual/react-native-ui/react-native-iap`, `/react-native-permissions` and
+  `/victory-native` (install `react-native-iap` or `react-native-permissions` yourself to use theirs).
+
+## Which behavior
+
+| The screen has | Use |
+|---|---|
+| Data from a load, shown once (a detail page, a profile, a one-shot list) | [Screen states](#screen-states) |
+| A list that loads in pages, or a chat or message history | [Lists](#lists) |
+| Fields the person types into and submits | [Forms](#forms) |
+| In-app purchases, subscriptions, a paywall or restore | [Purchases](#purchases) |
+| Items the person picks: an edit mode, bulk actions, a "choose up to N" picker | [Selection](#selection), with lists |
+| A sheet, bottom sheet or full-screen cover that edits something and closes with Cancel or Save | [Sheets](#sheets), often with forms |
+| A search field that searches or filters as the person types | [Search](#search) |
+| A feature that needs a system permission | [Permissions](#permissions) |
+| A chart with a range picker or touch to inspect | [Chart interactions](#chart-interactions) |
+
+Behaviors compose: a paged list is screen states for its first page, search results are a paged list, and a
+selection plugs into `PagedList`. Use the larger one rather than wiring the smaller ones together yourself.
 
 ## Screen states
 
@@ -38,7 +69,9 @@ ScreenStates(rememberScreenStates { api.items() }) { items -> ItemList(items) }
 Add the app's own views only where the design needs them, by the same names on every platform: `loading`,
 `empty`, `failed` (gets the error and `retry`), `offline` (gets `retry`) and `refreshError` (gets the error and
 `dismiss`; by default a system alert). To draw the states entirely yourself, use the state machine instead:
-`ScreenStatesModel` (SwiftUI), `ScreenStatesState` (Compose) or `useScreenStates` (React Native).
+`ScreenStatesModel` (SwiftUI), `ScreenStatesState` (Compose) or `useScreenStates` (React Native). A state machine
+you draw yourself needs `appear()` and `disappear()` from your view (SwiftUI `.task` and `.onDisappear`, Compose a
+`DisposableEffect`); the hook does it itself.
 
 **How to wire it right:**
 
@@ -56,24 +89,24 @@ Add the app's own views only where the design needs them, by the same names on e
 - **Compose ViewModels.** To keep the data across rotation, create `ScreenStatesState(viewModelScope) { repo.items() }`
   in the ViewModel and pass it to `ScreenStates(state)`.
 
-## Edge cases it already handles
+### Edge cases it already handles
 
 Don't write code for these, and don't let a review talk you into it; each has a test on every platform
-([spec](../../spec/screen-states.md)):
+([spec](https://github.com/codual-ai/ui/blob/main/spec/screen-states.md)):
 
 - Loading shows until the first load finishes, never a blank screen or the empty view (SS-01).
 - One load on first appear; appearing again doesn't reload or flash loading (SS-02, SS-03).
 - Empty collections show the empty view; other values only when `isEmpty` says so (SS-04).
 - Failures show the failed view with the error; no connection shows the offline view (SS-05, SS-06).
 - Retry shows loading then the result, loads once however often it's tapped, and works only after a failure; a retry
-  is never cancelled by the failed view going away (SS-07 to SS-10).
+  is never canceled by the failed view going away (SS-07 to SS-10).
 - Pull to refresh keeps the current view until the result, from content, empty, failed or offline (SS-11, SS-12).
 - A failed refresh keeps the content and reports a refresh error, cleared by the next success or by `dismiss`; a
   refresh to no items shows empty; a refresh failing from failed shows the new error (SS-13 to SS-16).
 - Pull to refresh during a load waits for it instead of loading twice (SS-17).
 - Leaving the screen cancels the load; a late result is dropped, and an old result never replaces a newer one
   (SS-18 to SS-20).
-- A cancelled refresh, or leaving during one, shows no error; a load that cancels itself with nothing on screen
+- A canceled refresh, or leaving during one, shows no error; a load that cancels itself with nothing on screen
   shows failed, never an endless spinner (SS-21, SS-22).
 - Every view you leave out is an accessible system view with a "Try Again" button where it needs one (SS-23).
 
@@ -113,8 +146,8 @@ PagedList(rememberPagedList(key = { it.id }) { token -> api.items(after = token)
   yours: a missing cursor, or a page shorter than you asked for (`next: items.count < size ? nil : page + 1`).
 - **Identity is how duplicates go.** SwiftUI uses `Identifiable`; give Compose `key` (a `String`, `Int` or `Long`)
   and React Native `keyExtractor`. Use the server's ID, never the index.
-- **No `onAppear` or `onEndReached` of your own.** The list loads the next page itself; don't add a
-  `.task`/`LaunchedEffect`/`useEffect` that loads, or a second `onEndReached`.
+- **No `onAppear` or `onEndReached` of your own.** `PagedList` loads every page itself (drawing it yourself is
+  below); don't add a `.task`/`LaunchedEffect`/`useEffect` that loads, or a second `onEndReached`.
 - **The footer** shows after the last row: by default a spinner, "Couldn't Load More" with Try Again, a Load More
   button, or "No More Items". To style it, pass `footer` and switch on its four cases (more, loading, failed, end);
   keep the actions it gives you (`loadMore`, `retry`) on real buttons.
@@ -125,7 +158,8 @@ PagedList(rememberPagedList(key = { it.id }) { token -> api.items(after = token)
   don't load it again yourself.
 - **The first page's views** are screen states' (`loading`, `empty`, `failed`, `offline`, `refreshError`).
 - **New input, new list**: `.id(query)`, `key(query) { … }`, `key={query}`, as with screen states.
-- **Draw it yourself** with `PagedListModel` (call `rowAppeared(_:)` from each row), `PagedListState` (call
+- **Draw it yourself** with `PagedListModel` (call `rowAppeared(_:)` from each row, and `appear()`/`disappear()`
+  from the view), `PagedListState` (call `appear()`/`disappear()` from a `DisposableEffect`,
   `endReached()` near the end, and put `PagedListAnnouncements(state)` beside the list so TalkBack hears new pages)
   or `usePagedList` (pass `endReached` to `onEndReached`), never by calling `loadMore`
   from a scroll callback: `loadMore` is the Load More button's action, and it goes on even after a stall.
@@ -141,7 +175,7 @@ PagedList(rememberPagedList(key = { it.id }) { token -> api.items(after = token)
 
 ### Edge cases it already handles
 
-Don't write code for these ([spec](../../spec/lists.md)):
+Don't write code for these ([spec](https://github.com/codual-ai/ui/blob/main/spec/lists.md)):
 
 - The first page is a screen state: loading, then the list, empty, failed or offline with retry; never a footer on
   its own (LS-01, LS-15).
@@ -184,10 +218,12 @@ enum Field { case username, email, password }
   FormField(.username, rules: [.required("Choose a username")],
             asyncRule: AsyncFormRule { name in try await api.isTaken(name) ? "That username is taken" : nil }),
   FormField(.email, rules: [.required("Enter your email"), .email("Enter a valid email")]),
-  FormField(.password, trim: false, rules: [.minLength(8, "Use 8 characters or more")]),
+  FormField(.password, trim: false, rules: [.required("Enter a password"), .minLength(8, "Use 8 characters or more")]),
 ])
 @FocusState private var focus: Field?
 
+TextField("Username", text: form.binding(.username)).formField(form, .username, focus: $focus)
+if let error = form.error(.username) { Text(error).foregroundStyle(.red) }
 TextField("Email", text: form.binding(.email)).formField(form, .email, focus: $focus)
 if let error = form.error(.email) { Text(error).foregroundStyle(.red) }
 SecureField("Password", text: form.binding(.password)).formField(form, .password, focus: $focus, onDone: save)
@@ -200,13 +236,14 @@ func save() { form.submit { values in try await api.signUp(values[.username], va
 // Jetpack Compose: pass the binding's pieces to the app's own TextField or OutlinedTextField
 val form = rememberForm(listOf(
   FormField(Field.Email, rules = listOf(required("Enter your email"), email("Enter a valid email"))),
-  FormField(Field.Password, trim = false, rules = listOf(minLength(8, "Use 8 characters or more"))),
+  FormField(Field.Password, trim = false, rules = listOf(required("Enter a password"), minLength(8, "Use 8 characters or more"))),
 ))
 val password = form.field(Field.Password, onDone = ::save)
 OutlinedTextField(password.value, password.onValueChange, password.modifier, isError = password.error != null,
   supportingText = password.error?.let { { Text(it) } },
   keyboardOptions = password.keyboardOptions.copy(keyboardType = KeyboardType.Password),
   keyboardActions = password.keyboardActions)
+// The email field the same way, from form.field(Field.Email), before it
 ```
 
 ```tsx
@@ -226,7 +263,7 @@ const form = useForm({ fields: { email: { rules: [required("Enter your email"), 
   and your own passes on an empty value, so an optional field needs no special case.
 - **Numbers:** use `number(…)` and read the submitted value with `parseNumber`, never `Double(text)`,
   `toDouble()` or `Number(text)`: "1,200" is 1200 in English and "1,5" is 1.5 in German.
-- **A server check** (a username that's taken) is an `asyncRule`: it waits for typing to pause, is cancelled when
+- **A server check** (a username that's taken) is an `asyncRule`: it waits for typing to pause, is canceled when
   the value changes, skips the starting value, and a submit waits for it. React Native: hand `signal` to `fetch`.
 - **Server errors for fields:** throw `FormFieldErrors` from the submit's action with a message per field; they
   show under the fields, focus moves to the first, and each clears when its field changes. Any other error is
@@ -249,7 +286,7 @@ const form = useForm({ fields: { email: { rules: [required("Enter your email"), 
 
 ### Edge cases it already handles
 
-Don't write code for these ([spec](../../spec/forms.md)):
+Don't write code for these ([spec](https://github.com/codual-ai/ui/blob/main/spec/forms.md)):
 
 - No error before the person interacts, none while a field is first typed; it shows on leaving the field or on a
   submit attempt, then follows the value (FM-01 to FM-04).
@@ -259,11 +296,11 @@ Don't write code for these ([spec](../../spec/forms.md)):
 - Async rules debounce, cancel, never show an old answer, don't block on a failed check, skip the starting value,
   and run at once on leave or submit (FM-15 to FM-19, FM-33).
 - Submit once, only when valid, focusing and announcing the first error; failures keep the input; server field
-  errors under their fields; a cancelled submit shows nothing (FM-20 to FM-25).
+  errors under their fields; a canceled submit shows nothing (FM-20 to FM-25).
 - Dirty tracking and "discard changes?" that never asks after a successful save (FM-26, FM-27, FM-32).
 - Hidden fields made inactive are skipped by checks, submit, focus and Next (FM-35).
 - Next and Done, errors read by screen readers with their field, nothing announced while typing (FM-28, FM-29);
-  a submit is never cancelled by its button changing (FM-30); React Native's Next keeps the keyboard up (FM-31).
+  a submit is never canceled by its button changing (FM-30); React Native's Next keeps the keyboard up (FM-31).
 
 ## Purchases
 
@@ -333,18 +370,18 @@ export const purchases = createPurchases(createReactNativeIapStore(iap, { consum
 
 ### Edge cases it already handles
 
-Don't write code for these ([spec](../../spec/purchases.md)):
+Don't write code for these ([spec](https://github.com/codual-ai/ui/blob/main/spec/purchases.md)):
 
 - Entitlements from launch, unknown until the store answers; transactions from outside the buy flow at any time
   (PU-01, PU-02).
 - Products as a screen state, in your order, missing ones left out, with the store's prices (PU-03 to PU-05).
-- Purchased, cancelled (not an error), failed, pending (Ask to Buy) approved or declined later, offline failures
+- Purchased, canceled (not an error), failed, pending (Ask to Buy) approved or declined later, offline failures
   that complete anyway (PU-06 to PU-12, PU-22).
 - Each transaction delivered and finished once, only after `deliver` succeeds, and unfinished ones from a crash
   finished at the next launch (PU-13 to PU-15).
 - Refunds, revocations, expiry and renewals, while running or closed; a failed check never removes access
   (PU-16 to PU-18, PU-21).
-- Restore, nothing to restore, a cancelled sign-in (PU-19, PU-20); double taps (PU-09); already owned (PU-23);
+- Restore, nothing to restore, a canceled sign-in (PU-19, PU-20); double taps (PU-09); already owned (PU-23);
   consumables bought again (PU-24); Family Sharing (PU-25); unverified App Store transactions (PU-26).
 - Messages, buy button states, selection, purchases outliving the paywall, and the proof for your server
   (PU-27 to PU-31).
@@ -429,7 +466,7 @@ const selection = useSelection({ keyExtractor: (photo: Photo) => photo.id });
 
 ### Edge cases it already handles
 
-Don't write code for these ([spec](../../spec/selection.md)):
+Don't write code for these ([spec](https://github.com/codual-ai/ui/blob/main/spec/selection.md)):
 
 - A tap toggles only in the mode; single selection keeps one; Select and a long press enter, Done, Cancel and back
   leave and clear; an always active selection has no mode (SL-01 to SL-05, SL-19).
@@ -502,11 +539,11 @@ useEffect(() => sheet.setHasUnsavedChanges(isDirty), [isDirty, sheet.setHasUnsav
 
 - **Every close goes through `requestDismiss`.** The Cancel or close button calls it; never set the item to nil,
   call `dismiss()`, or set `visible={false}` yourself. Swipes, taps outside, back and Escape are already wired to it.
-- **Unsaved changes are yours to say.** Set `hasUnsavedChanges` from the form's dirty state (the forms behaviour's,
+- **Unsaved changes are yours to say.** Set `hasUnsavedChanges` from the form's dirty state (the forms behavior's,
   or `draft != original`); sheets never compares values. It resets when the sheet closes.
 - **Save through `save`.** It blocks closing while it runs (`isSaving`: show your progress), closes the sheet with
   the value it returns, and keeps the sheet open with `saveError` if it throws. Don't close the sheet in the save.
-- **The result comes back once**, to `onResult`: saved with the value, or cancelled. Don't also use `onDismiss`.
+- **The result comes back once**, to `onResult`: saved with the value, or canceled. Don't also use `onDismiss`.
 - **One at a time.** Presenting while a sheet is open queues it; don't guard with "is a sheet showing".
 - **Nested sheets** get their own presenter, inside the outer sheet's content.
 - **Detents and heights** are yours: `.presentationDetents`, `skipPartiallyExpanded`, the library's snap points.
@@ -519,9 +556,9 @@ useEffect(() => sheet.setHasUnsavedChanges(isDirty), [isDirty, sheet.setHasUnsav
 
 ### Edge cases it already handles
 
-Don't write code for these ([spec](../../spec/sheets.md)):
+Don't write code for these ([spec](https://github.com/codual-ai/ui/blob/main/spec/sheets.md)):
 
-- The sheet follows the presenter's item alone (SH-01); a clean close reports cancelled (SH-02).
+- The sheet follows the presenter's item alone (SH-01); a clean close reports canceled (SH-02).
 - Unsaved changes ask before closing, however the close was asked for; Discard Changes closes, Keep Editing keeps
   the changes (SH-03, SH-04); the swipe and tap outside are blocked and ask instead (SH-05); no second confirmation
   (SH-06).
@@ -589,13 +626,13 @@ const search = useSearch({
   `search.listProps` on a `FlatList` or `ScrollView` you draw yourself. Cancel (`cancel()`) clears the query.
 - **A query from outside** (a deep link, `@SceneStorage`, the screen before): `initialQuery`. It searches at once
   and isn't a recent search. Compose's `rememberSearch` restores the query after rotation by itself.
-- **Draw it yourself** with `SearchModel` (call `appear()`/`disappear()`), `SearchState` (add
-  `SearchAnnouncements(state)` beside the results so TalkBack hears them) or `useSearch`; the results' list is a
+- **Draw it yourself** with `SearchModel` (call `appear()`/`disappear()`), `SearchState` (call
+  `appear()`/`disappear()` from a `DisposableEffect`, and add `SearchAnnouncements(state)` beside the results so TalkBack hears them) or `useSearch`; the results' list is a
   `PagedListModel` / `PagedListState` / paged list controller, used as in lists.
 
 ### Edge cases it already handles
 
-Don't write code for these ([spec](../../spec/search.md)):
+Don't write code for these ([spec](https://github.com/codual-ai/ui/blob/main/spec/search.md)):
 
 - One search after the typing stops, for the last query only; the query trimmed; too short shows the suggestions
   at once (SR-01 to SR-03).
@@ -657,6 +694,7 @@ const cameraAccess = createReactNativePermissionsAccess(permissions, "camera"); 
 const camera = usePermission(cameraAccess);
 <Button title="Scan" onPress={async () => setScanning(isUsable(await camera.ask()))} />
 <CameraExplanation visible={camera.phase === "explaining"} onContinue={camera.accept} onDismiss={camera.decline} />
+<SettingsGuidance visible={camera.phase === "settings-guidance"} onOpen={camera.openSettings} onDismiss={camera.decline} />
 // Android only, no dependency: usePermission(androidPermission("camera"))
 ```
 
@@ -689,7 +727,7 @@ const camera = usePermission(cameraAccess);
 
 ### Edge cases it already handles
 
-Don't write code for these ([spec](../../spec/permissions.md)):
+Don't write code for these ([spec](https://github.com/codual-ai/ui/blob/main/spec/permissions.md)):
 
 - The status read without prompting, unknown until read; nothing asked on launch or on return (PM-01, PM-02, PM-05).
 - The explanation first, the system prompt only after it, a declined explanation saving the prompt, usable
@@ -707,7 +745,7 @@ Don't write code for these ([spec](../../spec/permissions.md)):
 
 **Use it for** any chart of loaded data with a range picker or touch to inspect: a share price, steps, spending,
 a weight log. **Don't use it for** drawing: the app keeps its chart library (Swift Charts, Vico, Victory Native)
-and its marks, colours and axes. A static chart with no range, touch or loading needs nothing from it.
+and its marks, colors and axes. A static chart with no range, touch or loading needs nothing from it.
 
 ```swift
 // SwiftUI (iOS 17+), with Swift Charts
@@ -757,7 +795,8 @@ useVictoryScrub(chart, press, { useAnimatedReaction, scheduleOnRN });
   never search the data for the touched value yourself (matching by y picks the wrong point when two are equal).
 - **Touch**: SwiftUI `chartXSelection(value: chart.xSelection)`, or
   `.chartOverlay { proxy in chart.scrubOverlay { proxy.value(atX: $0.x) } }` for a press and hold inside a
-  `ScrollView`; Compose `Modifier.chartScrub(chart)` (press and hold by default, so the
+  `ScrollView` (its locations are the overlay's: subtract the plot's origin, from a `GeometryReader` and
+  `proxy.plotFrame`, when the chart shows a leading axis, and return nil outside the plot); Compose `Modifier.chartScrub(chart)` (press and hold by default, so the
   page still scrolls; `ChartScrubActivation.Immediate` outside scrolling containers); React Native: `useVictoryScrub` for
   Victory Native, or call `scrub(x)` and `endScrub()` from any other gesture library, with
   `activateAfterLongPress` inside a `ScrollView` (Victory: `chartPressConfig.pan.activateAfterLongPress`). Don't write
@@ -774,12 +813,12 @@ useVictoryScrub(chart, press, { useAnimatedReaction, scheduleOnRN });
 
 ### Edge cases it already handles
 
-Don't write code for these ([spec](../../spec/charts.md)):
+Don't write code for these ([spec](https://github.com/codual-ai/ui/blob/main/spec/charts.md)):
 
 - The first load is a screen state; no data in range is the empty view, never an error, and an error never looks
   empty (CH-01, CH-02).
 - Switching range keeps the old series on screen, stale, with no flash of loading; with nothing shown it shows
-  loading; the old load is cancelled and its late answer dropped; the same range loads nothing (CH-03 to CH-06).
+  loading; the old load is canceled and its late answer dropped; the same range loads nothing (CH-03 to CH-06).
 - A failed switch shows the failed view for the new range; refresh keeps the series; leaving and coming back mid
   switch loads the selected range; the compare toggle reloads like a switch (CH-07 to CH-10).
 - Snapping to the nearest point across series, ties to the earlier one, each series' own nearest point, points in

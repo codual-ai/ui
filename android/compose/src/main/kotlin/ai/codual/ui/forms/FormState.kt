@@ -268,7 +268,7 @@ public class FormState<F>(
 
 /**
  * A [FormState] in this composition's scope, created once: an async rule or submit still running when the screen
- * leaves is cancelled. To keep the form across configuration changes, create a [FormState] in a ViewModel instead,
+ * leaves is canceled. To keep the form across configuration changes, create a [FormState] in a ViewModel instead,
  * with `viewModelScope`.
  */
 @Composable

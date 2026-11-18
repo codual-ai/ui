@@ -2,7 +2,7 @@ import Foundation
 
 @testable import CodualUI
 
-/// A debounce that waits until the test says it has passed, and ends early, throwing, when its task is cancelled.
+/// A debounce that waits until the test says it has passed, and ends early, throwing, when its task is canceled.
 @MainActor
 final class FakeDebounce {
   private var waits: [UUID: CheckedContinuation<Void, any Error>] = [:]
@@ -118,7 +118,7 @@ final class SearchFixture {
     }
   }
 
-  /// Answers the oldest search, one the model has cancelled, and waits until it has seen the cancellation.
+  /// Answers the oldest search, one the model has canceled, and waits until it has seen the cancellation.
   func answerCancelled(with page: Page<TestItem, Int>) async {
     let cancelled = pages.answeredAfterCancel
     await pages.succeed(page)

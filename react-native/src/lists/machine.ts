@@ -87,7 +87,7 @@ export class PagedListMachine<Item, Token> {
   };
 
   /**
-   * Shows a first page at once with no request, even one with no items, which shows the empty view: for a behaviour
+   * Shows a first page at once with no request, even one with no items, which shows the empty view: for a behavior
    * built on this one, such as search filtering items in memory. Does nothing once a load has started.
    */
   showLoaded(page: Page<Item, Token>): void {
@@ -223,7 +223,7 @@ export class PagedListMachine<Item, Token> {
         arrived.map(({ item }) => item),
         keyExtractor,
       ).content;
-      // A load the list cancelled is dropped: it mustn't move the list or announce anything.
+      // A load the list canceled is dropped: it mustn't move the list or announce anything.
       if (this.inverted && !signal.aborted) {
         this.newest.scrollToBottom();
         const unannounced = arrived.filter(({ item, shown }) => !shown && !page.keys.has(keyExtractor(item)));

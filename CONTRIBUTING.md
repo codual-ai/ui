@@ -4,17 +4,17 @@ Thanks for helping with Codual UI.
 
 - **Bugs and ideas:** open an [issue](https://github.com/codual-ai/ui/issues).
 - **Security:** follow [SECURITY.md](SECURITY.md), never a public issue.
-- **A new behaviour, or a change to one:** open an issue first. Behaviours change what every app using them does.
+- **A new behavior, or a change to one:** open an issue first. Behaviors change what every app using them does.
 
 By taking part, you agree to the [Code of Conduct](CODE_OF_CONDUCT.md).
 
-## Adding a behaviour
+## Adding a behavior
 
-1. **Spec first.** Write `spec/<behaviour>.md` in the [format](spec/README.md), with `status: not implemented yet`:
+1. **Spec first.** Write `spec/<behavior>.md` in the [format](spec/README.md), with `status: not implemented yet`:
    its states, transitions, numbered edge cases, accessibility and what is left to the app. Get it reviewed on its
    own before any code.
 2. **Every platform.** Build it in `Sources/CodualUI/` (SwiftUI), `android/compose/` (Jetpack Compose) and
-   `react-native/src/` (React Native), with no colours, fonts or layout of its own: the app passes its own views.
+   `react-native/src/` (React Native), with no colors, fonts or layout of its own: the app passes its own views.
 3. **A test for every edge case on each platform,** named with its ID: `@Test("SS-07 …")` in `Tests/`,
    ``@Test fun `SS-07 …`()`` in `android/compose/src/test/`, and `test("SS-07 …")` in `react-native/tests/`. A case
    marked `(only: SwiftUI, Compose)` is tested on those platforms alone. Break each rule on purpose and watch its
@@ -24,7 +24,7 @@ By taking part, you agree to the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ### Compose tests
 
-Keep a behaviour's logic in plain Kotlin, driven by coroutines, so its tests run on the JVM in `src/test/` with
+Keep a behavior's logic in plain Kotlin, driven by coroutines, so its tests run on the JVM in `src/test/` with
 JUnit 4 and `kotlinx-coroutines-test` (virtual time, no device). Tests of the composables themselves run there
 too, on Robolectric, rather than as instrumented tests in `src/androidTest/`: they need no emulator, and Android
 before 11 (API 30) can't run test names with spaces. CI runs no device, so the spec check refuses an edge-case

@@ -123,7 +123,7 @@ export class SheetMachine<Item, Value, Opener = unknown> {
   };
 
   /**
-   * A bottom-sheet library's sheet closed: after a gesture it allowed, which reports cancelled, or after the sheet
+   * A bottom-sheet library's sheet closed: after a gesture it allowed, which reports canceled, or after the sheet
    * closed it, which finishes hiding. Either way the sheet is off screen, so the next queued one shows.
    */
   readonly dismissed = (): void => {
@@ -160,7 +160,7 @@ export class SheetMachine<Item, Value, Opener = unknown> {
     this.update({});
   }
 
-  /** Discard Changes, from the confirmation: closes the sheet and reports cancelled. */
+  /** Discard Changes, from the confirmation: closes the sheet and reports canceled. */
   readonly discardChanges = (): void => {
     if (this.snapshot.isConfirmingDiscard) this.close((item) => ({ status: "cancelled", item }));
   };

@@ -95,7 +95,7 @@ public fun <Item, Token : Any, Scope> SearchResults(
   }
 }
 
-/** Clears focus from the app's field and hides the keyboard each time the search is cancelled. */
+/** Clears focus from the app's field and hides the keyboard each time the search is canceled. */
 @Composable
 private fun EndEditingOnCancel(state: SearchState<*, *, *>) {
   val focusManager = LocalFocusManager.current

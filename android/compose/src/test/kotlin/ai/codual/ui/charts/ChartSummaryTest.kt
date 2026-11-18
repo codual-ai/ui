@@ -114,7 +114,7 @@ class ChartSummaryTest {
   }
 
   @Test
-  fun `CH-26 a gap is never summarised, and a series of gaps has no points`() = runTest {
+  fun `CH-26 a gap is never summarized, and a series of gaps has no points`() = runTest {
     val fixture = ChartFixture(this)
     fixture.loaded(
       data(series("Price", 1.0 to 5.0, 2.0 to Double.NaN, 3.0 to Double.NEGATIVE_INFINITY, 4.0 to 7.0), series("Gaps", 1.0 to Double.NaN))

@@ -98,7 +98,7 @@ test("SR-31 a query that found nothing shows the system no-results view with the
   expect(screen.queryByText("Try Again")).not.toBeOnTheScreen();
 });
 
-test("SR-31 recent searches have a Remove button each, labelled with the query, and a Clear button", async () => {
+test("SR-31 recent searches have a Remove button each, labeled with the query, and a Clear button", async () => {
   await renderScreen({ recentSearches: createInMemoryRecentSearches(["cat", "dog"]) });
   await user.press(screen.getByRole("button", { name: "Remove “cat”" }));
   expect(screen.queryByRole("button", { name: "cat" })).not.toBeOnTheScreen();

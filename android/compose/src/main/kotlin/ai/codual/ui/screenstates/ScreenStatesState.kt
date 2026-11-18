@@ -63,7 +63,7 @@ public class ScreenStatesState<T>(
 
   /**
    * Called when a load that showed the loading view (the first one, or a retry) finishes, with what it shows now: for
-   * a behaviour built on this one, such as search announcing its results. Not called for a refresh.
+   * a behavior built on this one, such as search announcing its results. Not called for a refresh.
    */
   internal var loadingFinished: ((ScreenState<T>) -> Unit)? = null
 
@@ -73,7 +73,7 @@ public class ScreenStatesState<T>(
   /** Set by [reload]: the running load is for a new input, so its failure replaces the content. */
   private var failureReplacesContent = false
 
-  /** Whether a load is running, for a behaviour built on this one. */
+  /** Whether a load is running, for a behavior built on this one. */
   internal val isLoadRunning: Boolean
     get() = running != null
 
@@ -91,7 +91,7 @@ public class ScreenStatesState<T>(
     generation += 1
     isRefreshing = false
     if (state == ScreenState.Loading) state = ScreenState.Idle
-    // Last, as an immediate dispatcher (viewModelScope's) can resume the cancelled load inside cancel().
+    // Last, as an immediate dispatcher (viewModelScope's) can resume the canceled load inside cancel().
     load?.cancel()
   }
 
@@ -119,7 +119,7 @@ public class ScreenStatesState<T>(
   }
 
   /**
-   * Shows a value the app already has, as if the first load had given it, so appearing loads nothing. For a behaviour
+   * Shows a value the app already has, as if the first load had given it, so appearing loads nothing. For a behavior
    * built on this one, such as a paged list given its first page. Does nothing once a load has started.
    */
   internal fun showLoaded(value: T) {
@@ -127,7 +127,7 @@ public class ScreenStatesState<T>(
   }
 
   /**
-   * Replaces the value shown, for a behaviour built on this one, such as a paged list adding a page. Does nothing
+   * Replaces the value shown, for a behavior built on this one, such as a paged list adding a page. Does nothing
    * unless content is shown.
    */
   internal fun replaceContent(value: T) {
@@ -135,7 +135,7 @@ public class ScreenStatesState<T>(
   }
 
   /**
-   * Replaces a loaded value with another, which may be empty, for a behaviour built on this one, such as a local search
+   * Replaces a loaded value with another, which may be empty, for a behavior built on this one, such as a local search
    * whose items changed. Does nothing unless content or the empty view is shown.
    */
   internal fun replaceLoaded(value: T) {
@@ -145,7 +145,7 @@ public class ScreenStatesState<T>(
   }
 
   /**
-   * Cancels the running load, drops its result and loads again for a new input, for a behaviour built on this one
+   * Cancels the running load, drops its result and loads again for a new input, for a behavior built on this one
    * (a chart's range). Content stays on screen meanwhile and anything else shows loading. Unlike a refresh's, its
    * failure replaces the content, which belongs to the old input.
    */
@@ -155,7 +155,7 @@ public class ScreenStatesState<T>(
     if (state !is ScreenState.Content) state = ScreenState.Loading
     failureReplacesContent = true
     launch()
-    // Last, as an immediate dispatcher can resume the cancelled load inside cancel().
+    // Last, as an immediate dispatcher can resume the canceled load inside cancel().
     load?.cancel()
   }
 
@@ -202,7 +202,7 @@ public class ScreenStatesState<T>(
 
   private fun fail(error: Throwable) {
     when (state) {
-      // Even a load that cancelled itself lands here when nothing else is on screen, never a spinner.
+      // Even a load that canceled itself lands here when nothing else is on screen, never a spinner.
       ScreenState.Idle, ScreenState.Loading -> show(error)
       is ScreenState.Content ->
         if (failureReplacesContent) show(error) else if (!isCancellation(error)) refreshError = error

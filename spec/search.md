@@ -44,7 +44,7 @@ announcement (see Accessibility).
 |---|---|---|---|
 | any | the query changes to one shorter than the minimum, or the person clears the field | suggestions | Cancels the running search and the waiting debounce. |
 | any | the query changes to one long enough, not the query shown | waiting | Cancels the running search at once; restarts the debounce. |
-| any | the query changes to the query shown (it only gained or lost surrounding spaces, or was typed back) | (same) | Cancels the waiting debounce; a search of it that was cancelled before finishing starts again. |
+| any | the query changes to the query shown (it only gained or lost surrounding spaces, or was typed back) | (same) | Cancels the waiting debounce; a search of it that was canceled before finishing starts again. |
 | waiting | the debounce ends | loading | Searches the trimmed query and scope. |
 | any | submit (the keyboard's search button), with a query long enough | loading | Searches at once, skipping the debounce; saves the query to recent searches. |
 | results, no results | submit of the query shown | (same) | Searches nothing new; saves it to recent searches. |
@@ -59,7 +59,7 @@ announcement (see Accessibility).
 | results | a row near the end appears | results | Loads the next page, for the query and scope of these results ([lists](lists.md)). |
 | any | cancel | suggestions | Clears the query, cancels the running search and the waiting debounce, ends editing. |
 | any | the screen goes away | (same) | Cancels the running search and the waiting debounce. |
-| any | the screen comes back | (same) | A query that was waiting, or whose search was cancelled, is searched at once. |
+| any | the screen comes back | (same) | A query that was waiting, or whose search was canceled, is searched at once. |
 
 ## Edge cases
 
@@ -76,7 +76,7 @@ announcement (see Accessibility).
 - **SR-06** While the debounce waits, the view on screen stays (the previous results, or the suggestions); once the
   new query's search starts, its loading view replaces it, never the previous query's results or no results.
 - **SR-07** Coming back to the query already shown before the debounce ends (typing a letter, then deleting it)
-  searches nothing and keeps its results; if its search was cancelled before it finished, it searches again.
+  searches nothing and keeps its results; if its search was canceled before it finished, it searches again.
 - **SR-08** Submit (the keyboard's search button) searches at once without waiting for the debounce, and the
   debounce that was waiting then searches nothing. A submit with a query shorter than the minimum does nothing.
 - **SR-09** Submitting the query already shown searches nothing new, unless its search failed: then it retries.
@@ -101,7 +101,7 @@ announcement (see Accessibility).
   the recent searches.
 - **SR-21** Results come in pages, as [lists](lists.md) do: each page is requested with the query and scope its
   results are for, even if the field has changed since. A new query or scope starts again from the first page, and a
-  page still loading for the old one is cancelled and never added.
+  page still loading for the old one is canceled and never added.
 - **SR-22** Local mode filters the app's items in memory on every change, with no debounce and no loading view, and
   shows no results the same way. When the app's items change, the results shown are filtered again in place: the
   list keeps its scroll position, and nothing is announced.
@@ -110,7 +110,7 @@ announcement (see Accessibility).
   ends editing; it saves nothing to the recent searches.
 - **SR-25** The screen going away cancels the running search and the waiting debounce; its result is never shown.
   Coming back keeps the query and what had loaded, and searches at once only a query that was waiting or whose
-  search was cancelled.
+  search was canceled.
 - **SR-26** An initial query (restored state, a deep link, the screen before) is searched at once with no debounce,
   and it is not saved to the recent searches.
 - **SR-27** (only: Compose) The query and scope survive rotation and the app's process being recreated
@@ -119,7 +119,7 @@ announcement (see Accessibility).
   query's first page arrives ("Showing 20 results."), "No results for “cat”." when it finds nothing, and the failure
   when it fails. Never once per keystroke, never for a search replaced before it finished, and never for a refresh;
   in local mode, once the query hasn't changed for the debounce.
-- **SR-29** The search behaviour never changes the field's text while the person types (no cursor jumps): trimming
+- **SR-29** The search behavior never changes the field's text while the person types (no cursor jumps): trimming
   only applies to what is searched.
 - **SR-30** A search that ends in a cancellation it made itself (the app's own timeout, say) shows the failed view,
   never a spinner that runs forever, as [screen states](screen-states.md) does.
@@ -137,8 +137,8 @@ announcement (see Accessibility).
 - The search field keeps focus while results arrive; nothing moves the screen reader away from it. The results are
   reached by swiping past it.
 - Picking, removing and clearing recent searches are real buttons, reachable by screen readers and keyboard. Remove
-  is labelled with the query ("Remove “cat”"), so a list of them reads clearly.
-- The built-in views (SR-31) use the system's text styles, so they follow the user's text size, and take no colours
+  is labeled with the query ("Remove “cat”"), so a list of them reads clearly.
+- The built-in views (SR-31) use the system's text styles, so they follow the user's text size, and take no colors
   or fonts of their own.
 - Pages after the first, their footers and their announcements follow [lists](lists.md); the loading, failed and
   offline views follow [screen states](screen-states.md).
@@ -168,12 +168,12 @@ announcement (see Accessibility).
   `enterKeyHint="search"`, `autoCorrect={false}`, `autoCapitalize="none"`, SR-32).
 - **Scopes.** SwiftUI: `.searchScopes($model.scope)` sets the model's `scope`. Compose: `state.scope = …`. React
   Native: `setScope(…)`. A search without scopes uses `NoSearchScope` (SwiftUI) or `Unit` (Compose).
-- **Debounce and cancellation.** SwiftUI: a task that sleeps for the debounce, and the search's task, both cancelled
+- **Debounce and cancellation.** SwiftUI: a task that sleeps for the debounce, and the search's task, both canceled
   on change. Compose: coroutines in the state's scope with `delay`. React Native: a timer, and an `AbortController`
   whose signal the search gets.
 - **Dismissing the keyboard on scroll (SR-23).** SwiftUI: `.scrollDismissesKeyboard(.immediately)` on the results and
   the `initial` view; the field's `.searchSuggestions` are a list the system draws, with the system's own keyboard
-  behaviour.
+  behavior.
   Compose: `Modifier.dismissKeyboardOnScroll()`, which `SearchResults` puts on its lists, clears focus and hides the
   keyboard when a list scrolls. React Native: `listProps` for the `FlatList` or `ScrollView`
   (`keyboardDismissMode="on-drag"`, `keyboardShouldPersistTaps="handled"`).
@@ -194,4 +194,4 @@ announcement (see Accessibility).
 - **The minimum length** is at least 1 and the debounce 0 or more on every platform (a `precondition`, a `require`
   and a `RangeError`); an app that wants results for the empty query shows them in its suggestions view.
 - **SR-27**: only Compose restores a screen's own state after the process is recreated without the app's help.
-  **SR-32**: only React Native's field is the app's own `TextInput` that the behaviour hands props to.
+  **SR-32**: only React Native's field is the app's own `TextInput` that the behavior hands props to.

@@ -5,7 +5,7 @@ struct Note: Identifiable, Equatable {
   var title = ""
 }
 
-/// The results a presenter reported, in order, as text that compares easily: "saved 1: Saved", "cancelled 2".
+/// The results a presenter reported, in order, as text that compares easily: "saved 1: Saved", "canceled 2".
 @MainActor
 final class ResultLog {
   private(set) var results: [String] = []

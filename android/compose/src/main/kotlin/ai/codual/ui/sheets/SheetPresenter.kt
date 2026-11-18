@@ -133,12 +133,12 @@ public class SheetPresenter<Item : Any, Value>(
     return true
   }
 
-  /** The platform closed the sheet itself, after a gesture it allowed. Reports cancelled; does nothing once closed. */
+  /** The platform closed the sheet itself, after a gesture it allowed. Reports canceled; does nothing once closed. */
   public fun dismissed() {
     close { SheetResult.Cancelled(it) }
   }
 
-  /** Discard Changes, from the confirmation: closes the sheet and reports cancelled. */
+  /** Discard Changes, from the confirmation: closes the sheet and reports canceled. */
   public fun discardChanges() {
     if (isConfirmingDiscard) close { SheetResult.Cancelled(it) }
   }
@@ -205,7 +205,7 @@ public class SheetPresenter<Item : Any, Value>(
     onResult(result(closing.item))
     // The result may have presented a sheet of its own; the queue waits behind it.
     if (shown == null && waiting.isNotEmpty()) shown = waiting.removeAt(0)
-    // Last, as an immediate dispatcher (viewModelScope's) can resume the cancelled save inside cancel().
+    // Last, as an immediate dispatcher (viewModelScope's) can resume the canceled save inside cancel().
     save?.cancel()
   }
 

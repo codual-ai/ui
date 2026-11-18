@@ -11,7 +11,7 @@ enum TestField: Hashable, Sendable {
 final class ManualSleep {
   private(set) var durations: [Duration] = []
   private var waiting: [CheckedContinuation<Void, Never>] = []
-  /// How many debounces the form has started and not cancelled, so `pass()` waits for each to begin.
+  /// How many debounces the form has started and not canceled, so `pass()` waits for each to begin.
   var started: () -> Int = { 0 }
 
   func sleep(_ duration: Duration) async throws {
@@ -20,7 +20,7 @@ final class ManualSleep {
     try Task.checkCancellation()
   }
 
-  /// Ends every debounce waiting now, once each task started has begun its own; the cancelled ones then end
+  /// Ends every debounce waiting now, once each task started has begun its own; the canceled ones then end
   /// without checking.
   func pass() async {
     await settle { waiting.count >= started() }
@@ -91,7 +91,7 @@ final class FormFixture {
 }
 
 /// Waits until a view the test hosts reaches the condition, or gives up after a minute or once the test is
-/// cancelled, so a test past its time limit never keeps the main actor busy.
+/// canceled, so a test past its time limit never keeps the main actor busy.
 @MainActor
 func waitForView(_ condition: () -> Bool) async {
   let deadline = ContinuousClock.now + .seconds(60)
@@ -101,7 +101,7 @@ func waitForView(_ condition: () -> Bool) async {
 }
 
 /// Waits until `condition` holds, letting other main-actor work run, or gives up after a minute or once the test is
-/// cancelled.
+/// canceled.
 @MainActor
 func settle(until condition: () -> Bool) async {
   let deadline = ContinuousClock.now + .seconds(60)

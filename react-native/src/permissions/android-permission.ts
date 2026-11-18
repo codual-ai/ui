@@ -120,7 +120,7 @@ class AndroidPermissionAccess implements PermissionAccess {
     const asked = isUpgrade ? this.description.full(sdk()) : requested;
     const answers: Partial<Record<AndroidManifestPermission, string>> =
       await PermissionsAndroid.requestMultiple([...requested]);
-    // No answers: the prompt was cancelled, which is no "no".
+    // No answers: the prompt was canceled, which is no "no".
     if (requested.every((name) => answers[name] === undefined)) return this.status();
     const granted = await this.grant(async (name) => answers[name] === PermissionsAndroid.RESULTS.GRANTED);
     if (granted && (granted !== LIMITED || !isUpgrade)) return granted;

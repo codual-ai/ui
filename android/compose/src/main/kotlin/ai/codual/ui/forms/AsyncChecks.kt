@@ -21,12 +21,12 @@ internal class AsyncAnswer(val value: String, val message: String?)
 private class RunningCheck(val job: Job, val value: String) {
   var isWaiting = true
 
-  /** Completes when the check answers or is cancelled, even one whose rule ignores cancellation. */
+  /** Completes when the check answers or is canceled, even one whose rule ignores cancellation. */
   val done = CompletableDeferred<Unit>()
 }
 
 /**
- * The async rules of a form's fields: one check per field at a time, debounced, cancelled when the value changes,
+ * The async rules of a form's fields: one check per field at a time, debounced, canceled when the value changes,
  * and an answer kept only for the value it was given.
  */
 internal class AsyncChecks<F>(
@@ -48,7 +48,7 @@ internal class AsyncChecks<F>(
 
   /**
    * Runs the field's check now instead of after the debounce, unless one is already running for its value; the
-   * result completes when it answers or is cancelled.
+   * result completes when it answers or is canceled.
    */
   fun runNow(key: F): Deferred<Unit> {
     val current = running[key]

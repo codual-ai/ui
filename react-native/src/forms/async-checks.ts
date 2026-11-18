@@ -38,7 +38,7 @@ export class AsyncChecks<F extends string> {
 
   /**
    * Runs a check still waiting for its debounce, or one the field needs, at once; resolves when it answers or is
-   * cancelled. A field that no longer needs one has its check cancelled.
+   * canceled. A field that no longer needs one has its check canceled.
    */
   now(field: F): Promise<void> {
     if (!this.target.needsCheck(field)) {
@@ -79,7 +79,7 @@ export class AsyncChecks<F extends string> {
       (message) => this.finish(field, generation, value, message),
       () => this.finish(field, generation, value, undefined),
     );
-    // A cancelled check that ignores its signal never holds up whoever waits for it.
+    // A canceled check that ignores its signal never holds up whoever waits for it.
     const aborted = new Promise<void>((resolve) =>
       controller.signal.addEventListener("abort", () => resolve()),
     );

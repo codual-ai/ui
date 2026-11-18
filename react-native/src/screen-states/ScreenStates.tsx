@@ -52,7 +52,7 @@ export function ScreenStates<T>(props: ScreenStatesProps<T>) {
   return <ScreenStatesView views={props} screen={screen} />;
 }
 
-/** The views of a screen state, for `ScreenStates` and the behaviours built on it. */
+/** The views of a screen state, for `ScreenStates` and the behaviors built on it. */
 export function ScreenStatesView<T>({
   views: props,
   screen,
@@ -61,7 +61,7 @@ export function ScreenStatesView<T>({
 }: {
   readonly views: ScreenStatesViews<T>;
   readonly screen: ScreenStatesController<T>;
-  /** `stay` leaves the screen reader where it is, for a behaviour whose field keeps focus, such as search. */
+  /** `stay` leaves the screen reader where it is, for a behavior whose field keeps focus, such as search. */
   readonly focusWhenLoaded?: FocusWhenLoaded;
   /** For the scroll view around the empty, failed and offline views: search's keyboard dismissal, say. */
   readonly pullToRefreshProps?: ScrollViewProps | undefined;

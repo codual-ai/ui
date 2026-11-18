@@ -23,7 +23,7 @@ import androidx.compose.ui.unit.dp
 internal data class NumberedAnnouncement<out T>(val number: Int, val value: T)
 
 /**
- * What a behaviour's state wants a screen reader to hear, for a live region to speak. Kept with the state (a
+ * What a behavior's state wants a screen reader to hear, for a live region to speak. Kept with the state (a
  * ViewModel's, say), so coming back to the screen or rotating it doesn't speak the last one again.
  */
 @Stable

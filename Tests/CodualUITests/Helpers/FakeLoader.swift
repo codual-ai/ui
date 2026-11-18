@@ -5,7 +5,7 @@ import Testing
 @MainActor
 final class FakeLoader<Value: Sendable> {
   private(set) var calls = 0
-  /// Calls that were answered after their task had been cancelled.
+  /// Calls that were answered after their task had been canceled.
   private(set) var answeredAfterCancel = 0
   private var waiting: [CheckedContinuation<Value, any Error>] = []
   private var answered = 0
@@ -83,7 +83,7 @@ func waitUntil(_ what: String, timeout: Duration = .seconds(15), at caller: Sour
 {
   let deadline = ContinuousClock.now + timeout
   while !condition() {
-    // A test past its time limit is cancelled, and stops waiting at once.
+    // A test past its time limit is canceled, and stops waiting at once.
     guard ContinuousClock.now < deadline, !Task.isCancelled else {
       let reason = "\(timeout) passed, or the test ran out of time"
       Issue.record("Stopped waiting for \(what): \(reason).", sourceLocation: caller)

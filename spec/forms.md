@@ -59,9 +59,9 @@ Two things sit beside these:
 | submitting | the action succeeds | editing | The submitted values become the starting values, so the form isn't dirty. |
 | submitting | the action fails with field errors | editing | Each named field shows its server error unless it changed while the submit ran; focus moves to the first, in field order; it is announced. |
 | submitting | the action fails in another way | failed | Keeps every value; the app shows the submit error. |
-| submitting | the action is cancelled | editing | No error. |
+| submitting | the action is canceled | editing | No error. |
 | any | the app resets the form | editing, every field fresh | Values go back to the starting values; errors, checks and the submit error clear. |
-| any | the app makes a field inactive | (same) | The field is skipped by checks, submit, focus and Next until it is active again; its check is cancelled. |
+| any | the app makes a field inactive | (same) | The field is skipped by checks, submit, focus and Next until it is active again; its check is canceled. |
 
 ## Edge cases
 
@@ -119,7 +119,7 @@ Two things sit beside these:
   server error for a field the person changed while the submit ran is dropped. Messages for no field on screen
   (not a field of the form, or an inactive one) are the submit error, even beside messages that are shown, so none
   is lost.
-- **FM-25** A submit whose action is cancelled shows no error, and the form stops submitting.
+- **FM-25** A submit whose action is canceled shows no error, and the form stops submitting.
 - **FM-26** A form isn't dirty when it appears or once each value is changed back to its starting one, ignoring
   spaces a field trims; it is dirty after any other change. A successful submit makes the submitted values the
   starting ones. Resetting puts the starting values back and clears every error.
@@ -207,8 +207,8 @@ of a word and short enough that the answer is there before the person reaches th
   engine has no `Intl`). A space-like grouping separator accepts a plain, a non-breaking and a narrow non-breaking
   space, and an apostrophe-like one both `'` and `’`. Digits are 0 to 9. `parseNumber` is public on each platform
   for reading the submitted value (FM-12).
-- **Async rules and cancellation (FM-16).** SwiftUI: an `async throws` closure, cancelled with its task. Compose: a
-  `suspend` function, cancelled with its coroutine. React Native: it gets an `AbortSignal`, aborted when the value
+- **Async rules and cancellation (FM-16).** SwiftUI: an `async throws` closure, canceled with its task. Compose: a
+  `suspend` function, canceled with its coroutine. React Native: it gets an `AbortSignal`, aborted when the value
   changes or the form unmounts.
 - **Server errors (FM-24).** The action throws `FormFieldErrors` with a message per field: SwiftUI
   `FormFieldErrors([.email: "…"])`, Compose `FormFieldErrors(mapOf(Field.Email to "…"))`, React Native

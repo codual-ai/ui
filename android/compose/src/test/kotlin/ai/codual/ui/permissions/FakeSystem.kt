@@ -27,7 +27,7 @@ internal class FakeSystem(override var sdk: Int = 34) : PermissionSystem {
 
   override fun areNotificationsEnabled(): Boolean = notificationsEnabled
 
-  /** The prompt is cancelled (its activity went away) and answers nothing. */
+  /** The prompt is canceled (its activity went away) and answers nothing. */
   var isCancelled = false
 
   override suspend fun request(permissions: List<String>): Map<String, Boolean> {

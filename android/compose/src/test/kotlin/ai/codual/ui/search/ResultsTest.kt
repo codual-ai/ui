@@ -57,7 +57,7 @@ class ResultsTest {
   }
 
   @Test
-  fun `SR-20 changing the scope searches again at once, cancelling the running search`() = runTest {
+  fun `SR-20 changing the scope searches again at once, canceling the running search`() = runTest {
     val fixture = SearchFixture(this)
     fixture.type("cat")
     fixture.settle()

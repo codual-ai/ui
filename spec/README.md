@@ -1,10 +1,10 @@
-# Behaviour specs
+# Behavior specs
 
-Each behaviour is written down here once, before any code. The SwiftUI, Jetpack Compose and React Native packages
-all follow it, and each tests every edge case it lists, so a behaviour does the same thing on every platform.
+Each behavior is written down here once, before any code. The SwiftUI, Jetpack Compose and React Native packages
+all follow it, and each tests every edge case it lists, so a behavior does the same thing on every platform.
 
-One file per behaviour, named after it (`screen-states.md`). A spec says what the behaviour does, never how it
-looks: views, colours, fonts, wording and layout belong to the app.
+One file per behavior, named after it (`screen-states.md`). A spec says what the behavior does, never how it
+looks: views, colors, fonts, wording and layout belong to the app.
 
 ## The format
 
@@ -52,7 +52,7 @@ status: not implemented yet
   The platform names are `SwiftUI`, `Compose` and `React Native`. IDs run in order from `01` with no gaps (at most 99). A published ID never changes meaning: to drop a case,
   keep its ID and write `Withdrawn.` after it, with the reason. New cases go at the end.
 - **Accessibility**: what screen readers, larger text and other settings must get, on every platform.
-- **Left to the app**: everything the behaviour deliberately doesn't decide.
+- **Left to the app**: everything the behavior deliberately doesn't decide.
 - **Platform notes**: only where the platforms must differ (a system API, an error type). Optional.
 
 ## Tests

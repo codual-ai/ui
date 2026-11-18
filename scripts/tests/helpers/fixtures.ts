@@ -29,7 +29,7 @@ export function specText({
   const body = sections.map((title) =>
     title === "Edge cases" ? `## ${title}\n\n${edgeCases.join("\n")}\n` : `## ${title}\n\nText.\n`,
   );
-  return `---\nprefix: ${prefix}\nstatus: ${status}\n---\n\n# Behaviour\n\n${body.join("\n")}`;
+  return `---\nprefix: ${prefix}\nstatus: ${status}\n---\n\n# Behavior\n\n${body.join("\n")}`;
 }
 
 /** Writes `files` (repo-relative path to text) into a temporary directory removed after the test. */

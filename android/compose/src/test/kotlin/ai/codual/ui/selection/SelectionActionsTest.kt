@@ -61,7 +61,7 @@ class SelectionActionsTest {
   }
 
   @Test
-  fun `SL-15 a destructive action runs only once confirmed, and cancelling keeps the selection`() = runTest {
+  fun `SL-15 a destructive action runs only once confirmed, and canceling keeps the selection`() = runTest {
     val fixture = SelectionFixture(this)
     val selection = fixture.selection
     fixture.activeWith(listOf(1, 2), selected = listOf(1))
@@ -126,7 +126,7 @@ class SelectionActionsTest {
     }
 
   @Test
-  fun `SL-17 the next action clears the error, and an action cancelling itself is a failure`() = runTest {
+  fun `SL-17 the next action clears the error, and an action canceling itself is a failure`() = runTest {
     val fixture = SelectionFixture(this)
     val selection = fixture.selection
     fixture.activeWith(listOf(1, 2), selected = listOf(2))

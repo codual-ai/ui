@@ -253,7 +253,7 @@ public final class SearchModel<Item: Identifiable, Token, Scope: Hashable> {
     localAnnouncement = afterTheDebounce { [weak self] in self?.announce(announcement) }
   }
 
-  /// Runs `action` once the debounce has passed, unless the task it returns is cancelled first.
+  /// Runs `action` once the debounce has passed, unless the task it returns is canceled first.
   private func afterTheDebounce(_ action: @escaping @MainActor () -> Void) -> Task<Void, Never> {
     Task { [sleep, debounce] in
       do { try await sleep(debounce) } catch { return }

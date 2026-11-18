@@ -2,6 +2,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
   alias(libs.plugins.android.library)
+  `maven-publish`
   alias(libs.plugins.kotlin.compose)
 }
 
@@ -31,6 +32,10 @@ android {
     disable += setOf("GradleDependency", "AndroidGradlePluginVersion", "NewerVersionAvailable")
     // A dependency's own lint checks (lifecycle-runtime's) being too old for this lint is no fault of this code.
     disable += "ObsoleteLintCustomCheck"
+  }
+
+  publishing {
+    singleVariant("release") { withSourcesJar() }
   }
 
   testOptions {
@@ -71,4 +76,13 @@ dependencies {
   testImplementation(libs.junit)
   testImplementation(libs.kotlinx.coroutines.test)
   testImplementation(libs.robolectric)
+}
+
+// JitPack builds the release from a tag with publishToMavenLocal (see jitpack.yml).
+publishing {
+  publications {
+    register<MavenPublication>("release") {
+      afterEvaluate { from(components["release"]) }
+    }
+  }
 }

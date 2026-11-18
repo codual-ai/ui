@@ -76,12 +76,12 @@ public final class SheetPresenter<Item: Identifiable, Value> {
     }
   }
 
-  /// The platform closed the sheet itself, after a swipe it allowed. Reports cancelled; does nothing once closed.
+  /// The platform closed the sheet itself, after a swipe it allowed. Reports canceled; does nothing once closed.
   public func dismissed() {
     close(SheetResult.cancelled)
   }
 
-  /// Discard Changes, from the confirmation: closes the sheet and reports cancelled.
+  /// Discard Changes, from the confirmation: closes the sheet and reports canceled.
   public func discardChanges() {
     guard isConfirmingDiscard else { return }
     close(SheetResult.cancelled)

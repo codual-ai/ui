@@ -57,7 +57,7 @@ public fun <T> ScreenStates(
 }
 
 /**
- * The views of a [ScreenStatesState], for [ScreenStates] and the behaviours built on it, which pass their own
+ * The views of a [ScreenStatesState], for [ScreenStates] and the behaviors built on it, which pass their own
  * [appear], [disappear] and [refresh] so they can do more around the state's. [scrollModifier] goes on the scrolling
  * containers of the empty, failed and offline views.
  */

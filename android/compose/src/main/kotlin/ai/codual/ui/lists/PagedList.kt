@@ -95,7 +95,7 @@ public fun <Item, Token : Any> PagedList(
 }
 
 /**
- * The views of a [PagedListState], for [PagedList] and the behaviours built on it, such as search. [scrollModifier] goes
+ * The views of a [PagedListState], for [PagedList] and the behaviors built on it, such as search. [scrollModifier] goes
  * on every scrolling container: the rows' `LazyColumn`, and the first page's empty, failed and offline views.
  */
 @Composable
