@@ -10,3 +10,7 @@ DerivedData/
 .kotlin/
 build/
 local.properties
+
+# Copied from the repository root when the npm package is packed.
+react-native/LICENSE
+react-native/NOTICE

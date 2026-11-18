@@ -65,7 +65,7 @@ public fun <F> rule(message: String, check: (value: String, values: FormValues<F
 
 /**
  * A rule that needs the server, such as a username that's taken. It runs once the field's own rules pass, after
- * typing pauses for [debounce], and is cancelled when the value changes. [check] returns the message to show, or
+ * typing pauses for [debounce], and is canceled when the value changes. [check] returns the message to show, or
  * null when the value is fine; a check that throws gives no message, and the server checks again on submit.
  */
 public class AsyncFormRule(

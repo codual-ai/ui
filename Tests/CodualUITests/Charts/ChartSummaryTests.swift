@@ -101,8 +101,8 @@ struct ChartSummaryTests {
     #expect(fixture.chart.spokenSummary.hasSuffix("Updating."))
   }
 
-  @Test("CH-26 a gap is never summarised, and a series of gaps has no points")
-  func aGapIsNeverSummarised() async {
+  @Test("CH-26 a gap is never summarized, and a series of gaps has no points")
+  func aGapIsNeverSummarized() async {
     let fixture = ChartFixture()
     let price = series("Price", [(1, 5), (2, .nan), (3, -.infinity), (4, 7)])
     await fixture.loaded(data(price, series("Gaps", [(1, .nan)])))

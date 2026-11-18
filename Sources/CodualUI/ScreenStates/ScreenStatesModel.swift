@@ -34,7 +34,7 @@ public final class ScreenStatesModel<Value> {
   @ObservationIgnored var isOffline: (any Error) -> Bool
   @ObservationIgnored private(set) var running: Task<Void, Never>?
   /// Called when a load that showed the loading view (the first one, or a retry) finishes, with what it shows now:
-  /// for a behaviour built on this one, such as search announcing its results. Not called for a refresh.
+  /// for a behavior built on this one, such as search announcing its results. Not called for a refresh.
   @ObservationIgnored var loadingFinished: ((ScreenState<Value>) -> Void)?
   @ObservationIgnored private var generation = 0
   /// Set by `reload()`: the running load is for a new input, so its failure replaces the content.
@@ -88,7 +88,7 @@ public final class ScreenStatesModel<Value> {
     await running?.value
   }
 
-  /// Starts a refresh without waiting for it, for a behaviour built on this one.
+  /// Starts a refresh without waiting for it, for a behavior built on this one.
   func startRefresh() {
     if case .idle = state { return }
     isRefreshing = true
@@ -101,7 +101,7 @@ public final class ScreenStatesModel<Value> {
   }
 
   /// Shows a value the app already has, as if the first load had given it, so appearing loads nothing. For a
-  /// behaviour built on this one, such as a paged list given its first page. Does nothing once a load has started.
+  /// behavior built on this one, such as a paged list given its first page. Does nothing once a load has started.
   func showLoaded(_ value: Value) {
     guard case .idle = state else { return }
     state = isEmpty(value) ? .empty : .content(value)
@@ -116,14 +116,14 @@ public final class ScreenStatesModel<Value> {
     }
   }
 
-  /// Replaces the value shown, for a behaviour built on this one, such as a paged list adding a page. Does nothing
+  /// Replaces the value shown, for a behavior built on this one, such as a paged list adding a page. Does nothing
   /// unless content is shown.
   func replaceContent(_ value: Value) {
     guard case .content = state else { return }
     state = .content(value)
   }
 
-  /// Cancels the running load, drops its result and loads again for a new input, for a behaviour built on this one
+  /// Cancels the running load, drops its result and loads again for a new input, for a behavior built on this one
   /// (a chart's range). Content stays on screen meanwhile and anything else shows loading. Unlike a refresh's, its
   /// failure replaces the content, which belongs to the old input.
   func reload() {
@@ -179,7 +179,7 @@ public final class ScreenStatesModel<Value> {
   private func fail(_ error: any Error) {
     switch state {
     case .idle, .loading:
-      // Even a load that cancelled itself lands here, so a spinner is never left running.
+      // Even a load that canceled itself lands here, so a spinner is never left running.
       show(error)
     case .content:
       if failureReplacesContent {

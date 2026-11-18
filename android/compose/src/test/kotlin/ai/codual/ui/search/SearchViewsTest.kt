@@ -51,7 +51,7 @@ internal class SearchViewsTest : SearchUiTestCase() {
   }
 
   @Test
-  fun `SR-31 the system recent searches pick, remove and clear with labelled buttons`() {
+  fun `SR-31 the system recent searches pick, remove and clear with labeled buttons`() {
     store.save(listOf("cat", "cow", "dog"))
     val withRecents = searchState()
     compose.setContent { SearchResults(withRecents) { item -> Text("Row ${item.id}") } }

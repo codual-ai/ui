@@ -39,7 +39,7 @@ export type StorePurchaseResult =
   | { readonly status: "pending" }
   | { readonly status: "cancelled" };
 
-/** `cancelled`: the user cancelled the store's sign-in. */
+/** `cancelled`: the user canceled the store's sign-in. */
 export type StoreSyncResult = "synced" | "cancelled";
 
 export type StoreUpdate =

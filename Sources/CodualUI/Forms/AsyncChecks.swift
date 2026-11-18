@@ -9,7 +9,7 @@ struct RunningCheck {
   let generation: Int
   let task: Task<Void, Never>
   var isWaiting: Bool
-  /// Who waits for the check to answer or be cancelled, even one whose rule ignores cancellation.
+  /// Who waits for the check to answer or be canceled, even one whose rule ignores cancellation.
   var waiters: [CheckedContinuation<Void, Never>] = []
 }
 
@@ -81,7 +81,7 @@ extension FormModel {
   }
 
   /// Runs every check that is waiting or needed now, and returns once no field needs one: edits while it waits
-  /// replace checks, and a cancelled check stops being waited for.
+  /// replace checks, and a canceled check stops being waited for.
   func finishChecks() async {
     while let field = fields.first(where: { needsCheck($0.key) })?.key {
       for other in fields { runCheckNow(other.key) }

@@ -1,0 +1,5 @@
+# JitPack builds the Android libraries in android/ from a tag, as com.github.codual-ai.ui:<module>:<tag>.
+jdk:
+  - openjdk21
+install:
+  - cd android && ./gradlew publishToMavenLocal -Pgroup=com.github.codual-ai.ui -Pversion=$VERSION --no-daemon

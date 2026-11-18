@@ -53,8 +53,8 @@ struct SelectionActionTests {
     #expect(fixture.actionCalls == [[2]])
   }
 
-  @Test("SL-15 cancelling the confirmation runs nothing and keeps the selection and the mode")
-  func cancellingTheConfirmationKeepsTheSelection() {
+  @Test("SL-15 canceling the confirmation runs nothing and keeps the selection and the mode")
+  func cancelingTheConfirmationKeepsTheSelection() {
     let fixture = SelectionFixture()
     fixture.show([1, 2])
     fixture.select([1, 2])

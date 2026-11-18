@@ -7,7 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 
-// System buttons for the selection mode: Material 3 components with no colours or fonts of their own, in the app's
+// System buttons for the selection mode: Material 3 components with no colors or fonts of their own, in the app's
 // `MaterialTheme`, and text from string resources the app can translate or replace.
 
 /** Select, which enters the selection mode, and Done inside it. Nothing for an always active selection. */

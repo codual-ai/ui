@@ -72,7 +72,7 @@ export function SystemProductRow(props: {
   );
 }
 
-/** Buys the selected product, labelled with its price; disabled while busy, with nothing selected, or when owned. */
+/** Buys the selected product, labeled with its price; disabled while busy, with nothing selected, or when owned. */
 export function SystemBuyButton(props: {
   readonly paywall: PaywallContent;
   readonly labels?: Partial<PaywallLabels>;

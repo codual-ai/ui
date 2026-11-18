@@ -23,8 +23,8 @@ public func parseNumber(_ text: String, locale: Locale = .autoupdatingCurrent) -
   if let fraction, fraction.isEmpty || !isDigits(fraction) { return nil }
   if integerPart.isEmpty && fraction == nil { return nil }
   guard let integer = integerDigits(integerPart, grouping: groupingSeparators(locale)) else { return nil }
-  let normalised = "\(sign)\(integer.isEmpty ? "0" : integer)" + (fraction.map { ".\($0)" } ?? "")
-  return Double(normalised)
+  let normalized = "\(sign)\(integer.isEmpty ? "0" : integer)" + (fraction.map { ".\($0)" } ?? "")
+  return Double(normalized)
 }
 
 private func groupingSeparators(_ locale: Locale) -> Set<Character> {

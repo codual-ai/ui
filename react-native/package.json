@@ -1,8 +1,7 @@
 {
   "name": "@codual/react-native-ui",
-  "version": "0.0.0",
-  "private": true,
-  "description": "Headless behaviours for React Native apps, the same as Codual UI's SwiftUI package, built for coding agents.",
+  "version": "0.1.0",
+  "description": "Headless behaviors for React Native apps, the same as Codual UI's SwiftUI package, built for coding agents.",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/codual-ai/ui.git",
@@ -49,7 +48,8 @@
     "dist",
     "react-native-iap",
     "react-native-permissions",
-    "victory-native"
+    "victory-native",
+    "NOTICE"
   ],
   "scripts": {
     "build": "node -e \"fs.rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.build.json",
@@ -57,7 +57,8 @@
     "test": "jest",
     "lint": "biome check --error-on-warnings .",
     "format": "biome format --write .",
-    "check": "pnpm typecheck && pnpm lint && pnpm test && pnpm build"
+    "check": "pnpm typecheck && pnpm lint && pnpm test && pnpm build",
+    "prepack": "pnpm build && node -e \"for (const f of ['LICENSE','NOTICE']) fs.copyFileSync('../' + f, f)\""
   },
   "engines": {
     "node": ">=22.18"

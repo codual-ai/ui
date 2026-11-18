@@ -38,7 +38,7 @@ class LifecycleTest {
   @Test
   fun `SS-18 going away on an immediate dispatcher drops the cancelled load, and the next appear loads again`() =
     runTest {
-      // viewModelScope's Main.immediate resumes the cancelled load inside cancel().
+      // viewModelScope's Main.immediate resumes the canceled load inside cancel().
       val loader = FakeLoader<List<Int>>()
       val screen = ScreenStatesState(backgroundScope + UnconfinedTestDispatcher(testScheduler), load = loader::load)
       screen.appear()

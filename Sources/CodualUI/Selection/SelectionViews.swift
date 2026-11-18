@@ -1,6 +1,6 @@
 import SwiftUI
 
-// System buttons for a selection, with no colours or fonts of their own. Their text is looked up in the app's main
+// System buttons for a selection, with no colors or fonts of their own. Their text is looked up in the app's main
 // bundle, so the app translates or replaces it in its string catalog.
 
 /// Select outside the selection mode and Done inside it, so entering the mode never needs a long press. Nothing for

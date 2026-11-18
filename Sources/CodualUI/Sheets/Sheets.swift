@@ -47,7 +47,7 @@ extension SheetPresenter {
   }
 
   /// The binding SwiftUI presents from. SwiftUI sets it to nil only when the person closed the sheet itself, so that
-  /// is reported as cancelled, and only for the showing on screen when the binding was made.
+  /// is reported as canceled, and only for the showing on screen when the binding was made.
   var platformBinding: Binding<Item?> {
     let shown = item == nil ? nil : showing
     return Binding(

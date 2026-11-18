@@ -27,7 +27,7 @@ internal enum class Field {
 internal class FakeCall<A, T>(private val ignoresCancellation: Boolean = false) {
   val arguments = mutableListOf<A>()
 
-  /** Calls whose coroutine was cancelled while they waited. */
+  /** Calls whose coroutine was canceled while they waited. */
   var cancelledCalls = 0
     private set
 

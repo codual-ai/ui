@@ -34,7 +34,7 @@ struct LoadErrorsTests {
     #expect(isCancellation(NSError(domain: NSURLErrorDomain, code: NSURLErrorCancelled)))
   }
 
-  @Test func cancellationIsRecognised() {
+  @Test func cancellationIsRecognized() {
     #expect(isCancellation(CancellationError()))
     #expect(isCancellation(URLError(.cancelled)))
     #expect(!isCancellation(URLError(.timedOut)))

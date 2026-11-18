@@ -84,7 +84,7 @@ test("CH-25 the summary of stale series ends with Updating.", async () => {
   expect(chart().spokenSummary.endsWith("Updating.")).toBe(true);
 });
 
-test("CH-26 a gap is never summarised, and a series of gaps has no points", async () => {
+test("CH-26 a gap is never summarized, and a series of gaps has no points", async () => {
   const { chart } = await loadedChart(
     data(series("Price", [1, 5], [2, Number.NaN], [3, -Infinity], [4, 7]), series("Gaps", [1, Number.NaN])),
   );

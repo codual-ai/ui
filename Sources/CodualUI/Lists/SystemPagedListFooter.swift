@@ -1,6 +1,6 @@
 import SwiftUI
 
-// The footer `PagedList` shows when the app leaves it out: system components with no colours or fonts of their own.
+// The footer `PagedList` shows when the app leaves it out: system components with no colors or fonts of their own.
 // Its text is looked up in the app's main bundle, so the app translates or replaces it in its string catalog.
 
 @MainActor

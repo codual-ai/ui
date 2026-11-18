@@ -2,6 +2,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
   alias(libs.plugins.android.library)
+  `maven-publish`
 }
 
 // The Play Billing store for Codual UI's purchases, in its own library so that apps which sell nothing don't get
@@ -25,6 +26,10 @@ android {
     disable += "ObsoleteLintCustomCheck"
   }
 
+  publishing {
+    singleVariant("release") { withSourcesJar() }
+  }
+
   testOptions {
     unitTests.all { test -> test.jvmArgs("--add-exports=java.base/jdk.internal.access=ALL-UNNAMED") }
   }
@@ -45,4 +50,13 @@ dependencies {
   testImplementation(libs.junit)
   testImplementation(libs.kotlinx.coroutines.test)
   testImplementation(libs.robolectric)
+}
+
+// JitPack builds the release from a tag with publishToMavenLocal (see jitpack.yml).
+publishing {
+  publications {
+    register<MavenPublication>("release") {
+      afterEvaluate { from(components["release"]) }
+    }
+  }
 }

@@ -34,7 +34,7 @@ struct TimedOut: Error, CustomStringConvertible {
 }
 
 /// Runs `work` on a dispatch queue and returns its result, or throws `TimedOut` if it takes longer than `timeout` and
-/// `CancellationError` if the test is cancelled first (its time limit, say); the work itself can't be stopped, but
+/// `CancellationError` if the test is canceled first (its time limit, say); the work itself can't be stopped, but
 /// the test goes on and fails with its name.
 /// Neither the work nor the deadline runs on Swift's cooperative pool: Vision's text reading blocks its thread while
 /// it waits on work of its own that needs that pool, so a few reads at once (a runner with 3 cores) deadlock it.

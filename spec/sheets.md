@@ -8,7 +8,7 @@ status: implemented
 ## Purpose
 
 A sheet, bottom sheet or full-screen cover that the app presents for an item (a note to edit, a new address) and that
-hands a result back: saved, with a value, or cancelled. The app gives its own sheet content and buttons and says
+hands a result back: saved, with a value, or canceled. The app gives its own sheet content and buttons and says
 whether the sheet holds unsaved changes. Sheets decides when the sheet may close: a sheet with unsaved changes asks
 before it throws them away, a sheet that is saving can't be closed, a sheet closes itself after a successful save,
 and only one sheet is open at a time. Every way of closing a sheet (a Cancel or close button, a swipe down, a tap
@@ -38,10 +38,10 @@ the Android back button, the Escape key or the screen reader's escape gesture.
 |---|---|---|---|
 | closed | present an item | open | Remembers what opened it, for focus. |
 | open, confirming, saving | present an item | (same) | Queues the item, unless it is the one shown or already queued. |
-| open | a close request, no unsaved changes | closed | Reports cancelled. |
+| open | a close request, no unsaved changes | closed | Reports canceled. |
 | open | a close request, unsaved changes | confirming | The sheet stays on screen. |
-| open | the platform finished closing the sheet itself | closed | Reports cancelled (a swipe the platform allowed). |
-| confirming | discard changes | closed | Reports cancelled. |
+| open | the platform finished closing the sheet itself | closed | Reports canceled (a swipe the platform allowed). |
+| confirming | discard changes | closed | Reports canceled. |
 | confirming | keep editing, or the confirmation is dismissed | open | Unsaved changes stay. |
 | confirming | a close request | confirming | No second confirmation. |
 | open | save | saving | Starts the app's save; clears any save error. |
@@ -55,10 +55,10 @@ the Android back button, the Escape key or the screen reader's escape gesture.
 
 - **SH-01** Presenting an item shows the sheet for that item, and nothing shows until an item is presented. The sheet
   is driven by that state alone: no separate "is showing" flag can disagree with it.
-- **SH-02** A close request on a sheet with no unsaved changes closes it and reports cancelled, with the item.
+- **SH-02** A close request on a sheet with no unsaved changes closes it and reports canceled, with the item.
 - **SH-03** A close request on a sheet with unsaved changes keeps it open and shows the discard confirmation instead,
   whichever way the close was asked for.
-- **SH-04** Discard Changes closes the sheet and reports cancelled. Keep Editing, or dismissing the confirmation
+- **SH-04** Discard Changes closes the sheet and reports canceled. Keep Editing, or dismissing the confirmation
   itself, returns to the sheet with its changes, and reports nothing.
 - **SH-05** While the sheet has unsaved changes, the system's swipe down and tap outside can't close it: the sheet
   stays, and the attempt shows the discard confirmation.
@@ -69,7 +69,7 @@ the Android back button, the Escape key or the screen reader's escape gesture.
 - **SH-09** A save that fails keeps the sheet open with its unsaved changes and reports the error; closing works again
   afterwards (with the confirmation, while changes remain), and the next save clears the error.
 - **SH-10** Saving again while a save runs starts no second save.
-- **SH-11** Every presented sheet reports exactly one result, saved or cancelled, never two: the platform reporting
+- **SH-11** Every presented sheet reports exactly one result, saved or canceled, never two: the platform reporting
   its own dismissal after the sheet already closed reports nothing more.
 - **SH-12** One sheet at a time: presenting while a sheet is open queues the new item, which is presented after the
   current one closes and its result is reported. Presenting the item already shown or queued does nothing.
@@ -93,7 +93,7 @@ the Android back button, the Escape key or the screen reader's escape gesture.
   say) never starts out blocked.
 
 The queue (SH-12) is the choice for a second request rather than replacing the open sheet: replacing it would throw
-away whatever the person had typed without asking, which is what this behaviour exists to stop. A request for the
+away whatever the person had typed without asking, which is what this behavior exists to stop. A request for the
 sheet already open is the usual double tap, so it is dropped.
 
 ## Accessibility
@@ -108,14 +108,14 @@ sheet already open is the usual double tap, so it is dropped.
   unavailable rather than doing nothing silently.
 - When the sheet closes, focus returns to the element that opened it (SH-17), so a screen-reader or keyboard user
   carries on where they were.
-- Text the behaviour shows (the confirmation's title, message and buttons) is localisable and follows the user's text
+- Text the behavior shows (the confirmation's title, message and buttons) is localisable and follows the user's text
   size.
 
 ## Left to the app
 
 - The sheet's content, its buttons, its progress view while saving and how it shows a save error.
 - Whether a sheet has unsaved changes: the app says so (`hasUnsavedChanges`), from its own form state or the
-  [forms](forms.md) behaviour's dirty state. Sheets never compares values itself.
+  [forms](forms.md) behavior's dirty state. Sheets never compares values itself.
 - The save itself: what it sends, and the value it returns to the presenter.
 - Detents and heights (medium, large, a fixed height), drag indicators, corner radius and background: the platform's
   own modifiers and parameters.
@@ -155,6 +155,6 @@ sheet already open is the usual double tap, so it is dropped.
   SwiftUI needs nothing. Compose: `present(item, opener = focusRequester)`. React Native: `present(item, { opener })`
   with a ref, focused with `AccessibilityInfo.sendAccessibilityEvent(…, "focus")` once the sheet is off screen; iOS's
   `Modal` gives focus back itself, so it is only sent on Android and for a bottom-sheet library's sheet.
-- **Cancelling a save.** SwiftUI: a save still running when the presenter goes away reports nothing. Compose: the
+- **Canceling a save.** SwiftUI: a save still running when the presenter goes away reports nothing. Compose: the
   save runs in the presenter's scope and ends with it. React Native: the save gets an `AbortSignal`, aborted when the
   component using the sheet unmounts.

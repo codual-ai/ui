@@ -32,9 +32,7 @@ describe("parseSpec", () => {
   });
 
   test("refuses a spec without front matter", () => {
-    expect(problems("# Behaviour\n")).toEqual([
-      "spec/x.md: must start with front matter between `---` lines",
-    ]);
+    expect(problems("# Behavior\n")).toEqual(["spec/x.md: must start with front matter between `---` lines"]);
   });
 
   test("refuses front matter that never closes", () => {
@@ -73,7 +71,7 @@ describe("parseSpec", () => {
     ]);
   });
 
-  test("refuses a gap in the numbering and another behaviour's prefix", () => {
+  test("refuses a gap in the numbering and another behavior's prefix", () => {
     expect(problems(specText({ edgeCases: ["- **SS-01** A.", "- **SS-03** B.", "- **LS-03** C."] }))).toEqual(
       [
         "spec/x.md: edge case SS-03 should be SS-02: IDs run in order from 01",

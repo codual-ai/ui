@@ -6,7 +6,7 @@ typealias TestQuery = ChartQuery<String>
 typealias TestData = ChartData<Double>
 
 /// A chart load whose calls wait until the test answers them, in any order. A call answered after its task was
-/// cancelled still returns, like work that ignores cancellation, so only the chart can drop it.
+/// canceled still returns, like work that ignores cancellation, so only the chart can drop it.
 @MainActor
 final class ChartLoader {
   private(set) var queries: [TestQuery] = []

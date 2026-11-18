@@ -140,7 +140,7 @@ Granted, limited and provisional are **usable**: the feature runs. Every other s
 - The explanation's text says what the feature does with the permission, in words larger text can reflow, and never
   only in an image.
 - The system prompt and Settings are the system's: they follow its own accessibility settings.
-- The behaviour has no text of its own. Every word is the app's, in its own string catalog or resources, including the
+- The behavior has no text of its own. Every word is the app's, in its own string catalog or resources, including the
   iOS usage strings (localised with an `InfoPlist` string table).
 
 ## Left to the app

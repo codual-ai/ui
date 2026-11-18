@@ -175,7 +175,7 @@ over the odd filtered-out page. It is not configurable: an app that needs more c
 ## Accessibility
 
 - The footers (LS-22) have screen-reader labels, use the system's text styles so they follow the user's text size,
-  and take no colours or fonts of their own. The loading footer is labelled ("Loading More").
+  and take no colors or fonts of their own. The loading footer is labeled ("Loading More").
 - Load More and Try Again are real buttons, reachable by screen readers and keyboard. Their labels are localisable
   strings the app can translate or replace.
 - Announcements (LS-20) are polite: they wait for what the screen reader is saying, there is at most one per page,
@@ -218,8 +218,8 @@ over the odd filtered-out page. It is not configurable: an app that needs more c
 - **Identity.** SwiftUI: the items' `Identifiable` ID. Compose: `key`, also used as the `LazyColumn` key, so it
   must be a type Android can save in a `Bundle` (a `String`, `Int` or `Long`, say). React Native: `keyExtractor`,
   also `FlatList`'s.
-- **The page loader and cancellation.** SwiftUI: an `async throws` function cancelled with its task. Compose: a
-  `suspend` function cancelled with its coroutine. React Native: it gets an `AbortSignal` too, and an abort of that
+- **The page loader and cancellation.** SwiftUI: an `async throws` function canceled with its task. Compose: a
+  `suspend` function canceled with its coroutine. React Native: it gets an `AbortSignal` too, and an abort of that
   signal is a cancellation; any other abort is a failure (LS-18).
 - **Announcements.** SwiftUI: `AccessibilityNotification.Announcement`, at low priority, which waits for current
   speech; `PagedListModel` posts it itself. Compose: a polite live region, `PagedListAnnouncements(state)`, outside

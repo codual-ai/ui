@@ -28,7 +28,7 @@ test("SL-14 an action gets the keys in the order selected, runs once, and locks 
   expect(selection().isActive).toBe(true);
 });
 
-test("SL-15 a destructive action runs only once confirmed; cancelling keeps the selection and the mode", async () => {
+test("SL-15 a destructive action runs only once confirmed; canceling keeps the selection and the mode", async () => {
   const { selection, selectedIds, run } = await selecting([1, 2]);
   const action = new FakeAction();
   await run(() => selection().performAfterConfirmation(action.run));

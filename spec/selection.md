@@ -102,7 +102,7 @@ An always active selection has no inactive state: it starts active, and Done, Ca
   for "3 of 10", and both change with every change, drops included.
 - **SL-14** A bulk action gets the selected items' identities, in the order they were selected, and runs once:
   starting it again while it runs does nothing, and so do taps, select all, deselect all, Done, Cancel and back.
-- **SL-15** A destructive action runs only after the person confirms it. Cancelling the confirmation runs nothing
+- **SL-15** A destructive action runs only after the person confirms it. Canceling the confirmation runs nothing
   and keeps the selection and the mode.
 - **SL-16** An action that succeeds clears the selection and leaves the mode (an always active selection stays
   active, with nothing selected).

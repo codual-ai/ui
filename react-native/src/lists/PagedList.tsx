@@ -59,7 +59,7 @@ export function PagedList<Item, Token>(props: PagedListProps<Item, Token>) {
 }
 
 /**
- * The views of a paged list's controller, for `PagedList`, the behaviours built on it, and apps that keep the state
+ * The views of a paged list's controller, for `PagedList`, the behaviors built on it, and apps that keep the state
  * themselves. An inverted controller is a chat: the newest row at the bottom, older pages above it, and newer items
  * scrolling into view only when the newest row is on screen.
  */

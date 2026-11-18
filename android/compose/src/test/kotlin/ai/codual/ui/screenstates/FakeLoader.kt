@@ -22,7 +22,7 @@ internal class FakeLoader<T>(private val ignoresCancellation: Boolean = false) {
   var calls = 0
     private set
 
-  /** Calls whose coroutine was cancelled while they waited. */
+  /** Calls whose coroutine was canceled while they waited. */
   var cancelledCalls = 0
     private set
 

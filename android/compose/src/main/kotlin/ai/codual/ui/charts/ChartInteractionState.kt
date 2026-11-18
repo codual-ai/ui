@@ -22,7 +22,7 @@ import kotlinx.coroutines.CoroutineScope
 internal class ChartContent<R>(val query: ChartQuery<R>, val data: ChartData, val id: Int)
 
 /**
- * The behaviour around a chart the app draws itself (with Vico, say): the selected range's series as a screen
+ * The behavior around a chart the app draws itself (with Vico, say): the selected range's series as a screen
  * state, range switching that keeps the old series on screen while the new ones load, a touch that snaps to the
  * nearest point with a haptic tick, and a summary and point-by-point values for screen readers.
  *
@@ -35,7 +35,7 @@ internal class ChartContent<R>(val query: ChartQuery<R>, val data: ChartData, va
  * @param formatX how an x value is read out. By default, in the person's locale, as [xKind] says.
  * @param formatY how a y value is read out. By default, a number in the person's locale.
  * @param haptic plays the selection tick. [rememberChartInteraction] passes the system's.
- * @param load loads the series for a query. Cancelled when the range changes or the chart goes away.
+ * @param load loads the series for a query. Canceled when the range changes or the chart goes away.
  */
 @Stable
 public class ChartInteractionState<R>(
@@ -210,7 +210,7 @@ public class ChartInteractionState<R>(
     query = newQuery
     selected = null
     if (shownContent?.query != newQuery) return screen.reload()
-    // Back to the series still on screen: the switch away is cancelled, and they load again as a refresh, so a
+    // Back to the series still on screen: the switch away is canceled, and they load again as a refresh, so a
     // failure keeps them.
     screen.disappear()
     screen.refresh()

@@ -206,7 +206,7 @@ public class Purchases(
       return result
     } finally {
       processing.remove(transaction.id)
-      // Cancelled with the scope: whatever waits for it is cancelled too.
+      // Canceled with the scope: whatever waits for it is canceled too.
       running.cancel()
     }
   }

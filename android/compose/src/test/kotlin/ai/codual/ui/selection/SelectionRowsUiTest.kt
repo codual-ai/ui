@@ -160,11 +160,11 @@ class SelectionRowsUiTest : SelectionComposeTest() {
   @Test
   fun `SL-23 the Select button and each row's Select action enter the mode without a long press`() {
     showRows(1, 2)
-    val labelledSelect =
-      SemanticsMatcher("a long-click action labelled Select") {
+    val labeledSelect =
+      SemanticsMatcher("a long-click action labeled Select") {
         it.config.getOrElseNullable(SemanticsActions.OnLongClick) { null }?.label == "Select"
       }
-    compose.onNodeWithText("Row 2").assert(labelledSelect)
+    compose.onNodeWithText("Row 2").assert(labeledSelect)
     compose.onNodeWithText("Row 2").performSemanticsAction(SemanticsActions.OnLongClick)
     settle()
     assertEquals(listOf<Any>(2), selection.selectedKeys)

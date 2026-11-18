@@ -38,7 +38,7 @@ public fun SystemProductRow(product: StoreProduct, paywall: PaywallContent, modi
 }
 
 /**
- * Buys the selected product, labelled with its price; busy while a purchase or restore runs, and disabled when
+ * Buys the selected product, labeled with its price; busy while a purchase or restore runs, and disabled when
  * nothing is selected or the user owns it.
  */
 @Composable

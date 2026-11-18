@@ -8,7 +8,7 @@ export interface Note {
   readonly title?: string;
 }
 
-/** The results a sheet reported, in order, as text that compares easily: "saved 1: Saved", "cancelled 2". */
+/** The results a sheet reported, in order, as text that compares easily: "saved 1: Saved", "canceled 2". */
 export class ResultLog {
   readonly results: string[] = [];
 

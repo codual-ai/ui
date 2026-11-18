@@ -62,7 +62,7 @@ internal class AndroidPermissionAccess(
     val declines = if (isUpgrade) upgrade else whole
     val hadRationale = asked.any(system::shouldShowRationale)
     val answers = system.request(requested)
-    // No answers: the prompt was cancelled (the activity went away), which is no "no".
+    // No answers: the prompt was canceled (the activity went away), which is no "no".
     if (answers.isEmpty()) return status()
     val granted = grant { answers[it] ?: system.isGranted(it) }
     if (granted != null && (granted != PermissionStatus.Limited || !isUpgrade)) return granted

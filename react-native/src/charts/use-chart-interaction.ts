@@ -79,7 +79,7 @@ export interface ChartInteractionController<Range> extends ChartInteractionSnaps
 const ADJUSTABLE_ACTIONS = [{ name: "increment" }, { name: "decrement" }] as const;
 
 /**
- * The behaviour around a chart the app draws itself (with Victory Native, say): the selected range's series as a
+ * The behavior around a chart the app draws itself (with Victory Native, say): the selected range's series as a
  * screen state, range switching that keeps the old series on screen while the new ones load, a touch that snaps to
  * the nearest point, and a summary and point-by-point values for screen readers. Loads on mount, aborts on unmount,
  * and always uses the latest options.

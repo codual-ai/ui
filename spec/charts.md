@@ -108,7 +108,7 @@ Screen states' transitions apply to the selected range's load, with these additi
   series with every point.
 - **CH-25** While the series shown are stale, the spoken summary ends with "Updating." so a screen reader user
   knows the chart is about to change.
-- **CH-26** A point whose value isn't a finite number (a gap in the data) is never selected, summarised, stepped to
+- **CH-26** A point whose value isn't a finite number (a gap in the data) is never selected, summarized, stepped to
   or read out; a series whose points are all gaps counts as having no points.
 - **CH-27** Going back to the range (and compare choice) whose series are still on screen, stale, while another
   range loads (1D, 1W, then 1D again) cancels that load and loads the shown range again as a refresh: the series
@@ -131,7 +131,7 @@ Screen states' transitions apply to the selected range's load, with these additi
 
 ## Left to the app
 
-- Drawing the chart: the library, marks, axes, colours, the rule line and the callout at the selection, and how a
+- Drawing the chart: the library, marks, axes, colors, the rule line and the callout at the selection, and how a
   stale chart looks (dimmed, say).
 - The ranges and their picker: what they are, their labels, and which one is first.
 - The load: what a range fetches, how the previous period's series are aligned to the current one (shifted onto

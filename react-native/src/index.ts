@@ -1,5 +1,5 @@
 /** The Codual UI release this build comes from. */
-export const version = "0.0.0";
+export const version = "0.1.0";
 
 export type { ChartData, ChartPoint, ChartQuery, ChartSeries, PlottedData } from "./charts/data";
 export {

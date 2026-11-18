@@ -116,7 +116,7 @@ public class PagedListState<Item, Token : Any>(
 
   /**
    * Loads the first page again while the list stays on screen, and replaces the whole list with it if it succeeds.
-   * A page that is loading is cancelled first.
+   * A page that is loading is canceled first.
    */
   public fun refresh() {
     cancelPageLoad()
@@ -200,7 +200,7 @@ public class PagedListState<Item, Token : Any>(
     try {
       val page = loadFirstPages()
       val content = page.addingNewer(arrived.map { it.item }, key).content
-      // A load the list cancelled is dropped: it mustn't move the list or announce anything.
+      // A load the list canceled is dropped: it mustn't move the list or announce anything.
       if (reverseLayout && currentCoroutineContext().isActive) {
         newest.scrollToBottom()
         val unannounced = arrived.filter { !it.shown }.map { it.item }
@@ -238,7 +238,7 @@ public class PagedListState<Item, Token : Any>(
           try {
             Result.success(loadPage(token))
           } catch (error: Exception) {
-            // The end of the scope propagates. A refresh or disappear() cancelling the page is dropped by
+            // The end of the scope propagates. A refresh or disappear() canceling the page is dropped by
             // finishPageLoad(); any other cancellation is the page's result.
             if (error is CancellationException && !scope.isActive) throw error
             Result.failure(error)
@@ -279,7 +279,7 @@ public class PagedListState<Item, Token : Any>(
     generation += 1
     val content = (screen.state as? ScreenState.Content)?.value
     if (content?.paging == Paging.Loading) screen.replaceContent(content.withPaging(Paging.Ready))
-    // Last, as an immediate dispatcher (viewModelScope's) can resume the cancelled load inside cancel().
+    // Last, as an immediate dispatcher (viewModelScope's) can resume the canceled load inside cancel().
     load?.cancel()
   }
 }

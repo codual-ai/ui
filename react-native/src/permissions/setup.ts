@@ -19,7 +19,7 @@ const runMemory = new Set<string>();
 
 /**
  * Sets where every permission keeps its declines; call it once at launch, before any permission is used. Without it
- * they are kept for one run only, so after a relaunch a "no" is asked again, against the behaviour's rules.
+ * they are kept for one run only, so after a relaunch a "no" is asked again, against the behavior's rules.
  */
 export function configurePermissions(next: PermissionsSetup): void {
   setup = next;

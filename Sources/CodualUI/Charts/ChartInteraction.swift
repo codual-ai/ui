@@ -19,7 +19,7 @@ struct ChartContent<Range: Hashable, X: ChartXValue> {
   let id: Int
 }
 
-/// The behaviour around a chart the app draws itself (with Swift Charts, say): the selected range's series as a
+/// The behavior around a chart the app draws itself (with Swift Charts, say): the selected range's series as a
 /// screen state, range switching that keeps the old series on screen while the new ones load, a touch that snaps
 /// to the nearest point with a haptic tick, and a summary and point-by-point values for screen readers.
 ///
@@ -53,7 +53,7 @@ public final class ChartInteraction<Range: Hashable, X: ChartXValue> {
   ///   - formatX: How an x value is read out. By default, in the person's locale.
   ///   - formatY: How a y value is read out. By default, a number in the person's locale.
   ///   - isOffline: Whether a failed load shows the offline view instead of the failed view.
-  ///   - load: Loads the series for a query. Cancelled when the range changes or the chart goes away.
+  ///   - load: Loads the series for a query. Canceled when the range changes or the chart goes away.
   public init(
     title: String,
     range: Range,
@@ -201,14 +201,14 @@ public final class ChartInteraction<Range: Hashable, X: ChartXValue> {
     query = newQuery
     selected = nil
     guard shownContent?.query == newQuery else { return screen.reload() }
-    // Back to the series still on screen: the switch away is cancelled, and they load again as a refresh, so a
+    // Back to the series still on screen: the switch away is canceled, and they load again as a refresh, so a
     // failure keeps them.
     screen.disappear()
     screen.startRefresh()
   }
 
   private func loadContent() async throws -> ChartContent<Range, X> {
-    // A switch before this task ran cancelled it: the range it was for is gone, so it asks for nothing.
+    // A switch before this task ran canceled it: the range it was for is gone, so it asks for nothing.
     try Task.checkCancellation()
     let loading = query
     let loaded = try await load(loading)
