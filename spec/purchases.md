@@ -29,7 +29,7 @@ screen state: loading, content, empty, failed or offline, as in [screen states](
 | purchasing | the buy button busy; buy and restore unavailable | The store's purchase sheet is up, or its transaction is being delivered and finished. |
 | pending | the pending message | The store is waiting for someone else (Ask to Buy, a deferred payment). Nothing is unlocked. Buy stays available. |
 | purchased | the product as owned | The purchase succeeded and its transaction was delivered and finished. The store shows its own confirmation, so the system message is none. |
-| canceled | the paywall, as in idle | The user closed the store's sheet. Not an error: no message. |
+| cancelled | the paywall, as in idle | The user closed the store's sheet. Not an error: no message. |
 | failed | the failed message, with the error | The purchase failed, or `deliver` refused it. Nothing new is unlocked. |
 | restoring | the restore button busy; buy and restore unavailable | The store is syncing the user's purchases. |
 | restored | the restored message | A restore found at least one entitlement. |
@@ -50,22 +50,22 @@ The buy button has its own state, from the status and the selected product:
 | From | Event | To | Also |
 |---|---|---|---|
 | (start) | purchases is created | (status idle) | Starts listening for transactions, delivers and finishes any unfinished ones, then checks entitlements. |
-| idle, pending, purchased, canceled, failed, restored, nothing to restore, restore failed | buy a product not owned | purchasing | Asks the store to buy it. |
+| idle, pending, purchased, cancelled, failed, restored, nothing to restore, restore failed | buy a product not owned | purchasing | Asks the store to buy it. |
 | purchasing, restoring | buy or restore | (same) | Nothing: no second request. |
 | any | buy a product owned (not a consumable) | (same) | Nothing. |
 | purchasing | the store gives a transaction | purchased | Delivers it, finishes it, then checks entitlements. |
 | purchasing | `deliver` throws | failed | The transaction stays unfinished; the store gives it again later. |
 | purchasing | the store says pending | pending | Nothing is unlocked. |
-| purchasing | the user cancels | canceled | |
+| purchasing | the user cancels | cancelled | |
 | purchasing | the store fails | failed | |
 | any | a transaction arrives outside the buy flow | (same), or purchased if the status is pending or failed for that product | Delivers it and finishes it, once, then checks entitlements. |
 | any | a refund, revocation, or the app returning to the foreground | (same) | Checks entitlements; a product no longer listed stops being owned. |
 | any | an owned subscription's expiry date passes | (same) | Checks entitlements. |
-| idle, pending, purchased, canceled, failed, restored, nothing to restore, restore failed | restore | restoring | Asks the store to sync. |
+| idle, pending, purchased, cancelled, failed, restored, nothing to restore, restore failed | restore | restoring | Asks the store to sync. |
 | restoring | the sync succeeds | restored, or nothing to restore | Checks entitlements first. |
 | restoring | the user cancels the sync | idle | |
 | restoring | the sync fails | restore failed | |
-| pending, purchased, canceled, failed, restored, nothing to restore, restore failed | the app dismisses the message | idle | |
+| pending, purchased, cancelled, failed, restored, nothing to restore, restore failed | the app dismisses the message | idle | |
 | (entitlements) | a check fails | (same) | Keeps the last entitlements. |
 
 ## Edge cases
@@ -85,7 +85,7 @@ The buy button has its own state, from the status and the selected product:
   from a number and a currency.
 - **PU-06** Buying shows purchasing, then purchased. The app's `deliver` gets the transaction before it is
   finished, acknowledged or consumed, and the entitlement is owned once it's finished.
-- **PU-07** A purchase the user cancels is not an error: the status is canceled, no message shows, nothing is
+- **PU-07** A purchase the user cancels is not an error: the status is cancelled, no message shows, nothing is
   unlocked, and buy is available again.
 - **PU-08** A failed purchase shows the failed message with the error, unlocks nothing, and leaves buy available.
 - **PU-09** Buy or restore while a purchase or restore runs does nothing: tapping buy twice, or buy then restore,
@@ -132,7 +132,7 @@ The buy button has its own state, from the status and the selected product:
 - **PU-26** (only: SwiftUI) A transaction that fails the App Store's verification never unlocks anything and is not
   finished; in the buy flow it shows failed.
 - **PU-27** The pending, failed, restored, nothing-to-restore and restore-failed statuses show a message, which the
-  app dismisses back to idle. A message the app leaves out is a system alert. Purchasing, canceled and purchased
+  app dismisses back to idle. A message the app leaves out is a system alert. Purchasing, cancelled and purchased
   show none: the store shows its own sheet and confirmation.
 - **PU-28** The buy button is unavailable until a product is selected, ready with the selected product's price,
   purchasing while a purchase or restore runs, and owned for an owned product. A button the app leaves out is a
