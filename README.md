@@ -12,7 +12,7 @@ its design. A [skill](skills/codual-ui/SKILL.md) teaches your coding agent when 
 
 **[Read the docs](https://codual-ai.github.io/ui/)**
 
-<!-- demo film -->
+https://github.com/user-attachments/assets/133bd84a-e346-434d-a4ee-20d5df673d55
 
 **Get started.** From your app's repository:
 

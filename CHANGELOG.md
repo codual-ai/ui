@@ -5,7 +5,7 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## Unreleased
 
-## 0.1.0 — YYYY-MM-DD
+## 0.1.0 — 2026-11-17
 
 The first release: nine headless behaviors on SwiftUI, Jetpack Compose and React Native, each with a spec in
 `spec/` and a test for every edge case on every platform it applies to.
