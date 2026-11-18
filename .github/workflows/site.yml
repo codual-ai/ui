@@ -1,0 +1,85 @@
+name: Site
+
+# The docs site at https://codual-ai.github.io/ui/, built from site/ (its own content) with the specs, the skill and the
+# API names in the source. Pull requests only build it, which also runs the name check.
+on:
+  push:
+    branches: [main]
+    paths:
+      - site/**
+      - spec/**
+      - skills/**
+      - Sources/**
+      - android/**/src/main/**
+      - react-native/src/**
+      - scripts/src/spec-file.ts
+      - scripts/src/edge-case-id.ts
+      - .github/workflows/site.yml
+  pull_request:
+    paths:
+      - site/**
+      - spec/**
+      - skills/**
+      - Sources/**
+      - android/**/src/main/**
+      - react-native/src/**
+      - scripts/src/spec-file.ts
+      - scripts/src/edge-case-id.ts
+      - .github/workflows/site.yml
+  workflow_dispatch:
+
+concurrency:
+  group: site-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: site
+    env:
+      NEXT_TELEMETRY_DISABLED: 1
+      # For a custom domain, set the repository variable SITE_CUSTOM_DOMAIN (docs.example.com, say): the site is then
+      # built for the domain's root and a CNAME file is added. Without it, the site is served under /ui.
+      SITE_CUSTOM_DOMAIN: ${{ vars.SITE_CUSTOM_DOMAIN }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+      - run: npm ci --ignore-scripts
+      - run: npm test
+      - name: Build (checks every API name and state first)
+        run: |
+          if [ -n "$SITE_CUSTOM_DOMAIN" ]; then export SITE_BASE_PATH=""; fi
+          npm run build
+          if [ -n "$SITE_CUSTOM_DOMAIN" ]; then echo "$SITE_CUSTOM_DOMAIN" > out/CNAME; fi
+          touch out/.nojekyll
+      - if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: site/out
+
+  deploy:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
